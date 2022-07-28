@@ -1,0 +1,19 @@
+version: '3'
+services:
+  simple-snowplow:
+    build:
+      context: simple_snowplow
+      dockerfile: Dockerfile
+    volumes:
+      - ./simple_snowplow:/app
+    ports:
+      - "8000:80"
+    restart: on-failure
+    command: "/start-reload.sh"
+
+  clickhouse:
+    image: yandex/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9009:9009"

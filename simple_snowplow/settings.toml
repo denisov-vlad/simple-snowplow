@@ -1,0 +1,14 @@
+[common]
+service_name = "simple-snowplow"
+database = "clickhouse"
+
+[elastic_apm]
+enabled = false
+
+[prometheus]
+enabled = false
+
+[clickhouse]
+url = "http://clickhouse:8123"
+user = "default"
+database = "snowplow"

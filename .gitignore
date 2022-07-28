@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ignore dynaconf secret files
+.secrets.*
+
+# Snowplow static files
+/simple_snowplow/static/

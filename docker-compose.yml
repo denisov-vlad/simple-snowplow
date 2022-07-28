@@ -1,0 +1,14 @@
+version: '3'
+services:
+  simple-snowplow:
+    image: vladenisov/simple-snowplow:0.0.1
+    ports:
+      - "8000:80"
+    restart: on-failure
+
+  clickhouse:
+    image: yandex/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+      - "9009:9009"
