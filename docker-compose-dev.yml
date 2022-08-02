@@ -10,6 +10,8 @@ services:
       - "8000:80"
     restart: on-failure
     command: "/start-reload.sh"
+    depends_on:
+      - clickhouse
 
   clickhouse:
     image: yandex/clickhouse-server:latest

@@ -5,6 +5,8 @@ services:
     ports:
       - "8000:80"
     restart: on-failure
+    depends_on:
+      - clickhouse
 
   clickhouse:
     image: yandex/clickhouse-server:latest
