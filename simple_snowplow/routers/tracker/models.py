@@ -4,7 +4,7 @@ from typing import List
 from typing import Optional
 
 from fastapi import Query
-from plugins.elastic_apm import LoggerBaseModel
+from plugins.models import LoggerBaseModel
 from pydantic import Field
 
 
