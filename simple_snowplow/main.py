@@ -6,9 +6,9 @@ from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from routers.tracker.db import ClickHouseInit
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
-
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -23,7 +23,6 @@ app.add_middleware(
 )
 
 app.add_middleware(BrotliMiddleware)
-
 if settings.elastic_apm.enabled:
     from elasticapm.contrib.starlette import ElasticAPM
     from plugins.elastic_apm import elastic_apm_client
@@ -45,9 +44,15 @@ if settings.prometheus.enabled:
 @app.on_event("startup")
 async def startup_event():
     app.state.ch_session = ClientSession()
+
     app.state.ch_client = ChClient(
-        app.state.ch_session, **settings["clickhouse"], compress_response=True
+        app.state.ch_session,
+        **settings.clickhouse.connection  # , compress_response=True
     )
+
+    app.state.ch_table = await ClickHouseInit(
+        app.state.ch_client, **settings.clickhouse.configuration
+    ).create_all()
 
 
 @app.on_event("shutdown")

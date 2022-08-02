@@ -9,6 +9,10 @@ enabled = false
 enabled = false
 
 [clickhouse]
+[clickhouse.connection]
 url = "http://clickhouse:8123"
 user = "default"
+[clickhouse.configuration]
 database = "snowplow"
+cluster_name = ""
+engine = "MergeTree()"
