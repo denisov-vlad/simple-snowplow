@@ -1,6 +1,7 @@
 version: '3'
 services:
   simple-snowplow:
+    container_name: simple-snowplow
     build:
       context: simple_snowplow
       dockerfile: Dockerfile
@@ -8,12 +9,15 @@ services:
       - ./simple_snowplow:/app
     ports:
       - "8000:80"
+    environment:
+      - "SNOWPLOW_COMMON__DEBUG=true"
     restart: on-failure
     command: "/start-reload.sh"
     depends_on:
       - clickhouse
 
   clickhouse:
+    container_name: simple-snowplow-ch
     image: yandex/clickhouse-server:latest
     ports:
       - "8123:8123"

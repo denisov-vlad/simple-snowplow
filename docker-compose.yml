@@ -1,6 +1,7 @@
 version: '3'
 services:
   simple-snowplow:
+    container_name: snowplow
     image: vladenisov/simple-snowplow:0.0.1
     ports:
       - "8000:80"
@@ -9,6 +10,7 @@ services:
       - clickhouse
 
   clickhouse:
+    container_name: clickhouse
     image: yandex/clickhouse-server:latest
     ports:
       - "8123:8123"

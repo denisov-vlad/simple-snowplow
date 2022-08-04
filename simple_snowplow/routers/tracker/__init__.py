@@ -8,7 +8,7 @@ from fastapi import Request
 from fastapi.responses import Response
 from fastapi.routing import APIRouter
 from routers.tracker import models
-from routers.tracker.db import insert
+from routers.tracker.handlers import process_data
 from starlette.status import HTTP_204_NO_CONTENT
 
 
@@ -47,7 +47,10 @@ async def tracker(
     :param cookie: Browser's cookies
     :return:
     """
-    await insert(request.app.state.ch_client, body, user_agent, x_forwarded_for, cookie)
+
+    data = await process_data(body, user_agent, x_forwarded_for, cookie)
+    await request.app.state.connector.insert(data)
+
     return Response(status_code=HTTP_204_NO_CONTENT)
 
 
@@ -58,14 +61,9 @@ async def get_tracker(
     user_agent: Optional[str] = Header(None),
     x_forwarded_for: Optional[str] = Header(None),
     cookie: Optional[str] = Header(None),
-    background_tasks: BackgroundTasks = None,
 ):
-    background_tasks.add_task(
-        insert,
-        request.app.state.ch_client,
-        params,
-        user_agent,
-        x_forwarded_for,
-        cookie,
-    )
+
+    data = await process_data(params, user_agent, x_forwarded_for, cookie)
+    await request.app.state.connector.insert(data)
+
     return Response(content=pixel, media_type="image/gif")

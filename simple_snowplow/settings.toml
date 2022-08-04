@@ -1,6 +1,7 @@
 [common]
 service_name = "simple-snowplow"
 database = "clickhouse"
+debug = false
 
 [elastic_apm]
 enabled = false

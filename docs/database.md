@@ -17,7 +17,7 @@ CREATE DATABASE snowplow IF NOT EXISTS
 ```clickhouse
 CREATE TABLE snowplow.local
 (
-    `app_id` String,
+    `app_id` LowCardinality(String),
     `platform` Enum8('web' = 1, 'mob' = 2, 'pc' = 3, 'srv' = 4, 'app' = 5, 'tv' = 6, 'cnsl' = 7, 'iot' = 8),
     `app_extra` String DEFAULT '',
     `page` String DEFAULT '',
@@ -40,15 +40,15 @@ CREATE TABLE snowplow.local
     `user_data` String DEFAULT '',
     `user_ip` IPv4,
     `user_agent` String DEFAULT '',
-    `browser` Tuple(family String, version Array(String), version_string String, cookie UInt8, charset String, color_depth UInt8),
-    `os` Tuple(family String, version Array(String), version_string String, language String),
-    `device` Tuple(family String, brand String, model String),
+    `browser` Tuple(family LowCardinality(String), version Array(String), version_string String, cookie UInt8, charset LowCardinality(String), color_depth UInt8),
+    `os` Tuple(family LowCardinality(String), version Array(String), version_string String, language LowCardinality(String)),
+    `device` Tuple(family LowCardinality(String), brand LowCardinality(String), model LowCardinality(String)),
     `device_is` Tuple(mobile Int8, tablet Int8, touch Int8, pc Int8, bot Int8),
     `device_extra` String DEFAULT '',
     `resolution` Tuple(browser String, viewport String, page String),
-    `event` Tuple(action String, category String, label String, property String, value String, unstructured String),
+    `event` Tuple(action LowCardinality(String), category LowCardinality(String), label String, property String, value String, unstructured String),
     `extra` String DEFAULT '',
-    `tracker` Tuple(version String, namespace String)
+    `tracker` Tuple(version LowCardinality(String), namespace LowCardinality(String))
 )
 ENGINE = MergeTree()
 PARTITION BY (toYYYYMM(time), event_type)

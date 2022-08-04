@@ -6,12 +6,26 @@ from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from routers.tracker.db import ClickHouseInit
+from routers.demo import router as demo_router
+from routers.tracker import router as app_router
+from routers.tracker.db import ClickHouseConnector
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
 
+
 app = FastAPI()
+
+
+app.include_router(app_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+if settings.common.debug:
+    app.include_router(demo_router)
+    app.mount(
+        "/demo", StaticFiles(directory="routers/demo/static", html=True), name="demo"
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,9 +64,11 @@ async def startup_event():
         **settings.clickhouse.connection  # , compress_response=True
     )
 
-    app.state.ch_table = await ClickHouseInit(
+    app.state.connector = ClickHouseConnector(
         app.state.ch_client, **settings.clickhouse.configuration
-    ).create_all()
+    )
+
+    await app.state.connector.create_all()
 
 
 @app.on_event("shutdown")
@@ -64,10 +80,13 @@ async def shutdown_event():
 async def probe():
     status = {"clickhouse": await app.state.ch_client.is_alive()}
     status = jsonable_encoder(status)
-    result = JSONResponse(content=status)
 
     for v in status.values():
         if not v:
             return JSONResponse(content=status, status_code=HTTP_502_BAD_GATEWAY)
+
+    result = JSONResponse(
+        content={"status": status, "table": app.state.connector.get_table_name()}
+    )
 
     return result

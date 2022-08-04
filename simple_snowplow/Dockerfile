@@ -13,6 +13,7 @@ RUN sh /app/utils/download_scripts.sh
 FROM tiangolo/uvicorn-gunicorn-fastapi:python3.9-alpine3.14-2021-10-02
 
 ENV UVICORN_LOG_LEVEL=warning
+ENV UVICORN_PORT=5000
 ENV WORKER_CLASS=uvicorn.workers.UvicornH11Worker
 ENV PYTHONUNBUFFERED=1
 
