@@ -5,13 +5,9 @@ A clear backend for Snowplow to work with raw data
 
 ### Local
 1. Install docker and docker-compose.
-2. Download scripts from the [snowplow-javascript-tracker](https://github.com/snowplow/snowplow-javascript-tracker) repo:
+2. Run `docker-compose`. It will build an application image if necessary.
 ```shell
-sh ./simple_snowplow/utils/download_scripts.sh
-```
-3. Run `docker-compose`. It will build an application image if necessary.
-```shell
-docker-compose -f docker-compose-dev.yml up
+docker-compose up
 ```
 
 
