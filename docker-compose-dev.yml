@@ -10,7 +10,7 @@ services:
     ports:
       - "8000:80"
     environment:
-      - "SNOWPLOW_COMMON__DEBUG=true"
+      - "SNOWPLOW_COMMON__DEMO=true"
     restart: on-failure
     command: "/start-reload.sh"
     depends_on:
