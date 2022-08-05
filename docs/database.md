@@ -1,12 +1,12 @@
-Simple-snowplow supports only ClickHouse database.
+Simple-snowplow supports only the ClickHouse database.
 
 ## First steps
 
 ### ClickHouse
 
-If you have multiple shards and set up cluster, use `ON CLUSTER $cluster_name` for all queries below.
+If you have multiple shards and set up a cluster, use `ON CLUSTER $cluster_name` for all queries below.
 
-* Create database:
+* Create a database:
 
 ```clickhouse
 CREATE DATABASE snowplow IF NOT EXISTS
@@ -63,7 +63,7 @@ use `ReplicatedMergeTree` engine instead of `MergeTree`:
 ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/snowplow', '{replica}')
 ```
 
-* Create buffer table which allows to send requests directly to ClickHouse without batching:
+* Create a buffer table that allows sending requests directly to ClickHouse without batching:
 
 ```clickhouse
 CREATE TABLE snowplow.buffer AS snowplow.local ENGINE = Buffer('snowplow', 'local', 16, 10, 100, 10000, 1000000, 10000000, 100000000);
@@ -77,6 +77,6 @@ CREATE TABLE snowplow.clickstream ON CLUSTER $cluster_name AS snowplow.local ENG
 
 
 Finally:
-* if you have 1 shard, use `snowplow.buffer` to insert / select data.
+* if you have 1 shard, use `snowplow.buffer` to insert/select data.
 * in other ways use `snowplow.clickstream`.
 * **do not use `snowplow.local` to insert data through `simple-snowplow`**
