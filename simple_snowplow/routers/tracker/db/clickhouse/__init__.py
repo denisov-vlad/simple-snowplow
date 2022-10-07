@@ -23,11 +23,23 @@ class ClickHouseConnector:
         self.cluster_condition = self._make_on_cluster(cluster_name)
         self.database = database
         self.params = params
+        self.tables = self.get_tables()
+        self.table = self.get_table_name()
 
-        if self.cluster:
-            self.table = f"{self.database}.clickstream"
-        else:
-            self.table = f"{self.database}.buffer"
+    def get_tables(self):
+
+        tables_names = {}
+
+        for table_type, table_name in self.params["tables_names"].items():
+            if table_name:
+                if "." in table_name:
+                    tables_names[table_type] = table_name
+                else:
+                    tables_names[table_type] = f"{self.database}.{table_name}"
+            else:
+                tables_names[table_type] = f"{self.database}.{table_type}"
+
+        return tables_names
 
     @staticmethod
     def _make_on_cluster(cluster_name: Optional[str] = None) -> str:
@@ -36,12 +48,18 @@ class ClickHouseConnector:
         return f"ON CLUSTER {cluster_name}"
 
     async def create_db(self):
-        await self.conn.execute(f"CREATE DATABASE IF NOT EXISTS {self.database}")
+        for table_name in self.tables.values():
+            db, table = table_name.split(".")
+            await self.conn.execute(
+                f"""
+                CREATE DATABASE IF NOT EXISTS {db} {self.cluster_condition}
+            """
+            )
 
     async def create_local_table(self):
         await self.conn.execute(
             f"""
-        CREATE TABLE IF NOT EXISTS {self.database}.local {self.cluster_condition}
+        CREATE TABLE IF NOT EXISTS {self.tables["local"]} {self.cluster_condition}
         (
             `app_id` LowCardinality(String),
             `platform` Enum8('web' = 1, 'mob' = 2, 'pc' = 3, 'srv' = 4, 'app' = 5, 'tv' = 6, 'cnsl' = 7, 'iot' = 8),
@@ -92,7 +110,7 @@ class ClickHouseConnector:
                 category LowCardinality(String),
                 label String,
                 property String,
-                value String,
+                value Float32,
                 unstructured String
             ),
             `extra` String DEFAULT '',
@@ -107,21 +125,27 @@ class ClickHouseConnector:
         )
 
     async def create_buffer_table(self):
+
+        local_db, local_table = self.tables["local"].split(".")
+
         await self.conn.execute(
             f"""
-        CREATE TABLE IF NOT EXISTS {self.database}.buffer {self.cluster_condition}
-        AS {self.database}.local ENGINE = Buffer(
-            '{self.database}', 'local', 16, 10, 100, 10000, 1000000, 10000000, 100000000
+        CREATE TABLE IF NOT EXISTS {self.tables["buffer"]}  {self.cluster_condition}
+        AS {self.tables["local"]} ENGINE = Buffer(
+            '{local_db}', '{local_table}', 16, 10, 100, 10000, 1000000, 10000000, 100000000
         );
         """
         )
 
     async def create_distributed_table(self):
+
+        buffer_db, buffer_table = self.tables["buffer"].split(".")
+
         await self.conn.execute(
             f"""
-        CREATE TABLE IF NOT EXISTS {self.database}.clickstream {self.cluster_condition}
-        AS {self.database}.local ENGINE = Distributed(
-            '{self.cluster}', '{self.database}', 'buffer', cityHash64(device_id)
+        CREATE TABLE IF NOT EXISTS {self.tables["distributed"]} {self.cluster_condition}
+        AS {self.tables["local"]} ENGINE = Distributed(
+            '{self.cluster}', '{buffer_db}', '{buffer_table}', cityHash64(device_id)
         );
         """
         )
@@ -180,4 +204,8 @@ class ClickHouseConnector:
                 )
 
     def get_table_name(self):
-        return self.table
+
+        if self.cluster:
+            return self.tables["distributed"]
+        else:
+            return self.tables["buffer"]

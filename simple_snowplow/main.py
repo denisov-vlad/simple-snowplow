@@ -20,7 +20,7 @@ app.include_router(app_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-if settings.common.debug:
+if settings.common.demo:
     app.include_router(demo_router)
     app.mount(
         "/demo", StaticFiles(directory="routers/demo/static", html=True), name="demo"
