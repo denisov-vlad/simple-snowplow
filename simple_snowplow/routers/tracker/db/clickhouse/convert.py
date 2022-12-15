@@ -7,6 +7,7 @@ table_fields = [
     {"column_name": "event_type", "payload_name": "e"},
     {"column_name": "event_id", "payload_name": "eid"},
     {"column_name": "view_id", "payload_name": "view_id"},
+    {"column_name": "view_id_amp", "payload_name": "view_id_amp"},
     {"column_name": "session_id", "payload_name": "sid"},
     {"column_name": "visit_count", "payload_name": "vid"},
     {
