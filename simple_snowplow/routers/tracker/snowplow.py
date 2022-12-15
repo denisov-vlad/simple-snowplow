@@ -8,8 +8,30 @@ from uuid import uuid4
 
 import elasticapm
 import orjson
+from config import settings
 from inflection import underscore
 from routers.tracker import models
+
+
+EMPTY_DICTS = (
+    "extra",
+    "user_data",
+    "page_data",
+    "screen_unstructured",
+    "session_unstructured",
+)
+EMPTY_STRINGS = (
+    "app_version",
+    "app_build",
+    "storage_mechanism",
+    "screen_type",
+    "screen_vc",
+    "screen_tvc",
+    "screen_activity",
+    "screen_fragment",
+)
+
+schemas = settings.common.snowplow.schemas
 
 
 @elasticapm.async_capture_span()
@@ -53,6 +75,8 @@ async def parse_payload(
     if event_context is not None:
         event_context = orjson.loads(event_context)
         element["ue"] = await parse_event(event_context)
+    else:
+        element["ue"] = {}
 
     if element.get("rtm") is None:
         element["rtm"] = datetime.utcnow()
@@ -132,19 +156,36 @@ async def parse_payload(
     if "screen_extra" in element and "screen_name" in element["screen_extra"]:
         element["url"] = element["screen_extra"].pop("screen_name")
 
+    if "se_pr" in element and element["se_pr"]:
+        try:
+            element["se_pr"] = orjson.loads(element["se_pr"])
+        except orjson.JSONDecodeError:
+            element["se_pr"] = {"ex-property": element["se_pr"]}
+    else:
+        element["se_pr"] = {}
+
+    if "se_va" in element and element["se_va"]:
+        if isinstance(element["se_va"], (float, int)):
+            pass
+        try:
+            element["se_va"] = float(element["se_va"])
+        except ValueError:
+            element["se_pr"]["ex-value"] = element["se_va"]
+            element["se_va"] = 0.0
+    else:
+        element["se_va"] = 0.0
+
     return element
 
 
 @elasticapm.async_capture_span()
 async def parse_contexts(contexts: dict) -> dict:
 
-    result = {
-        "extra": {},
-        "user_data": {},
-        "device_extra": {},
-        "session_extra": {},
-        "screen_extra": {},
-    }
+    result = {}
+    for col in EMPTY_DICTS:
+        result[col] = {}
+    for col in EMPTY_STRINGS:
+        result[col] = ""
 
     for item in contexts["data"]:
         if "schema" not in item:
@@ -173,8 +214,8 @@ async def parse_contexts(contexts: dict) -> dict:
             result["duid_amp"] = data["domainUserid"]
             result["uid_amp"] = data["userId"]
         elif schema.startswith("iglu:dev.amp.snowplow/amp_web_page"):
-            result["view_id"] = item["data"]["ampPageViewId"]
-        elif schema.startswith("iglu:dev.snowplow.simple/page_data"):
+            result["view_id_amp"] = item["data"]["ampPageViewId"]
+        elif schema.startswith(schemas.page_data):
             result["page_data"] = item["data"]
         elif schema.startswith("iglu:com.snowplowanalytics.snowplow/mobile_context"):
             result["device_brand"] = data.pop("deviceManufacturer")
@@ -185,27 +226,39 @@ async def parse_contexts(contexts: dict) -> dict:
             result["os_version_string"] = data.pop("osVersion")
             result["os_version"] = result["os_version_string"].split(".")
             result["device_is"] = (1, 0, 1, 0, 0)
-            for k, v in data.items():
-                result["device_extra"][underscore(k)] = v
+            result["carrier"] = data.get("carrier", "")
+            result["network_type"] = data.get("networkType", "")
+            result["network_technology"] = data.get("networkTechnology", "")
+            result["open_idfa"] = data.get("openIdfa", "")
+            result["apple_idfa"] = data.get("appleIdfa", "")
+            result["apple_idfv"] = data.get("appleIdfv", "")
+            result["android_idfa"] = data.get("androidIdfa", "")
         elif schema.startswith("iglu:com.snowplowanalytics.mobile/application/"):
-            result["app_extra"] = item["data"]
+            result["app_version"] = item["data"]["version"]
+            result["app_build"] = item["data"]["build"]
         elif schema.startswith("iglu:com.snowplowanalytics.snowplow/client_session"):
             result["vid"] = data.pop("sessionIndex")
             result["sid"] = data.pop("sessionId")
             result["duid"] = data.pop("userId")
-            for k, v in data.items():
-                result["session_extra"][underscore(k)] = v
+            result["previous_session_id"] = data.get("previousSessionId", "")
+            result["first_event_id"] = data.get("firstEventId", "")
+            result["storage_mechanism"] = data.get("storageMechanism", "")
         elif schema.startswith("iglu:com.snowplowanalytics.mobile/screen/"):
             # data is duplicated in event field is it's view
             result["url"] = data.pop("name")
             result["view_id"] = data.pop("id")
-            for key in ("activity", "type"):
-                if key in data:
-                    result["screen_extra"][key] = data.pop(key)
-        elif schema.startswith("iglu:dev.snowplow.simple/screen_data"):
+
+            result["screen_type"] = data.get("type", "")
+            result["screen_vc"] = data.get("viewController", "")
+            result["screen_tvc"] = data.get("topViewController", "")
+            result["screen_activity"] = data.get("activity", "")
+            result["screen_fragment"] = data.get("fragment", "")
+        elif schema.startswith(schemas.screen_data):
+            if "screen_unstructured" not in result:
+                result["screen_unstructured"] = {}
             for k, v in data.items():
-                result["screen_extra"][k] = v
-        elif schema.startswith("iglu:dev.snowplow.simple/user_data"):
+                result["screen_unstructured"][k] = v
+        elif schema.startswith(schemas.user_data):
             for k, v in data.items():
                 result["user_data"][k] = v
         else:

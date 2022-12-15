@@ -63,15 +63,24 @@ class ClickHouseConnector:
         (
             `app_id` LowCardinality(String),
             `platform` Enum8('web' = 1, 'mob' = 2, 'pc' = 3, 'srv' = 4, 'app' = 5, 'tv' = 6, 'cnsl' = 7, 'iot' = 8),
-            `app_extra` String DEFAULT '',
+            `app_extra` Tuple(
+                version String,
+                build String
+            ),
             `page` String DEFAULT '',
             `referer` Nullable(String) DEFAULT NULL,
             `event_type` Enum8('pv' = 1, 'pp' = 2, 'ue' = 3, 'se' = 4, 'tr' = 5, 'ti' = 6, 's' = 7),
             `event_id` UUID,
-            `view_id` String DEFAULT '',
+            `view_id` UUID,
+            `view_id_amp` String DEFAULT '',
             `session_id` UUID,
             `visit_count` Nullable(UInt32),
-            `session_extra` String DEFAULT '',
+            `session_extra` Tuple(
+                previous_session_id Nullable(UUID),
+                first_event_id Nullable(UUID),
+                storage_mechanism LowCardinality(String),
+                unstructured JSON
+            ),
             `device_id` UUID,
             `device_id_amp` Nullable(String) DEFAULT NULL,
             `user_id` Nullable(String) DEFAULT NULL,
@@ -79,9 +88,15 @@ class ClickHouseConnector:
             `timezone` Nullable(String) DEFAULT NULL,
             `time_extra` Tuple(`time_user` DateTime64(3, 'UTC'), `time_sent` DateTime64(3, 'UTC')),
             `title` Nullable(String) DEFAULT NULL,
-            `screen_extra` String DEFAULT '',
-            `page_data` String DEFAULT '',
-            `user_data` String DEFAULT '',
+            `screen_extra` Tuple(
+                type String,
+                view_controller String,
+                top_view_controller String,
+                activity String,
+                fragment String,
+                unstructured JSON),
+            `page_data` JSON,
+            `user_data` JSON,
             `user_ip` IPv4,
             `user_agent` String DEFAULT '',
             `browser` Tuple(
@@ -103,7 +118,14 @@ class ClickHouseConnector:
                 model LowCardinality(String)
             ),
             `device_is` Tuple(mobile Int8, tablet Int8, touch Int8, pc Int8, bot Int8),
-            `device_extra` String DEFAULT '',
+            `device_extra` Tuple(
+                carrier LowCardinality(String),
+                network_type Enum8('' = 1, 'mobile' = 2, 'wifi' = 3, 'offline' = 4),
+                network_technology LowCardinality(String),
+                open_idfa String,
+                apple_idfa String,
+                apple_idfv String,
+                android_idfa String),
             `resolution` Tuple(browser String, viewport String, page String),
             `event` Tuple(
                 action LowCardinality(String),
@@ -111,9 +133,9 @@ class ClickHouseConnector:
                 label String,
                 property String,
                 value Float32,
-                unstructured String
+                unstructured JSON
             ),
-            `extra` String DEFAULT '',
+            `extra` JSON,
             `tracker` Tuple(version LowCardinality(String), namespace LowCardinality(String))
         )
         ENGINE = {self.engine}
@@ -153,7 +175,7 @@ class ClickHouseConnector:
     async def create_all(self):
         await self.create_db()
         await self.create_local_table()
-        await self.create_buffer_table()
+        # await self.create_buffer_table()
 
         if self.cluster:
             await self.create_distributed_table()
@@ -161,15 +183,10 @@ class ClickHouseConnector:
     @staticmethod
     async def _convert_types(value):
         if isinstance(value, dict):
-            # insert empty dict `{}` as empty string
-            if not value:
-                value = ""
-            else:
-                value = str(dumps(value), "utf-8")
+            value = str(dumps(value), "utf-8")
         elif isinstance(value, datetime):
             # clickhouse driver doesn't support Datetime64 insert from datetime type
             value = value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-
         return value
 
     @elasticapm.async_capture_span()
@@ -208,4 +225,4 @@ class ClickHouseConnector:
         if self.cluster:
             return self.tables["distributed"]
         else:
-            return self.tables["buffer"]
+            return self.tables["local"]

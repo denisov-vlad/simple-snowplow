@@ -2,6 +2,10 @@
 service_name = "simple-snowplow"
 database = "clickhouse"
 demo = false
+[common.snowplow.schemas]
+user_data = "iglu:dev.snowplow.simple/user_data"
+page_data = "iglu:dev.snowplow.simple/page_data"
+screen_data = "iglu:dev.snowplow.simple/screen_data"
 
 [elastic_apm]
 enabled = false

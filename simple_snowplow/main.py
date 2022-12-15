@@ -61,7 +61,7 @@ async def startup_event():
 
     app.state.ch_client = ChClient(
         app.state.ch_session,
-        **settings.clickhouse.connection  # , compress_response=True
+        **settings.clickhouse.connection,
     )
 
     app.state.connector = ClickHouseConnector(

@@ -11,6 +11,7 @@ services:
       - "8000:80"
     environment:
       - "SNOWPLOW_COMMON__DEMO=true"
+#      - "SNOWPLOW_COMMON__SNOWPLOW__SCHEMAS__USER_DATA=iglu:ru.sports/page_data"
     restart: on-failure
     command: "/start-reload.sh"
     depends_on:
@@ -18,8 +19,18 @@ services:
 
   clickhouse:
     container_name: simple-snowplow-ch
-    image: yandex/clickhouse-server:latest
+    build:
+      context: clickhouse
+      dockerfile: Dockerfile
+    environment:
+      - "ALLOW_EMPTY_PASSWORD=yes"
     ports:
       - "8123:8123"
       - "9000:9000"
       - "9009:9009"
+
+  clickhouse-bulk:
+    container_name: simple-snowplow-chbulk
+    image: nikepan/clickhouse-bulk:1.3.7
+    ports:
+      - "8124:8124"
