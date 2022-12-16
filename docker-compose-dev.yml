@@ -11,7 +11,6 @@ services:
       - "8000:80"
     environment:
       - "SNOWPLOW_COMMON__DEMO=true"
-#      - "SNOWPLOW_COMMON__SNOWPLOW__SCHEMAS__USER_DATA=iglu:ru.sports/page_data"
     restart: on-failure
     command: "/start-reload.sh"
     depends_on:

@@ -12,7 +12,7 @@ docker-compose up
 
 
 ### Production
-1. Install [ClickHouse](https://clickhouse.com/docs/en/quick-start).
+1. Install [ClickHouse](https://clickhouse.com/docs/en/quick-start) >= 22.11.
 2. Build docker image:
 ```shell
 docker build -t simple-snowplow ./simple_snowplow
