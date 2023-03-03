@@ -6,6 +6,7 @@ demo = false
 user_data = "iglu:dev.snowplow.simple/user_data"
 page_data = "iglu:dev.snowplow.simple/page_data"
 screen_data = "iglu:dev.snowplow.simple/screen_data"
+ad_data = "iglu:dev.snowplow.simple/ad_data"
 
 [elastic_apm]
 enabled = false

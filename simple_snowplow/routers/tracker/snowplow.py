@@ -107,10 +107,8 @@ async def parse_payload(
         }
 
     # AMP specific
-    if element.get("duid_amp", ""):
-        element["duid"] = element["duid_amp"]
-    if element.get("uid_amp", ""):
-        element["uid"] = element["uid_amp"]
+    if element.get("amp_uid", ""):
+        element["uid"] = element["amp_uid"]
     if element["e"] == "ue" and "amp_page_ping" in element["ue"]:
         element["e"] = "pp"
         element["extra"]["amp_page_ping"] = element["ue"].pop("amp_page_ping")
@@ -123,9 +121,9 @@ async def parse_payload(
 
     if query_string.get("sp_amp_linker", []):
         amp_linker = query_string["sp_amp_linker"][0]
-        unknown_1, unknown_2, unknown_3, device_id_amp = amp_linker.split("*")
-        device_id_amp = await parse_base64(device_id_amp)
-        element["device_id_amp"] = device_id_amp
+        unknown_1, unknown_2, unknown_3, amp_device_id = amp_linker.split("*")
+        amp_device_id = await parse_base64(amp_device_id)
+        element["amp_device_id"] = amp_device_id
 
     sp_cookies = await parse_cookies(cookies)
     if sp_cookies:
@@ -210,21 +208,18 @@ async def parse_contexts(contexts: dict) -> dict:
         elif schema.startswith("iglu:com.snowplowanalytics.snowplow/web_page"):
             result["view_id"] = item["data"]["id"]
         elif schema.startswith("iglu:dev.amp.snowplow/amp_id"):
-            result["device_id_amp"] = data["ampClientId"]
-            result["duid_amp"] = data["domainUserid"]
-            result["uid_amp"] = data["userId"]
+            result["amp_client_id"] = data["ampClientId"]
+            result["amp_device_id"] = data.get("domainUserid", "")
+            result["amp_uid"] = data("userId", "")
         elif schema.startswith("iglu:dev.amp.snowplow/amp_web_page"):
-            result["view_id_amp"] = item["data"]["ampPageViewId"]
+            result["amp_view_id"] = item["data"]["ampPageViewId"]
         elif schema.startswith(schemas.page_data):
             result["page_data"] = item["data"]
         elif schema.startswith("iglu:com.snowplowanalytics.snowplow/mobile_context"):
             result["device_brand"] = data.pop("deviceManufacturer")
             result["device_model"] = data.pop("deviceModel")
-            device_family = f"{result['device_brand']} {result['device_model']}"
-            result["device_family"] = device_family
             result["os_family"] = data.pop("osType")
             result["os_version_string"] = data.pop("osVersion")
-            result["os_version"] = result["os_version_string"].split(".")
             result["device_is"] = (1, 0, 1, 0, 0)
             result["carrier"] = data.get("carrier", "")
             result["network_type"] = data.get("networkType", "")
@@ -233,6 +228,9 @@ async def parse_contexts(contexts: dict) -> dict:
             result["apple_idfa"] = data.get("appleIdfa", "")
             result["apple_idfv"] = data.get("appleIdfv", "")
             result["android_idfa"] = data.get("androidIdfa", "")
+            result["battery_level"] = data.get("batteryLevel", "")
+            result["battery_state"] = data.get("batteryState", "")
+            result["low_power_mode"] = data.get("lowPowerMode", "")
         elif schema.startswith("iglu:com.snowplowanalytics.mobile/application/"):
             result["app_version"] = item["data"]["version"]
             result["app_build"] = item["data"]["build"]
@@ -240,6 +238,10 @@ async def parse_contexts(contexts: dict) -> dict:
             result["vid"] = data.pop("sessionIndex")
             result["sid"] = data.pop("sessionId")
             result["duid"] = data.pop("userId")
+            result["event_index"] = data.get("eventIndex")
+            first_event_time = data.get("firstEventTimestamp")
+            if first_event_time is not None:
+                result["first_event_time"] = datetime.fromisoformat(first_event_time)
             result["previous_session_id"] = data.get("previousSessionId", "")
             result["first_event_id"] = data.get("firstEventId", "")
             result["storage_mechanism"] = data.get("storageMechanism", "")
@@ -247,7 +249,6 @@ async def parse_contexts(contexts: dict) -> dict:
             # data is duplicated in event field is it's view
             result["url"] = data.pop("name")
             result["view_id"] = data.pop("id")
-
             result["screen_type"] = data.get("type", "")
             result["screen_vc"] = data.get("viewController", "")
             result["screen_tvc"] = data.get("topViewController", "")
@@ -261,6 +262,8 @@ async def parse_contexts(contexts: dict) -> dict:
         elif schema.startswith(schemas.user_data):
             for k, v in data.items():
                 result["user_data"][k] = v
+        elif schema.startswith(schemas.ad_data):
+            result["extra"]["ad_data"] = item["data"]
         else:
             print(item)  # add warning
 

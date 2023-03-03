@@ -72,17 +72,28 @@ class ClickHouseConnector:
             `event_type` Enum8('pv' = 1, 'pp' = 2, 'ue' = 3, 'se' = 4, 'tr' = 5, 'ti' = 6, 's' = 7),
             `event_id` UUID,
             `view_id` UUID,
-            `view_id_amp` String DEFAULT '',
             `session_id` UUID,
-            `visit_count` Nullable(UInt32),
+            `visit_count` Nullable(UInt64),
             `session_extra` Tuple(
+                event_index Nullable(UInt64),
                 previous_session_id Nullable(UUID),
                 first_event_id Nullable(UUID),
+                first_event_time Nullable(DateTime64(3, 'UTC')),
                 storage_mechanism LowCardinality(String),
                 unstructured JSON
             ),
+
+            amp_extra Tuple(
+                device_id String,
+                client_id String,
+                session_id UInt64,
+                visit_count UInt64,
+                session_engaged UInt8,
+                first_event_time Nullable(DateTime64(3, 'UTC')),
+                previous_session_time Nullable(DateTime64(3, 'UTC')),
+                view_id String
+            ),
             `device_id` UUID,
-            `device_id_amp` Nullable(String) DEFAULT NULL,
             `user_id` Nullable(String) DEFAULT NULL,
             `time` DateTime64(3, 'UTC'),
             `timezone` Nullable(String) DEFAULT NULL,
@@ -101,19 +112,16 @@ class ClickHouseConnector:
             `user_agent` String DEFAULT '',
             `browser` Tuple(
                 family LowCardinality(String),
-                version Array(String),
-                version_string String,
+                version String,
                 cookie UInt8,
                 charset LowCardinality(String),
                 color_depth UInt8),
             `os` Tuple(
                 family LowCardinality(String),
-                version Array(String),
-                version_string String,
+                version String,
                 language LowCardinality(String)
             ),
             `device` Tuple(
-                family LowCardinality(String),
                 brand LowCardinality(String),
                 model LowCardinality(String)
             ),
@@ -125,7 +133,11 @@ class ClickHouseConnector:
                 open_idfa String,
                 apple_idfa String,
                 apple_idfv String,
-                android_idfa String),
+                android_idfa String,
+                battery_level UInt8,
+                battery_state Enum8('' = 1, 'unplugged' = 2, 'charging' = 3, 'full' = 4),
+                low_power_mode UInt8
+            ),
             `resolution` Tuple(browser String, viewport String, page String),
             `event` Tuple(
                 action LowCardinality(String),

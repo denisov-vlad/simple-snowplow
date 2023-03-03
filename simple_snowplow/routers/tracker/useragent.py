@@ -13,7 +13,6 @@ async def parse_agent(string: str) -> dict:
         "os_family": user_agent.os.family,
         "os_version": [str(i) for i in user_agent.os.version],
         "os_version_string": user_agent.os.version_string,
-        "device_family": user_agent.device.family,
         "device_brand": user_agent.device.brand,
         "device_model": user_agent.device.model,
         "device_is": (
