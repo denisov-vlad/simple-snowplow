@@ -24,5 +24,4 @@ cluster_name = ""
 engine = "MergeTree()"
 [clickhouse.configuration.tables_names]
 local = ""
-buffer = ""
 distributed = ""

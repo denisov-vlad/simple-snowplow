@@ -30,9 +30,9 @@ docker run -d -p 8000:80 simple-snowplow
 2. Open the `Network` tab, and you will see request to the `/tracker` endpoint.
 3. Open clickhouse client: `docker exec -it simple-snowplow-ch clickhouse-client`
 4. Check data in a table:
-```clickhouse
-SELECT * FROM snowplow.buffer LIMIT 1
-```
+    ```clickhouse
+    SELECT * FROM snowplow.local LIMIT 1
+    ```
 5. Done!
 
 ### Production

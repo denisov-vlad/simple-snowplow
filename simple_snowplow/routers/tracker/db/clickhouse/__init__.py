@@ -160,26 +160,29 @@ class ClickHouseConnector:
 
     async def create_buffer_table(self):
 
-        local_db, local_table = self.tables["local"].split(".")
+        source_db, source_table = self.tables["local"].split(".")
 
         await self.conn.execute(
             f"""
         CREATE TABLE IF NOT EXISTS {self.tables["buffer"]}  {self.cluster_condition}
         AS {self.tables["local"]} ENGINE = Buffer(
-            '{local_db}', '{local_table}', 16, 10, 100, 10000, 1000000, 10000000, 100000000
+            '{source_db}', '{source_table}', 16, 10, 100, 10000, 1000000, 10000000, 100000000
         );
         """
         )
 
     async def create_distributed_table(self):
 
-        buffer_db, buffer_table = self.tables["buffer"].split(".")
+        if "buffer" in self.tables:
+            source_db, source_table = self.tables["buffer"].split(".")
+        else:
+            source_db, source_table = self.tables["local"].split(".")
 
         await self.conn.execute(
             f"""
         CREATE TABLE IF NOT EXISTS {self.tables["distributed"]} {self.cluster_condition}
         AS {self.tables["local"]} ENGINE = Distributed(
-            '{self.cluster}', '{buffer_db}', '{buffer_table}', cityHash64(device_id)
+            '{self.cluster}', '{source_db}', '{source_table}', cityHash64(device_id)
         );
         """
         )
@@ -187,7 +190,8 @@ class ClickHouseConnector:
     async def create_all(self):
         await self.create_db()
         await self.create_local_table()
-        # await self.create_buffer_table()
+        if "buffer" in self.tables:
+            await self.create_buffer_table()
 
         if self.cluster:
             await self.create_distributed_table()
