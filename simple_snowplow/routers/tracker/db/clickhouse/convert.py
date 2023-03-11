@@ -1,7 +1,7 @@
 table_fields = [
     {"column_name": "app_id", "payload_name": "aid"},
     {"column_name": "platform", "payload_name": "p"},
-    {"column_name": "app_extra", "payload_name": ("app_version", "app_build")},
+    {"column_name": "app", "payload_name": ("app_version", "app_build")},
     {"column_name": "page", "payload_name": "url"},
     {"column_name": "referer", "payload_name": "refr"},
     {"column_name": "event_type", "payload_name": "e"},
@@ -10,7 +10,7 @@ table_fields = [
     {"column_name": "session_id", "payload_name": "sid"},
     {"column_name": "visit_count", "payload_name": "vid"},
     {
-        "column_name": "session_extra",
+        "column_name": "session",
         "payload_name": (
             "event_index",
             "previous_session_id",
@@ -21,7 +21,7 @@ table_fields = [
         ),
     },
     {
-        "column_name": "amp_extra",
+        "column_name": "amp",
         "payload_name": (
             "amp_device_id",
             "amp_client_id",
@@ -40,7 +40,7 @@ table_fields = [
     {"column_name": "timezone", "payload_name": "tz"},
     {"column_name": "title", "payload_name": "page"},
     {
-        "column_name": "screen_extra",
+        "column_name": "screen",
         "payload_name": (
             "screen_type",
             "screen_vc",

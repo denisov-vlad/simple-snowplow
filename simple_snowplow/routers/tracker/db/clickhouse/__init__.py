@@ -30,7 +30,7 @@ class ClickHouseConnector:
 
         tables_names = {}
 
-        for table_type, table_name in self.params["tables_names"].items():
+        for table_type, table_name in self.params["tables"].items():
             if table_name:
                 if "." in table_name:
                     tables_names[table_type] = table_name
@@ -63,7 +63,7 @@ class ClickHouseConnector:
         (
             `app_id` LowCardinality(String),
             `platform` Enum8('web' = 1, 'mob' = 2, 'pc' = 3, 'srv' = 4, 'app' = 5, 'tv' = 6, 'cnsl' = 7, 'iot' = 8),
-            `app_extra` Tuple(
+            `app` Tuple(
                 version String,
                 build String
             ),
@@ -74,7 +74,7 @@ class ClickHouseConnector:
             `view_id` UUID,
             `session_id` UUID,
             `visit_count` Nullable(UInt64),
-            `session_extra` Tuple(
+            `session` Tuple(
                 event_index Nullable(UInt64),
                 previous_session_id Nullable(UUID),
                 first_event_id Nullable(UUID),
@@ -83,7 +83,7 @@ class ClickHouseConnector:
                 unstructured JSON
             ),
 
-            amp_extra Tuple(
+            `amp` Tuple(
                 device_id String,
                 client_id String,
                 session_id UInt64,
@@ -99,7 +99,7 @@ class ClickHouseConnector:
             `timezone` Nullable(String) DEFAULT NULL,
             `time_extra` Tuple(`time_user` DateTime64(3, 'UTC'), `time_sent` DateTime64(3, 'UTC')),
             `title` Nullable(String) DEFAULT NULL,
-            `screen_extra` Tuple(
+            `screen` Tuple(
                 type String,
                 view_controller String,
                 top_view_controller String,

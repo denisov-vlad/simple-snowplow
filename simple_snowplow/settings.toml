@@ -22,6 +22,6 @@ user = "default"
 database = "snowplow"
 cluster_name = ""
 engine = "MergeTree()"
-[clickhouse.configuration.tables_names]
+[clickhouse.configuration.tables]
 local = ""
 distributed = ""
