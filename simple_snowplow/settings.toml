@@ -18,6 +18,8 @@ enabled = false
 [clickhouse.connection]
 url = "http://clickhouse:8123"
 user = "default"
+database = "default"
+password = ""
 [clickhouse.configuration]
 database = "snowplow"
 cluster_name = ""
