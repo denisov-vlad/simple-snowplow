@@ -3,14 +3,20 @@ FROM python:3.11-alpine3.17 as builder
 
 ENV SCRIPTS_VERSION=3.8.0
 ENV SCRIPTS_OUTPUT_DIR=/app/static
+ENV CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-COPY ./requirements.txt /app/requirements.txt
-COPY ./utils /app/utils/
 
 RUN apk update
-RUN apk add --no-cache gcc g++ musl-dev rust cargo patchelf wget
-RUN python -m pip install --no-cache-dir --upgrade pip setuptools
-RUN python -m pip install --no-cache-dir -r /app/requirements.txt
+RUN apk add gcc g++ rust musl-dev cargo patchelf wget maturin git
+RUN git clone -b 3.8.7 https://github.com/ijl/orjson.git
+RUN cd orjson && maturin build --release --strip
+RUN python -m pip install --upgrade pip setuptools wheel
+RUN python -m pip install --no-index --find-links=/orjson/target/wheels orjson
+
+COPY ./requirements.txt /app/requirements.txt
+RUN python -m pip install -r /app/requirements.txt
+
+COPY ./utils /app/utils/
 RUN sh /app/utils/download_scripts.sh
 
 FROM python:3.11-alpine3.17
