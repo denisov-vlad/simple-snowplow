@@ -12,7 +12,7 @@ services:
     environment:
       - "SNOWPLOW_COMMON__DEMO=true"
     restart: on-failure
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload", "--log-level", "info"]
     depends_on:
       - clickhouse
 

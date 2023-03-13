@@ -2,7 +2,7 @@ version: '3'
 services:
   simple-snowplow:
     container_name: snowplow
-    image: vladenisov/simple-snowplow:0.0.1
+    image: vladenisov/simple-snowplow:latest
     ports:
       - "8000:80"
     environment:

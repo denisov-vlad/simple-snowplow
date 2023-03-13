@@ -10,6 +10,7 @@ import elasticapm
 import orjson
 from config import settings
 from inflection import underscore
+from loguru import logger
 from routers.tracker import models
 
 
@@ -187,7 +188,7 @@ async def parse_contexts(contexts: dict) -> dict:
 
     for item in contexts["data"]:
         if "schema" not in item:
-            print(item)
+            logger.warning("Empty schema for payload {}", item)
             continue
 
         schema = item["schema"]
@@ -265,7 +266,7 @@ async def parse_contexts(contexts: dict) -> dict:
         elif schema.startswith(schemas.ad_data):
             result["extra"]["ad_data"] = item["data"]
         else:
-            print(item)  # add warning
+            logger.warning("Schema {} has no parser", schema)
 
     return result
 

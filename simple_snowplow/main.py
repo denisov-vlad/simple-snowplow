@@ -6,15 +6,16 @@ from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from plugins.logger import init_logging
 from routers.demo import router as demo_router
 from routers.tracker import router as app_router
 from routers.tracker.db import ClickHouseConnector
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
 
-
 app = FastAPI()
 
+init_logging()
 
 app.include_router(app_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
