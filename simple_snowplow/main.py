@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from aiochclient import ChClient
 from aiohttp import ClientSession
 from brotli_asgi import BrotliMiddleware
@@ -13,7 +15,28 @@ from routers.tracker.db import ClickHouseConnector
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(application):
+    application.state.ch_session = ClientSession()
+
+    application.state.ch_client = ChClient(
+        application.state.ch_session,
+        **settings.clickhouse.connection,
+    )
+
+    application.state.connector = ClickHouseConnector(
+        application.state.ch_client, **settings.clickhouse.configuration
+    )
+
+    await application.state.connector.create_all()
+
+    yield
+
+    await application.state.ch_session.close()
+
+
+app = FastAPI(lifespan=lifespan)
 
 init_logging()
 
@@ -54,27 +77,6 @@ if settings.prometheus.enabled:
         group_paths=True,
     )
     app.add_route("/metrics/", handle_metrics)
-
-
-@app.on_event("startup")
-async def startup_event():
-    app.state.ch_session = ClientSession()
-
-    app.state.ch_client = ChClient(
-        app.state.ch_session,
-        **settings.clickhouse.connection,
-    )
-
-    app.state.connector = ClickHouseConnector(
-        app.state.ch_client, **settings.clickhouse.configuration
-    )
-
-    await app.state.connector.create_all()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await app.state.ch_session.close()
 
 
 @app.get("/", include_in_schema=True)
