@@ -158,19 +158,20 @@ async def parse_payload(
     if "se_pr" in element and element["se_pr"]:
         try:
             element["se_pr"] = orjson.loads(element["se_pr"])
+            if not isinstance(element["se_pr"], dict):
+                element["se_pr"] = {}
         except orjson.JSONDecodeError:
             element["se_pr"] = {"ex-property": element["se_pr"]}
     else:
         element["se_pr"] = {}
 
     if "se_va" in element and element["se_va"]:
-        if isinstance(element["se_va"], (float, int)):
-            pass
-        try:
-            element["se_va"] = float(element["se_va"])
-        except ValueError:
-            element["se_pr"]["ex-value"] = element["se_va"]
-            element["se_va"] = 0.0
+        if not isinstance(element["se_va"], (float, int)):
+            try:
+                element["se_va"] = float(element["se_va"])
+            except ValueError:
+                element["se_pr"]["ex-value"] = element["se_va"]
+                element["se_va"] = 0.0
     else:
         element["se_va"] = 0.0
 

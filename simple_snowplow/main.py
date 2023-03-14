@@ -36,7 +36,7 @@ async def lifespan(application):
     await application.state.ch_session.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="Simple Snowplow", version="0.0.8", lifespan=lifespan)
 
 init_logging()
 
