@@ -12,13 +12,11 @@ class ClickHouseConnector:
     def __init__(
         self,
         conn: ChClient,
-        engine: str,
         cluster_name: Optional[str] = None,
         database: str = "snowplow",
         **params,
     ):
         self.conn = conn
-        self.engine = engine
         self.cluster = cluster_name
         self.cluster_condition = self._make_on_cluster(cluster_name)
         self.database = database
@@ -30,7 +28,10 @@ class ClickHouseConnector:
 
         tables_names = {}
 
-        for table_type, table_name in self.params["tables"].items():
+        for table_type, table_info in self.params["tables"].items():
+            table_name = table_info["name"]
+            if not table_info.get("enabled", True):
+                continue
             if table_name:
                 if "." in table_name:
                     tables_names[table_type] = table_name
@@ -150,9 +151,9 @@ class ClickHouseConnector:
             `extra` JSON,
             `tracker` Tuple(version LowCardinality(String), namespace LowCardinality(String))
         )
-        ENGINE = {self.engine}
+        ENGINE = {self.params["tables"]["local"]["engine"]}
         PARTITION BY (toYYYYMM(time), event_type)
-        ORDER BY ({self.params["order_by"]})
+        ORDER BY ({self.params["tables"]["local"]["order_by"]})
         SAMPLE BY cityHash64(device_id)
         SETTINGS index_granularity = 8192;
         """
@@ -233,7 +234,9 @@ class ClickHouseConnector:
 
             async with elasticapm.async_capture_span("clickhouse_query"):
                 await self.conn.execute(
-                    f"INSERT INTO {self.table} {columns_names} VALUES ", tuple(row)
+                    f"INSERT INTO {self.table} {columns_names} "
+                    f"SETTINGS async_insert=1, wait_for_async_insert=0 VALUES ",
+                    tuple(row),
                 )
 
     def get_table_name(self):
