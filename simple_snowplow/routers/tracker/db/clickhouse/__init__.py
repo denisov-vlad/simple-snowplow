@@ -152,7 +152,7 @@ class ClickHouseConnector:
         )
         ENGINE = {self.engine}
         PARTITION BY (toYYYYMM(time), event_type)
-        ORDER BY (time, app_id, platform, event_type, device_id, cityHash64(device_id), session_id, view_id, page, event_id)
+        ORDER BY ({self.params["order_by"]})
         SAMPLE BY cityHash64(device_id)
         SETTINGS index_granularity = 8192;
         """
