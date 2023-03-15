@@ -1,4 +1,4 @@
-FROM clickhouse/clickhouse-server:22.11.2
+FROM clickhouse/clickhouse-server:23.2.4.12
 
 RUN apt-get update && apt-get install -y xmlstarlet \
     && xmlstarlet ed --inplace --subnode '/clickhouse/profiles/default' --type elem \
