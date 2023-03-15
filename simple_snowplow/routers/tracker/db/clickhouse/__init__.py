@@ -137,7 +137,7 @@ class ClickHouseConnector:
                 android_idfa String,
                 battery_level UInt8,
                 battery_state Enum8('' = 1, 'unplugged' = 2, 'charging' = 3, 'full' = 4),
-                low_power_mode UInt8
+                low_power_mode Int8
             ),
             `resolution` Tuple(browser String, viewport String, page String),
             `event` Tuple(

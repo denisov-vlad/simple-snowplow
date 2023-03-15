@@ -149,11 +149,14 @@ async def parse_payload(
         else:
             element["referer"] = None
         for k, v in element["ue"]["screen_view"].items():
-            element["screen_extra"][underscore(k)] = v
+            element["screen_unstructured"][underscore(k)] = v
         _ = element["ue"].pop("screen_view")
 
-    if "screen_extra" in element and "screen_name" in element["screen_extra"]:
-        element["url"] = element["screen_extra"].pop("screen_name")
+    if (
+        "screen_unstructured" in element
+        and "screen_name" in element["screen_unstructured"]
+    ):
+        element["url"] = element["screen_unstructured"].pop("screen_name")
 
     if "se_pr" in element and element["se_pr"]:
         try:
@@ -212,7 +215,7 @@ async def parse_contexts(contexts: dict) -> dict:
         elif schema.startswith("iglu:dev.amp.snowplow/amp_id"):
             result["amp_client_id"] = data["ampClientId"]
             result["amp_device_id"] = data.get("domainUserid", "")
-            result["amp_uid"] = data("userId", "")
+            result["amp_uid"] = data.get("userId", "")
         elif schema.startswith("iglu:dev.amp.snowplow/amp_web_page"):
             result["amp_view_id"] = item["data"]["ampPageViewId"]
         elif schema.startswith(schemas.page_data):
@@ -232,7 +235,7 @@ async def parse_contexts(contexts: dict) -> dict:
             result["android_idfa"] = data.get("androidIdfa", "")
             result["battery_level"] = data.get("batteryLevel", "")
             result["battery_state"] = data.get("batteryState", "")
-            result["low_power_mode"] = data.get("lowPowerMode", "")
+            result["low_power_mode"] = data.get("lowPowerMode", -1)
         elif schema.startswith("iglu:com.snowplowanalytics.mobile/application/"):
             result["app_version"] = item["data"]["version"]
             result["app_build"] = item["data"]["build"]
