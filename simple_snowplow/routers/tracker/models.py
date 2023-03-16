@@ -48,11 +48,15 @@ class PayloadElementBaseModel(LoggerBaseModel):
     res: str = Query(..., title="Screen / monitor resolution")
     se_ac: str = Query("", title="Event action", description="Only for event_type = se")
     se_ca: str = Query(
-        "", title="Event category", description="Only for event_type = se"
+        "",
+        title="Event category",
+        description="Only for event_type = se",
     )
     se_la: str = Query("", title="Event label", description="Only for event_type = se")
     se_pr: str = Query(
-        "", title="Event property", description="Only for event_type = se"
+        "",
+        title="Event property",
+        description="Only for event_type = se",
     )
     se_va: str = Query("", title="Event value", description="Only for event_type = se")
     sid: str = Query(
@@ -69,7 +73,8 @@ class PayloadElementBaseModel(LoggerBaseModel):
     ue_pr: str = Query("", title="The properties of the event")
     ue_px: str = Query("", title="The properties of the event (b64)")
     uid: Optional[str] = Query(
-        None, title="Unique identifier for user, set by the business using setUserId"
+        None,
+        title="Unique identifier for user, set by the business using setUserId",
     )
     url: str = Query("", title="Page URL")
     vid: Optional[int] = Query(

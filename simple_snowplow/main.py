@@ -20,23 +20,36 @@ from starlette.status import HTTP_502_BAD_GATEWAY
 async def lifespan(application):
     application.state.ch_session = ClientSession()
 
-    application.state.ch_client = ChClient(
-        application.state.ch_session,
-        **settings.clickhouse.connection,
-    )
+    ch_conn = settings.clickhouse.connection
+    ch_bulk_conn = ch_conn.pop("bulk")
+    ch_config = settings.clickhouse.configuration
 
+    application.state.ch_client = ChClient(application.state.ch_session, **ch_conn)
     application.state.connector = ClickHouseConnector(
-        application.state.ch_client, **settings.clickhouse.configuration
+        application.state.ch_client, **ch_config
     )
-
     await application.state.connector.create_all()
+
+    if ch_bulk_conn["enabled"]:
+        await application.state.ch_client.close()
+        await application.state.ch_session.close()
+
+        application.state.ch_session = ClientSession()
+
+        ch_conn["url"] = ch_bulk_conn["url"]
+        ch_config["chbulk_enabled"] = True
+        application.state.ch_client = ChClient(application.state.ch_session, **ch_conn)
+        application.state.connector = ClickHouseConnector(
+            application.state.ch_client, **ch_config
+        )
 
     yield
 
+    await application.state.ch_client.close()
     await application.state.ch_session.close()
 
 
-app = FastAPI(title="Simple Snowplow", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Simple Snowplow", version="0.1.1", lifespan=lifespan)
 
 init_logging()
 
@@ -47,7 +60,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 if settings.common.demo:
     app.include_router(demo_router)
     app.mount(
-        "/demo", StaticFiles(directory="routers/demo/static", html=True), name="demo"
+        "/demo",
+        StaticFiles(directory="routers/demo/static", html=True),
+        name="demo",
     )
 
 
@@ -89,7 +104,7 @@ async def probe():
             return JSONResponse(content=status, status_code=HTTP_502_BAD_GATEWAY)
 
     result = JSONResponse(
-        content={"status": status, "table": app.state.connector.get_table_name()}
+        content={"status": status, "table": app.state.connector.get_table_name()},
     )
 
     return result

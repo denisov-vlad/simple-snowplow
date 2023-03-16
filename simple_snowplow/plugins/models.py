@@ -23,6 +23,6 @@ class LoggerBaseModel(BaseModel):
                 elastic_apm.elastic_apm_client.capture_exception()
             logger.warning(
                 f"Validation error for {cls.__name__} \n"
-                + f"error: {e.errors()} \n data: {value}"
+                + f"error: {e.errors()} \n data: {value}",
             )
             raise e

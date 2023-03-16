@@ -183,7 +183,6 @@ async def parse_payload(
 
 @elasticapm.async_capture_span()
 async def parse_contexts(contexts: dict) -> dict:
-
     result = {}
     for col in EMPTY_DICTS:
         result[col] = {}
@@ -289,7 +288,7 @@ async def parse_cookies(cookies_str: str) -> dict:
     if cookies_str is None:
         return result
 
-    cookies_dict = SimpleCookie()
+    cookies_dict: SimpleCookie = SimpleCookie()
     cookies_dict.load(cookies_str)
 
     if cookies_dict:
@@ -300,12 +299,12 @@ async def parse_cookies(cookies_str: str) -> dict:
                 break
 
         if cookie_value:
-            cookie_value = cookie_value.split(".")
-            result["device_id"] = cookie_value[0]
-            result["created_time"] = cookie_value[1]
-            result["visit_count"] = cookie_value[2]
-            result["now_time"] = cookie_value[3]
-            result["last_visit_time"] = cookie_value[4]
-            result["session_id"] = cookie_value[5]
+            cookie_value_list = cookie_value.split(".")
+            result["device_id"] = cookie_value_list[0]
+            result["created_time"] = cookie_value_list[1]
+            result["visit_count"] = cookie_value_list[2]
+            result["now_time"] = cookie_value_list[3]
+            result["last_visit_time"] = cookie_value_list[4]
+            result["session_id"] = cookie_value_list[5]
 
     return result

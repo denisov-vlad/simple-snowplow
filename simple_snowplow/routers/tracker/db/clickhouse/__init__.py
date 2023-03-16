@@ -24,8 +24,12 @@ class ClickHouseConnector:
         self.tables = self.get_tables()
         self.table = self.get_table_name()
 
-    def get_tables(self):
+        if params.get("chbulk_enabled", False):
+            self.async_settings = ""
+        else:
+            self.async_settings = "SETTINGS async_insert=1, wait_for_async_insert=0"
 
+    def get_tables(self):
         tables_names = {}
 
         for table_type, table_info in self.params["tables"].items():
@@ -54,7 +58,7 @@ class ClickHouseConnector:
             await self.conn.execute(
                 f"""
                 CREATE DATABASE IF NOT EXISTS {db} {self.cluster_condition}
-            """
+            """,
             )
 
     async def create_local_table(self):
@@ -156,11 +160,10 @@ class ClickHouseConnector:
         ORDER BY ({self.params["tables"]["local"]["order_by"]})
         SAMPLE BY cityHash64(device_id)
         SETTINGS index_granularity = 8192;
-        """
+        """,
         )
 
     async def create_buffer_table(self):
-
         source_db, source_table = self.tables["local"].split(".")
 
         await self.conn.execute(
@@ -169,11 +172,10 @@ class ClickHouseConnector:
         AS {self.tables["local"]} ENGINE = Buffer(
             '{source_db}', '{source_table}', 16, 10, 100, 10000, 1000000, 10000000, 100000000
         );
-        """
+        """,
         )
 
     async def create_distributed_table(self):
-
         if "buffer" in self.tables:
             source_db, source_table = self.tables["buffer"].split(".")
         else:
@@ -185,7 +187,7 @@ class ClickHouseConnector:
         AS {self.tables["local"]} ENGINE = Distributed(
             '{self.cluster}', '{source_db}', '{source_table}', cityHash64(device_id)
         );
-        """
+        """,
         )
 
     async def create_all(self):
@@ -208,9 +210,7 @@ class ClickHouseConnector:
 
     @elasticapm.async_capture_span()
     async def insert(self, rows: List[dict]):
-
         for r in rows:
-
             columns_names = []
 
             row = []
@@ -219,7 +219,7 @@ class ClickHouseConnector:
                 payload_name = field["payload_name"]
                 if isinstance(payload_name, tuple):
                     value = tuple(
-                        [await self._convert_types(r.get(v)) for v in payload_name]
+                        [await self._convert_types(r.get(v)) for v in payload_name],
                     )
                 else:
                     value = await self._convert_types(r.get(payload_name))
@@ -235,12 +235,11 @@ class ClickHouseConnector:
             async with elasticapm.async_capture_span("clickhouse_query"):
                 await self.conn.execute(
                     f"INSERT INTO {self.table} {columns_names} "
-                    f"SETTINGS async_insert=1, wait_for_async_insert=0 VALUES ",
+                    f"{self.async_settings} VALUES ",
                     tuple(row),
                 )
 
     def get_table_name(self):
-
         if self.cluster:
             return self.tables["distributed"]
         else:

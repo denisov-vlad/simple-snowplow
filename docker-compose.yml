@@ -4,17 +4,17 @@ services:
     container_name: snowplow
     image: vladenisov/simple-snowplow:latest
     ports:
-      - "8000:80"
+    - "8000:80"
     environment:
-      - "SNOWPLOW_COMMON__DEMO=true"
+    - "SNOWPLOW_COMMON__DEMO=true"
     restart: on-failure
     depends_on:
-      - clickhouse
+    - clickhouse
 
   clickhouse:
     container_name: clickhouse
     image: yandex/clickhouse-server:latest
     ports:
-      - "8123:8123"
-      - "9000:9000"
-      - "9009:9009"
+    - "8123:8123"
+    - "9000:9000"
+    - "9009:9009"

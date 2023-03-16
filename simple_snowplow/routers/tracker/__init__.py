@@ -17,7 +17,7 @@ router = APIRouter(tags=["snowplow"])
 
 def pixel_gif():
     return base64.b64decode(
-        b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+        b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",
     )
 
 
@@ -62,7 +62,6 @@ async def get_tracker(
     x_forwarded_for: Optional[str] = Header(None),
     cookie: Optional[str] = Header(None),
 ):
-
     data = await process_data(params, user_agent, x_forwarded_for, cookie)
     await request.app.state.connector.insert(data)
 
