@@ -12,6 +12,7 @@ from plugins.logger import init_logging
 from routers.demo import router as demo_router
 from routers.tracker import router as app_router
 from routers.tracker.db import ClickHouseConnector
+from routers.tracker.db.clickhouse.lib import ChClientBulk
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
 
@@ -38,10 +39,15 @@ async def lifespan(application):
 
         ch_conn["url"] = ch_bulk_conn["url"]
         ch_config["chbulk_enabled"] = True
-        application.state.ch_client = ChClient(application.state.ch_session, **ch_conn)
+        application.state.ch_client = ChClientBulk(
+            application.state.ch_session, **ch_conn
+        )
         application.state.connector = ClickHouseConnector(
             application.state.ch_client, **ch_config
         )
+        application.state.ch_conn_type = "bulk"
+    else:
+        application.state.ch_conn_type = "direct"
 
     yield
 
