@@ -152,7 +152,7 @@ class ClickHouseConnector:
                 value Float32,
                 unstructured JSON
             ),
-            `extra` JSON,
+            `extra` String,
             `tracker` Tuple(version LowCardinality(String), namespace LowCardinality(String))
         )
         ENGINE = {self.params["tables"]["local"]["engine"]}
