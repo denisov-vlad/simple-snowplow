@@ -12,8 +12,12 @@ services:
     - clickhouse
 
   clickhouse:
-    container_name: clickhouse
-    image: yandex/clickhouse-server:latest
+    container_name: simple-snowplow-ch
+    build:
+      context: clickhouse
+      dockerfile: Dockerfile
+    environment:
+    - "ALLOW_EMPTY_PASSWORD=yes"
     ports:
     - "8123:8123"
     - "9000:9000"

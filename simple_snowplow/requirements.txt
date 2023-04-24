@@ -1,4 +1,3 @@
-aiochclient[speedups]==2.3.1
 aiofiles==23.1.0
 aiohttp==3.8.4
 brotli==1.0.9
@@ -6,6 +5,7 @@ brotli-asgi==1.3.0
 dynaconf==3.1.12
 elastic-apm==6.15.1
 fastapi==0.95.1
+git+https://github.com/Kadiska/aiochclient@gt/fix_sqlparse
 infi.clickhouse_orm==2.1.3
 inflection==0.5.1
 loguru==0.7.0
