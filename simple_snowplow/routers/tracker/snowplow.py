@@ -211,6 +211,17 @@ async def parse_contexts(contexts: dict) -> dict:
             result["extra"]["ga_cookies"] = item["data"]
         elif schema.startswith("iglu:com.snowplowanalytics.snowplow/web_page"):
             result["view_id"] = item["data"]["id"]
+        elif schema.startswith("iglu:dev.amp.snowplow/amp_session"):
+            if "ampSessionId" in data:
+                result["amp_session_id"] = data["ampSessionId"]
+            if "sessionCreationTimestamp" in data:
+                result["amp_first_event_time"] = data["sessionCreationTimestamp"]
+            if "lastSessionEventTimestamp" in data:
+                result["amp_previous_session_time"] = data["sessionCreationTimestamp"]
+            if "sessionEngaged" in data:
+                result["amp_session_engaged"] = data["sessionEngaged"]
+            if "ampSessionIndex" in data:
+                result["amp_visit_count"] = data["ampSessionIndex"]
         elif schema.startswith("iglu:dev.amp.snowplow/amp_id"):
             result["amp_client_id"] = data["ampClientId"]
             result["amp_device_id"] = data.get("domainUserid", "")
