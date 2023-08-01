@@ -287,12 +287,9 @@ async def parse_contexts(contexts: dict) -> dict:
 
 @elasticapm.async_capture_span()
 async def parse_event(event: dict) -> dict:
-    try:
-        event = event["data"]
-        event_name = event["schema"].split("/")[-3]
-        return {event_name: event["data"]}
-    except IndexError:
-        return {}
+    event = event["data"]
+    event_name = event["schema"].split("/")[-3]
+    return {event_name: event["data"]}
 
 
 @elasticapm.async_capture_span()
