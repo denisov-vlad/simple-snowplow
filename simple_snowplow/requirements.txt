@@ -1,5 +1,5 @@
 aiochclient[httpx-speedups]==2.4.0
-aiofiles==23.1.0
+aiofiles==23.2.1
 aiohttp==3.8.5
 brotli==1.0.9
 brotli-asgi==1.4.0
