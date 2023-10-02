@@ -303,10 +303,10 @@ async def parse_cookies(cookies_str: str) -> dict:
     cookies_dict.load(cookies_str)
 
     if cookies_dict:
-        cookie_name, cookie_value = None, None
+        cookie_value = None
         for k, v in cookies_dict.items():
             if k.startswith("_sp_id."):
-                cookie_name, cookie_value = k, v.value
+                cookie_value = v.value
                 break
 
         if cookie_value:

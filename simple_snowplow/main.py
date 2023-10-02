@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from plugins.logger import init_logging
 from routers.demo import router as demo_router
 from routers.tracker import router as app_router
-from routers.tracker.db import ClickHouseConnector
+from routers.tracker.db.clickhouse import ClickHouseConnector
 from routers.tracker.db.clickhouse.lib import ChClientBulk
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY

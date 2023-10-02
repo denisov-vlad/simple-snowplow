@@ -4,16 +4,16 @@ from typing import List
 from typing import Optional
 
 from fastapi import Query
-from plugins.models import LoggerBaseModel
+from pydantic import BaseModel
 from pydantic import Field
 
 
-class SnowPlowModel(LoggerBaseModel):
+class SnowPlowModel(BaseModel):
     data: List[Optional[Any]] = Query(...)
     json_schema: str = Query(None, alias="schema", title="Snowplow schema definition")
 
 
-class PayloadElementBaseModel(LoggerBaseModel):
+class PayloadElementBaseModel(BaseModel):
     # https://docs.snowplowanalytics.com/docs/collecting-data/collecting-from-own-applications/snowplow-tracker-protocol/
     aid: str = Query(..., title="Unique identifier for website / application")
     cd: int = Query(0, title="Browser color depth")
@@ -28,7 +28,10 @@ class PayloadElementBaseModel(LoggerBaseModel):
     )
     duid: str = Query(
         None,
-        title="Unique identifier for a user, based on a first party cookie (so domain specific)",
+        title=(
+            "Unique identifier for a user, based on a first party cookie "
+            "(so domain specific)"
+        ),
     )
     e: str = Query(
         ...,

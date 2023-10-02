@@ -1,7 +1,6 @@
 import base64
 from typing import Optional
 
-from fastapi import BackgroundTasks
 from fastapi import Depends
 from fastapi import Header
 from fastapi import Request

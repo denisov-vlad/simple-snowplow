@@ -67,14 +67,25 @@ class ClickHouseConnector:
         CREATE TABLE IF NOT EXISTS {self.tables["local"]} {self.cluster_condition}
         (
             `app_id` LowCardinality(String),
-            `platform` Enum8('web' = 1, 'mob' = 2, 'pc' = 3, 'srv' = 4, 'app' = 5, 'tv' = 6, 'cnsl' = 7, 'iot' = 8),
+            `platform` Enum8(
+                'web' = 1,
+                'mob' = 2,
+                'pc' = 3,
+                'srv' = 4,
+                'app' = 5,
+                'tv' = 6,
+                'cnsl' = 7,
+                'iot' = 8
+            ),
             `app` Tuple(
                 version String,
                 build String
             ),
             `page` String DEFAULT '',
             `referer` Nullable(String) DEFAULT NULL,
-            `event_type` Enum8('pv' = 1, 'pp' = 2, 'ue' = 3, 'se' = 4, 'tr' = 5, 'ti' = 6, 's' = 7),
+            `event_type` Enum8(
+                'pv' = 1, 'pp' = 2, 'ue' = 3, 'se' = 4, 'tr' = 5, 'ti' = 6, 's' = 7
+            ),
             `event_id` UUID,
             `view_id` UUID,
             `session_id` UUID,
@@ -102,7 +113,10 @@ class ClickHouseConnector:
             `user_id` Nullable(String) DEFAULT NULL,
             `time` DateTime64(3, 'UTC'),
             `timezone` Nullable(String) DEFAULT NULL,
-            `time_extra` Tuple(`time_user` DateTime64(3, 'UTC'), `time_sent` DateTime64(3, 'UTC')),
+            `time_extra` Tuple(
+                `time_user` DateTime64(3, 'UTC'),
+                `time_sent` DateTime64(3, 'UTC')
+            ),
             `title` Nullable(String) DEFAULT NULL,
             `screen` Tuple(
                 type String,
@@ -140,7 +154,9 @@ class ClickHouseConnector:
                 apple_idfv String,
                 android_idfa String,
                 battery_level UInt8,
-                battery_state Enum8('' = 1, 'unplugged' = 2, 'charging' = 3, 'full' = 4),
+                battery_state Enum8(
+                    '' = 1, 'unplugged' = 2, 'charging' = 3, 'full' = 4
+                ),
                 low_power_mode Int8
             ),
             `resolution` Tuple(browser String, viewport String, page String),
@@ -153,7 +169,10 @@ class ClickHouseConnector:
                 unstructured JSON
             ),
             `extra` String,
-            `tracker` Tuple(version LowCardinality(String), namespace LowCardinality(String))
+            `tracker` Tuple(
+                version LowCardinality(String),
+                namespace LowCardinality(String)
+            )
         )
         ENGINE = {self.params["tables"]["local"]["engine"]}
         PARTITION BY (toYYYYMM(time), event_type)
@@ -170,7 +189,9 @@ class ClickHouseConnector:
             f"""
         CREATE TABLE IF NOT EXISTS {self.tables["buffer"]}  {self.cluster_condition}
         AS {self.tables["local"]} ENGINE = Buffer(
-            '{source_db}', '{source_table}', 16, 10, 100, 10000, 1000000, 10000000, 100000000
+            '{source_db}',
+            '{source_table}',
+            16, 10, 100, 10000, 1000000, 10000000, 100000000
         );
         """,
         )
