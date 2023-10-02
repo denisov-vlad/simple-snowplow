@@ -13,7 +13,7 @@ RUN python -m pip install --no-index --find-links=/orjson/target/wheels orjson
 COPY ./requirements.txt /app/requirements.txt
 RUN python -m pip install -r /app/requirements.txt
 
-ENV SCRIPTS_VERSION=3.14.0
+ENV SCRIPTS_VERSION=3.15.0
 
 COPY ./utils /app/utils/
 RUN sh /app/utils/download_scripts.sh
@@ -29,6 +29,7 @@ RUN apk update && apk add --no-cache curl libstdc++  # orjson dependency
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY . /app
+COPY --from=builder /app/static /app/static
 
 HEALTHCHECK --interval=10s --timeout=1s CMD curl -f http://localhost:80/ || exit 1
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--log-level", "warning"]

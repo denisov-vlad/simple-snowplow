@@ -68,5 +68,9 @@ To contribute to the development of Simple Snowplow, follow these steps:
    ```shell
    pre-commit run -a
    ```
+5. Download Snowplow scripts:
+   ```shell
+   sh ./simple_snowplow/utils/download_scripts.sh
+   ```
 
 Feel free to modify or extend this documentation as needed.
