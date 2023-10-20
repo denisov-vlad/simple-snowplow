@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Any
 from typing import List
-from typing import Optional
 
 from fastapi import Query
 from pydantic import BaseModel
@@ -9,24 +8,28 @@ from pydantic import Field
 
 
 class SnowPlowModel(BaseModel):
-    data: List[Optional[Any]] = Query(...)
-    json_schema: str = Query(None, alias="schema", title="Snowplow schema definition")
+    data: List[Any | None] = Query(...)
+    json_schema: str | None = Query(
+        None,
+        alias="schema",
+        title="Snowplow schema definition",
+    )
 
 
 class PayloadElementBaseModel(BaseModel):
     # https://docs.snowplowanalytics.com/docs/collecting-data/collecting-from-own-applications/snowplow-tracker-protocol/
     aid: str = Query(..., title="Unique identifier for website / application")
     cd: int = Query(0, title="Browser color depth")
-    cookie: Optional[int] = Query(None, title="Does the browser permit cookies?")
+    cookie: int | None = Query(None, title="Does the browser permit cookies?")
     cs: str = Query("", title="Web page’s character encoding", description="ex. UTF-8")
-    co: Optional[str] = Query(None, title="An array of custom contexts (b64)")
-    cx: Optional[str] = Query(None, title="An array of custom contexts (b64)")
+    co: str | None = Query(None, title="An array of custom contexts (b64)")
+    cx: str | None = Query(None, title="An array of custom contexts (b64)")
     ds: str = Query("0x0", title="Web page width and height")
     dtm: datetime = Field(
         default_factory=lambda: datetime.utcnow(),
         title="Timestamp when event occurred, as recorded by client device",
     )
-    duid: str = Query(
+    duid: str | None = Query(
         None,
         title=(
             "Unique identifier for a user, based on a first party cookie "
@@ -39,15 +42,15 @@ class PayloadElementBaseModel(BaseModel):
         description="pv = page view, pp = page ping, ue = unstructured event, "
         "se = structured event, tr = transaction, ti = transaction item",
     )
-    eid: str = Query(None, title="Event UUID")
+    eid: str | None = Query(None, title="Event UUID")
     lang: str = Query("", title="Language the browser is set to")
     p: str = Query(..., title="The platform the app runs on", description="ex. web")
-    page: str = Query(None, title="Page title")
+    page: str | None = Query(None, title="Page title")
     pp_mix: int = Query(0, title="Minimum page x offset seen in the last ping period")
     pp_max: int = Query(0, title="Maximum page x offset seen in the last ping period")
     pp_miy: int = Query(0, title="Minimum page y offset seen in the last ping period")
     pp_may: int = Query(0, title="Maximum page y offset seen in the last ping period")
-    refr: Optional[str] = Query(None, title="Referrer URL")
+    refr: str | None = Query(None, title="Referrer URL")
     res: str = Query(..., title="Screen / monitor resolution")
     se_ac: str = Query("", title="Event action", description="Only for event_type = se")
     se_ca: str = Query(
@@ -62,25 +65,25 @@ class PayloadElementBaseModel(BaseModel):
         description="Only for event_type = se",
     )
     se_va: str = Query("", title="Event value", description="Only for event_type = se")
-    sid: str = Query(
+    sid: str | None = Query(
         None,
         title="Unique identifier (UUID) for this visit of this user_id to this domain",
     )
-    stm: Optional[datetime] = Field(
+    stm: datetime | None = Field(
         default_factory=lambda: datetime.utcnow(),
         title="Timestamp when event was sent by client device to collector",
     )
     tna: str = Query("", title="The tracker namespace")
     tv: str = Query(..., title="Identifier for Snowplow tracker")
-    tz: Optional[str] = Query(None, title="Time zone of client device’s OS")
+    tz: str | None = Query(None, title="Time zone of client device’s OS")
     ue_pr: str = Query("", title="The properties of the event")
     ue_px: str = Query("", title="The properties of the event (b64)")
-    uid: Optional[str] = Query(
+    uid: str | None = Query(
         None,
         title="Unique identifier for user, set by the business using setUserId",
     )
     url: str = Query("", title="Page URL")
-    vid: Optional[int] = Query(
+    vid: int | None = Query(
         None,
         title="Index of number of visits that this user_id has made to this domain",
     )
