@@ -96,7 +96,7 @@ class ClickHouseConnector:
                 first_event_id Nullable(UUID),
                 first_event_time Nullable(DateTime64(3, 'UTC')),
                 storage_mechanism LowCardinality(String),
-                unstructured JSON
+                unstructured String
             ),
 
             `amp` Tuple(
@@ -124,9 +124,9 @@ class ClickHouseConnector:
                 top_view_controller String,
                 activity String,
                 fragment String,
-                unstructured JSON),
-            `page_data` JSON,
-            `user_data` JSON,
+                unstructured String),
+            `page_data` String,
+            `user_data` String,
             `user_ip` IPv4,
             `user_agent` String DEFAULT '',
             `browser` Tuple(
@@ -166,7 +166,7 @@ class ClickHouseConnector:
                 label String,
                 property String,
                 value Float32,
-                unstructured JSON
+                unstructured String
             ),
             `extra` String,
             `tracker` Tuple(
