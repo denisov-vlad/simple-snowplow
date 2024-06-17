@@ -11,7 +11,7 @@ inflection==0.5.1
 loguru==0.7.2
 orjson==3.10.3
 PyYAML==6.0.1
-requests==2.32.2
+requests==2.32.3
 starlette_exporter==0.22.0
 ua-parser==0.18.0
 user-agents==2.2.0
