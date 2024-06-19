@@ -39,7 +39,6 @@ schemas = settings.common.snowplow.schemas
 async def parse_base64(data: Union[str, bytes], altchars=b"+/") -> str:
     if isinstance(data, str):
         data = data.encode("UTF-8")
-    data = re.sub(rb"[^a-zA-Z0-9%s]+" % altchars, b"", data)  # normalize
     missing_padding = len(data) % 4
     if missing_padding:
         data += b"=" * (4 - missing_padding)
