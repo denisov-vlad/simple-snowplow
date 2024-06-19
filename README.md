@@ -9,7 +9,8 @@ Simple Snowplow is a backend application designed to work with raw data from Sno
 To install Simple Snowplow locally, follow these steps:
 
 1. Make sure you have Docker and Docker Compose installed on your machine.
-2. Run the following command to start the application using Docker Compose:
+2. Run `./simple_snowplow/utils/download_scripts.sh` to download JS files.
+3. Run the following command to start the application using Docker Compose:
    ```shell
    docker-compose up
    ```

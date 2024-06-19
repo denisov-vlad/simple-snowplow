@@ -1,4 +1,4 @@
-FROM python:3.11-alpine3.18 as builder
+FROM python:3.12-alpine3.20 as builder
 
 RUN apk update
 RUN apk add g++
@@ -8,7 +8,7 @@ COPY ./requirements.txt /app/requirements.txt
 RUN python -m pip install -r /app/requirements.txt
 
 
-FROM python:3.11-alpine3.18
+FROM python:3.12-alpine3.20
 
 ENV PYTHONUNBUFFERED=1
 
@@ -16,7 +16,7 @@ WORKDIR /app
 
 RUN apk update && apk add --no-cache curl libstdc++  # orjson dependency
 
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY . /app
 
