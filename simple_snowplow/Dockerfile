@@ -21,7 +21,7 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY . /app
 
 ENV SCRIPTS_OUTPUT_DIR=/app/static
-ENV SCRIPTS_VERSION=3.15.0
+ENV SCRIPTS_VERSION=3.23.1
 RUN sh /app/utils/download_scripts.sh
 
 HEALTHCHECK --interval=10s --timeout=1s CMD curl -f http://localhost:80/ || exit 1
