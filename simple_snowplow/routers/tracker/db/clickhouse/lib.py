@@ -17,7 +17,14 @@ class ChClientBulk(ChClient):
         **settings,
     ):
         super().__init__(
-            session, url, user, password, database, compress_response, json, **settings
+            session,
+            url,
+            user,
+            password,
+            database,
+            compress_response,
+            json,
+            **settings,
         )
         _http_client = HttpClientABC.choose_http_client(session)
         self._http_client = _http_client(session)

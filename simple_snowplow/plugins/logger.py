@@ -4,6 +4,12 @@ import logging
 import sys
 from pprint import pformat
 
+import orjson
+from fastapi import Request
+from fastapi import status
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from loguru import logger
 from loguru._defaults import LOGURU_FORMAT
 
@@ -84,4 +90,15 @@ def init_logging():
         handlers=[
             {"sink": sys.stdout, "level": logging.DEBUG, "format": format_record},
         ],
+    )
+
+
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    error_data = exc.errors()
+    logger.warning(
+        f"Validation error: {orjson.dumps(error_data)}, body: {orjson.dumps(exc.body)}",
+    )
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder(error_data),
     )

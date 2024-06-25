@@ -6,9 +6,11 @@ from brotli_asgi import BrotliMiddleware
 from config import settings
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from plugins.logger import init_logging
+from plugins.logger import validation_exception_handler
 from routers.demo import router as demo_router
 from routers.tracker import router as app_router
 from routers.tracker.db.clickhouse import ClickHouseConnector
@@ -27,7 +29,8 @@ async def lifespan(application):
 
     application.state.ch_client = ChClient(application.state.ch_session, **ch_conn)
     application.state.connector = ClickHouseConnector(
-        application.state.ch_client, **ch_config
+        application.state.ch_client,
+        **ch_config,
     )
     await application.state.connector.create_all()
 
@@ -40,10 +43,12 @@ async def lifespan(application):
         ch_conn["url"] = ch_bulk_conn["url"]
         ch_config["chbulk_enabled"] = True
         application.state.ch_client = ChClientBulk(
-            application.state.ch_session, **ch_conn
+            application.state.ch_session,
+            **ch_conn,
         )
         application.state.connector = ClickHouseConnector(
-            application.state.ch_client, **ch_config
+            application.state.ch_client,
+            **ch_config,
         )
         application.state.ch_conn_type = "bulk"
     else:
@@ -55,9 +60,11 @@ async def lifespan(application):
     await application.state.ch_session.close()
 
 
-app = FastAPI(title="Simple Snowplow", version="0.1.1", lifespan=lifespan)
+app = FastAPI(title="Simple Snowplow", version="0.2.1", lifespan=lifespan)
 
 init_logging()
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
 
 app.include_router(app_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
