@@ -29,7 +29,7 @@ cluster_name = ""
 [clickhouse.configuration.tables.local]
 name = ""
 engine = "MergeTree()"
-order_by = "app_id, time, page, event_type, device_id, cityHash64(device_id), session_id"
+order_by = "app_id, toDate(time), event_type, page, device_id, cityHash64(device_id), session_id, time"
 [clickhouse.configuration.tables.distributed]
 name = ""
 [clickhouse.configuration.tables.buffer]
