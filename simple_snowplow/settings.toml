@@ -8,7 +8,7 @@ page_data = "iglu:dev.snowplow.simple/page_data"
 screen_data = "iglu:dev.snowplow.simple/screen_data"
 ad_data = "iglu:dev.snowplow.simple/ad_data"
 [common.snowplow.endpoints]
-post_endpoint = "/tracker111"
+post_endpoint = "/tracker"
 get_endpoint = "/i"
 
 [elastic_apm]
