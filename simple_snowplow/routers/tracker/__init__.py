@@ -1,6 +1,7 @@
 import base64
 from typing import Optional
 
+from config import settings
 from fastapi import Depends
 from fastapi import Header
 from fastapi import Request
@@ -22,13 +23,16 @@ def pixel_gif():
 
 pixel = pixel_gif()
 
+endpoints = settings.common.snowplow.endpoints
 
-@router.options("/tracker", include_in_schema=False)
+
+@router.options(endpoints.post_endpoint, include_in_schema=False)
+@router.options(endpoints.get_endpoint, include_in_schema=False)
 async def tracker_cors():
     return
 
 
-@router.post("/tracker", summary="Snowplow JS Tracker endpoint")
+@router.post(endpoints.post_endpoint, summary="Snowplow JS Tracker endpoint")
 async def tracker(
     request: Request,
     body: models.PayloadModel,
@@ -53,7 +57,11 @@ async def tracker(
     return Response(status_code=HTTP_204_NO_CONTENT)
 
 
-@router.get("/i", summary="Snowplow JS Tracker GET endpoint", response_class=Response)
+@router.get(
+    endpoints.get_endpoint,
+    summary="Snowplow JS Tracker GET endpoint",
+    response_class=Response,
+)
 async def get_tracker(
     request: Request,
     params: models.PayloadElementBaseModel = Depends(),
