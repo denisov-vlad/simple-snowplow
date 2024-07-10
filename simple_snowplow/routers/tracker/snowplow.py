@@ -1,5 +1,4 @@
 import base64
-import re
 import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
@@ -268,6 +267,25 @@ async def parse_contexts(contexts: dict) -> dict:
             result["screen_tvc"] = data.get("topViewController", "")
             result["screen_activity"] = data.get("activity", "")
             result["screen_fragment"] = data.get("fragment", "")
+        elif schema.startswith("iglu:com.snowplowanalytics.snowplow/browser_context/"):
+            if "cookiesEnabled" in data:
+                result["cookie"] = data.pop("cookiesEnabled")
+            if "documentSize" in data:
+                result["ds"] = data.pop("documentSize")
+            if "viewport" in data:
+                result["vp"] = data.pop("viewport")
+            if "resolution" in data:
+                result["res"] = data.pop("resolution")
+            if "colorDepth" in data:
+                result["cd"] = data.pop("colorDepth")
+            if "browserLanguage" in data:
+                result["lang"] = data.pop("browserLanguage")
+            result["browser_unstructured"] = data
+        elif schema.startswith(
+            "iglu:com.snowplowanalytics.snowplow/geolocation_context/",
+        ):
+            geo_data = {k: v for k, v in data.items() if v is not None}
+            result["geolocation"] = geo_data
         elif schema.startswith(schemas.screen_data):
             if "screen_unstructured" not in result:
                 result["screen_unstructured"] = {}

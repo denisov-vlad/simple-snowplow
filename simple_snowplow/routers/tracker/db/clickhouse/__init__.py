@@ -128,13 +128,15 @@ class ClickHouseConnector:
             `page_data` String,
             `user_data` String,
             `user_ip` IPv4,
+            `geolocation` String,
             `user_agent` String DEFAULT '',
             `browser` Tuple(
                 family LowCardinality(String),
                 version String,
                 cookie UInt8,
                 charset LowCardinality(String),
-                color_depth UInt8),
+                color_depth UInt8,
+                unstructured String),
             `os` Tuple(
                 family LowCardinality(String),
                 version String,

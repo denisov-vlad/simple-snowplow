@@ -53,6 +53,7 @@ table_fields = [
     {"column_name": "page_data", "payload_name": "page_data"},
     {"column_name": "user_data", "payload_name": "user_data"},
     {"column_name": "user_ip", "payload_name": "user_ip"},
+    {"column_name": "geolocation", "payload_name": "geolocation"},
     {"column_name": "user_agent", "payload_name": "user_agent"},
     {
         "column_name": "browser",
@@ -62,6 +63,7 @@ table_fields = [
             "cookie",
             "cs",
             "cd",
+            "browser_unstructured",
         ),
     },
     {
