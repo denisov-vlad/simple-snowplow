@@ -2,6 +2,7 @@
 service_name = "simple-snowplow"
 database = "clickhouse"
 demo = false
+hostname = "http://localhost:8000"
 [common.snowplow.schemas]
 user_data = "iglu:dev.snowplow.simple/user_data"
 page_data = "iglu:dev.snowplow.simple/page_data"
@@ -10,6 +11,16 @@ ad_data = "iglu:dev.snowplow.simple/ad_data"
 [common.snowplow.endpoints]
 post_endpoint = "/tracker"
 get_endpoint = "/i"
+proxy_endpoint = "/proxy"
+
+[proxy]
+domains = [
+    "google-analytics.com"
+]
+paths = [
+    "analytics.js"
+]
+
 
 [elastic_apm]
 enabled = false

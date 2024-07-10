@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from plugins.logger import init_logging
 from plugins.logger import validation_exception_handler
 from routers.demo import router as demo_router
+from routers.proxy import router as proxy_router
 from routers.tracker import router as app_router
 from routers.tracker.db.clickhouse import ClickHouseConnector
 from routers.tracker.db.clickhouse.lib import ChClientBulk
@@ -67,6 +68,7 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 
 app.include_router(app_router)
+app.include_router(proxy_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
