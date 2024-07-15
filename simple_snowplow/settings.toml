@@ -15,10 +15,12 @@ proxy_endpoint = "/proxy"
 
 [proxy]
 domains = [
-    "google-analytics.com"
+    "google-analytics.com",
+    "www.googletagmanager.com"
 ]
 paths = [
-    "analytics.js"
+    "analytics.js",
+    "gtm.js"
 ]
 
 

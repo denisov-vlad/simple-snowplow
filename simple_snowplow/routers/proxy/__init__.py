@@ -41,9 +41,9 @@ async def proxy_hash(data: models.HashModel):
         return_encoded = True
 
     if not return_encoded:
-        return data["url"]
+        return data.url
 
-    result = f"{hostname}/{proxy_endpoint}/route/{data.url.scheme}/{encode(data.url.host)}/{full_path}"
+    result = f"{hostname}{proxy_endpoint}/route/{data.url.scheme}/{encode(data.url.host)}/{full_path}"
 
     return result
 
