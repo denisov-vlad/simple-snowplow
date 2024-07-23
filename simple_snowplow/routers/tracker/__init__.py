@@ -52,8 +52,6 @@ async def tracker(
     :return:
     """
 
-    print("ip adress", x_forwarded_for, type(x_forwarded_for))
-
     data = await process_data(body, user_agent, x_forwarded_for, cookie)
     await request.app.state.connector.insert(data)
 
