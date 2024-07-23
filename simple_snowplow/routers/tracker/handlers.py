@@ -7,7 +7,7 @@ from routers.tracker.useragent import parse_agent
 
 
 async def convert_ip(ip: IPv4Address | IPv6Address | None) -> IPv4Address | None:
-    if isinstance(ip, (IPv4Address, None)):
+    if isinstance(ip, IPv4Address | None):
         return ip
     return ip.ipv4_mapped
 
