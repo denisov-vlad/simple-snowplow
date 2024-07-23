@@ -7,6 +7,7 @@ from fastapi import Header
 from fastapi import Request
 from fastapi.responses import Response
 from fastapi.routing import APIRouter
+from pydantic import IPvAnyAddress
 from routers.tracker import models
 from routers.tracker.handlers import process_data
 from starlette.status import HTTP_204_NO_CONTENT
@@ -37,7 +38,7 @@ async def tracker(
     request: Request,
     body: models.PayloadModel,
     user_agent: Optional[str] = Header(None),
-    x_forwarded_for: Optional[str] = Header(None),
+    x_forwarded_for: IPvAnyAddress | None = Header(None),
     cookie: Optional[str] = Header(None),
 ):
     """
