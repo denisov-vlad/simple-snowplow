@@ -2,10 +2,10 @@ FROM python:3.12-alpine3.20 as builder
 
 RUN apk update
 RUN apk add g++
-RUN python -m pip install --upgrade pip setuptools wheel
+RUN python -m pip install uv
 
 COPY ./requirements.txt /app/requirements.txt
-RUN python -m pip install -r /app/requirements.txt
+RUN python -m uv pip install -r /app/requirements.txt
 
 
 FROM python:3.12-alpine3.20
