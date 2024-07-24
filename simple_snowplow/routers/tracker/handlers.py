@@ -15,7 +15,7 @@ async def convert_ip(ip: IPv4Address | IPv6Address | None) -> IPv4Address | None
         except PydanticCustomError:
             return None
 
-    if isinstance(IPv6Address):
+    if isinstance(ip, IPv6Address):
         return ip.ipv4_mapped
 
     return ip
