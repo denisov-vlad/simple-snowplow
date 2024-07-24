@@ -2,14 +2,23 @@ from ipaddress import IPv4Address
 from ipaddress import IPv6Address
 
 import elasticapm
+from pydantic import IPvAnyAddress
+from pydantic_core import PydanticCustomError
 from routers.tracker import snowplow
 from routers.tracker.useragent import parse_agent
 
 
 async def convert_ip(ip: IPv4Address | IPv6Address | None) -> IPv4Address | None:
-    if isinstance(ip, IPv4Address | None):
-        return ip
-    return ip.ipv4_mapped
+    if isinstance(ip, str):
+        try:
+            ip = IPvAnyAddress(ip)
+        except PydanticCustomError:
+            return None
+
+    if isinstance(IPv6Address):
+        return ip.ipv4_mapped
+
+    return ip
 
 
 @elasticapm.async_capture_span()

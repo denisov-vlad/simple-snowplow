@@ -149,16 +149,14 @@ class ClickHouseConnector:
             `device_is` Tuple(mobile Int8, tablet Int8, touch Int8, pc Int8, bot Int8),
             `device_extra` Tuple(
                 carrier LowCardinality(String),
-                network_type Enum8('' = 1, 'mobile' = 2, 'wifi' = 3, 'offline' = 4),
+                network_type LowCardinality(String),
                 network_technology LowCardinality(String),
                 open_idfa String,
                 apple_idfa String,
                 apple_idfv String,
                 android_idfa String,
                 battery_level UInt8,
-                battery_state Enum8(
-                    '' = 1, 'unplugged' = 2, 'charging' = 3, 'full' = 4
-                ),
+                battery_state LowCardinality(String),
                 low_power_mode Int8
             ),
             `resolution` Tuple(browser String, viewport String, page String),

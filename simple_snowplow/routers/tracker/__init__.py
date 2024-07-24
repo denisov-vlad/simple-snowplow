@@ -38,7 +38,7 @@ async def tracker(
     request: Request,
     body: models.PayloadModel,
     user_agent: Optional[str] = Header(None),
-    x_forwarded_for: IPvAnyAddress | None = Header(None),
+    x_forwarded_for: IPvAnyAddress | str | None = Header(None),
     cookie: Optional[str] = Header(None),
 ):
     """
@@ -67,7 +67,7 @@ async def get_tracker(
     request: Request,
     params: models.PayloadElementBaseModel = Depends(),
     user_agent: Optional[str] = Header(None),
-    x_forwarded_for: Optional[str] = Header(None),
+    x_forwarded_for: IPvAnyAddress | str | None = Header(None),
     cookie: Optional[str] = Header(None),
 ):
     data = await process_data(params, user_agent, x_forwarded_for, cookie)
