@@ -95,9 +95,13 @@ def init_logging():
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     error_data = exc.errors()
-    logger.warning(
-        f"Validation error: {orjson.dumps(error_data)}, body: {orjson.dumps(exc.body)}",
-    )
+
+    try:
+        body = orjson.dumps(exc.body)
+    except TypeError:
+        body = exc.body
+
+    logger.warning(f"Validation error: {orjson.dumps(error_data)}, body: {body}")
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder(error_data),
