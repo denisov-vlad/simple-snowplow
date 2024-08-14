@@ -3,6 +3,7 @@ from typing import Any
 from typing import List
 
 from fastapi import Query
+from pydantic import AliasChoices
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -16,7 +17,44 @@ class SnowPlowModel(BaseModel):
     )
 
 
-class PayloadElementBaseModel(BaseModel):
+se_description = "Only for event_type = se"
+
+
+class StructuredEvent(BaseModel):
+
+    se_ac: str = Query(
+        "",
+        title="Event action",
+        description=se_description,
+        validation_alias=AliasChoices("se_ac", "action"),
+    )
+    se_ca: str = Query(
+        "",
+        title="Event category",
+        description=se_description,
+        validation_alias=AliasChoices("se_ca", "category"),
+    )
+    se_la: str = Query(
+        "",
+        title="Event label",
+        description=se_description,
+        validation_alias=AliasChoices("se_la", "label"),
+    )
+    se_pr: str = Query(
+        "",
+        title="Event property",
+        description=se_description,
+        validation_alias=AliasChoices("se_pr", "property"),
+    )
+    se_va: str = Query(
+        "",
+        title="Event value",
+        description=se_description,
+        validation_alias=AliasChoices("se_va", "value"),
+    )
+
+
+class PayloadElementBaseModel(StructuredEvent):
     # https://docs.snowplowanalytics.com/docs/collecting-data/collecting-from-own-applications/snowplow-tracker-protocol/
     aid: str = Query(..., title="Unique identifier for website / application")
     cd: int = Query(0, title="Browser color depth")
@@ -52,19 +90,6 @@ class PayloadElementBaseModel(BaseModel):
     pp_may: int = Query(0, title="Maximum page y offset seen in the last ping period")
     refr: str | None = Query(None, title="Referrer URL")
     res: str = Query(..., title="Screen / monitor resolution")
-    se_ac: str = Query("", title="Event action", description="Only for event_type = se")
-    se_ca: str = Query(
-        "",
-        title="Event category",
-        description="Only for event_type = se",
-    )
-    se_la: str = Query("", title="Event label", description="Only for event_type = se")
-    se_pr: str = Query(
-        "",
-        title="Event property",
-        description="Only for event_type = se",
-    )
-    se_va: str = Query("", title="Event value", description="Only for event_type = se")
     sid: str | None = Query(
         None,
         title="Unique identifier (UUID) for this visit of this user_id to this domain",
@@ -92,7 +117,7 @@ class PayloadElementBaseModel(BaseModel):
 
 class PayloadElementPostModel(PayloadElementBaseModel):
     rtm: datetime = Field(
-        default_factory=lambda: datetime.utcnow(),
+        default_factory=lambda: datetime.now(),
         title="Timestamp when event was received by collector",
     )
 

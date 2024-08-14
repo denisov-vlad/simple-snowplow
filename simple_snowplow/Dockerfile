@@ -1,4 +1,4 @@
-FROM python:3.12-alpine3.20 as builder
+FROM python:3.12-alpine3.20 AS builder
 
 RUN apk update
 RUN apk add g++

@@ -50,7 +50,7 @@ async def parse_payload(
     element: Union[models.PayloadElementBaseModel, models.PayloadElementPostModel],
     cookies: str,
 ) -> dict:
-    element = element.dict()
+    element = element.model_dump()
 
     context = None
     if element["cx"] is not None:
@@ -73,7 +73,9 @@ async def parse_payload(
 
     if event_context is not None:
         event_context = orjson.loads(event_context)
-        element["ue"] = await parse_event(event_context)
+        event_data = await parse_event(event_context)
+        for k, v in event_data.items():
+            element[k] = v
     else:
         element["ue"] = {}
 
@@ -296,6 +298,10 @@ async def parse_contexts(contexts: dict) -> dict:
                 result["user_data"][k] = v
         elif schema.startswith(schemas.ad_data):
             result["extra"]["ad_data"] = item["data"]
+        elif schema.startswith(
+            "iglu:com.snowplowanalytics.mobile/application_lifecycle/",
+        ):
+            result["extra"]["app_lifecycle"] = item["data"]
         else:
             logger.warning("Schema {} has no parser", schema)
 
@@ -304,9 +310,15 @@ async def parse_contexts(contexts: dict) -> dict:
 
 @elasticapm.async_capture_span()
 async def parse_event(event: dict) -> dict:
+    result = {"e": "ue"}
     event = event["data"]
-    event_name = event["schema"].split("/")[-3]
-    return {event_name: event["data"]}
+    if event["schema"].startswith(schemas.u2s_data):
+        result = models.StructuredEvent.model_validate(event["data"]).model_dump()
+        result["e"] = "se"
+    else:
+        event_name = event["schema"].split("/")[-3]
+        result = {"ue": {event_name: event["data"]}}
+    return result
 
 
 @elasticapm.async_capture_span()
