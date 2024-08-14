@@ -310,7 +310,6 @@ async def parse_contexts(contexts: dict) -> dict:
 
 @elasticapm.async_capture_span()
 async def parse_event(event: dict) -> dict:
-    result = {"e": "ue"}
     event = event["data"]
     if event["schema"].startswith(schemas.u2s_data):
         result = models.StructuredEvent.model_validate(event["data"]).model_dump()
