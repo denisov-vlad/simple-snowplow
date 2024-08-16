@@ -64,7 +64,7 @@ class PayloadElementBaseModel(StructuredEvent):
     cx: str | None = Query(None, title="An array of custom contexts (b64)")
     ds: str = Query("0x0", title="Web page width and height")
     dtm: datetime = Field(
-        default_factory=lambda: datetime.utcnow(),
+        default_factory=lambda: datetime.now(),
         title="Timestamp when event occurred, as recorded by client device",
     )
     duid: str | None = Query(
@@ -95,7 +95,7 @@ class PayloadElementBaseModel(StructuredEvent):
         title="Unique identifier (UUID) for this visit of this user_id to this domain",
     )
     stm: datetime | None = Field(
-        default_factory=lambda: datetime.utcnow(),
+        default_factory=lambda: datetime.now(),
         title="Timestamp when event was sent by client device to collector",
     )
     tna: str = Query("", title="The tracker namespace")

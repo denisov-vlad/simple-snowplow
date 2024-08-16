@@ -80,10 +80,10 @@ async def parse_payload(
         element["ue"] = {}
 
     if element.get("rtm") is None:
-        element["rtm"] = datetime.utcnow()
+        element["rtm"] = datetime.now()
 
     if element.get("stm") is None:
-        element["stm"] = datetime.utcnow()
+        element["stm"] = datetime.now()
 
     if element.get("cookie") is None:
         if cookies:
@@ -302,6 +302,11 @@ async def parse_contexts(contexts: dict) -> dict:
             "iglu:com.snowplowanalytics.mobile/application_lifecycle/",
         ):
             result["extra"]["app_lifecycle"] = item["data"]
+        elif schema.startswith("iglu:com.snowplowanalytics.mobile/screen_summary/"):
+            if "screen_unstructured" not in result:
+                result["screen_unstructured"] = {}
+            for k, v in data.items():
+                result["screen_unstructured"][k] = v
         else:
             logger.warning("Schema {} has no parser", schema)
 
