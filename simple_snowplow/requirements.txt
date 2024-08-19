@@ -15,4 +15,4 @@ requests==2.32.3
 starlette_exporter==0.23.0
 ua-parser==0.18.0
 user-agents==2.2.0
-uvicorn==0.30.5
+uvicorn==0.30.6
