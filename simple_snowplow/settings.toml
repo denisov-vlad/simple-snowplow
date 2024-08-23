@@ -33,8 +33,10 @@ enabled = false
 
 [clickhouse]
 [clickhouse.connection]
-url = "http://clickhouse:8123"
-user = "default"
+interface = "http"
+host = "clickhouse" # "http://clickhouse:8123"
+port = 8123
+username = "default"
 database = "default"
 password = ""
 [clickhouse.connection.bulk]

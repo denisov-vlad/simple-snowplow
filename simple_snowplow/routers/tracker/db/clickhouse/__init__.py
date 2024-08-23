@@ -3,7 +3,7 @@ from typing import List
 from typing import Optional
 
 import elasticapm
-from aiochclient import ChClient
+from clickhouse_connect.driver.asyncclient import AsyncClient
 from orjson import dumps
 from routers.tracker.db.clickhouse.convert import table_fields
 
@@ -11,7 +11,7 @@ from routers.tracker.db.clickhouse.convert import table_fields
 class ClickHouseConnector:
     def __init__(
         self,
-        conn: ChClient,
+        conn: AsyncClient,
         cluster_name: Optional[str] = None,
         database: str = "snowplow",
         **params,
@@ -55,14 +55,14 @@ class ClickHouseConnector:
     async def create_db(self):
         for table_name in self.tables.values():
             db, table = table_name.split(".")
-            await self.conn.execute(
+            await self.conn.command(
                 f"""
                 CREATE DATABASE IF NOT EXISTS {db} {self.cluster_condition}
             """,
             )
 
     async def create_local_table(self):
-        await self.conn.execute(
+        await self.conn.command(
             f"""
         CREATE TABLE IF NOT EXISTS {self.tables["local"]} {self.cluster_condition}
         (
@@ -185,7 +185,7 @@ class ClickHouseConnector:
     async def create_buffer_table(self):
         source_db, source_table = self.tables["local"].split(".")
 
-        await self.conn.execute(
+        await self.conn.command(
             f"""
         CREATE TABLE IF NOT EXISTS {self.tables["buffer"]}  {self.cluster_condition}
         AS {self.tables["local"]} ENGINE = Buffer(
@@ -202,7 +202,7 @@ class ClickHouseConnector:
         else:
             source_db, source_table = self.tables["local"].split(".")
 
-        await self.conn.execute(
+        await self.conn.command(
             f"""
         CREATE TABLE IF NOT EXISTS {self.tables["distributed"]} {self.cluster_condition}
         AS {self.tables["local"]} ENGINE = Distributed(
@@ -251,14 +251,15 @@ class ClickHouseConnector:
                 columns_names.append(field["column_name"])
                 row.append(value)
 
+            print(columns_names)
             columns_names = f"({','.join(columns_names)})"
 
-            async with elasticapm.async_capture_span("clickhouse_query"):
-                await self.conn.execute(
-                    f"INSERT INTO {self.table} {columns_names} "
-                    f"{self.async_settings} VALUES ",
-                    tuple(row),
-                )
+            # async with elasticapm.async_capture_span("clickhouse_query"):
+            #     await self.conn.command(
+            #         f"INSERT INTO {self.table} {columns_names} "
+            #         f"{self.async_settings} VALUES ",
+            #         tuple(row),
+            #     )
 
     def get_table_name(self):
         if self.cluster:

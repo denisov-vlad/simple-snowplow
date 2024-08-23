@@ -1,7 +1,6 @@
 from contextlib import asynccontextmanager
 
-from aiochclient import ChClient
-from aiohttp import ClientSession
+from clickhouse_connect import get_async_client
 from brotli_asgi import BrotliMiddleware
 from config import settings
 from fastapi import FastAPI
@@ -15,20 +14,22 @@ from routers.demo import router as demo_router
 from routers.proxy import router as proxy_router
 from routers.tracker import router as app_router
 from routers.tracker.db.clickhouse import ClickHouseConnector
-from routers.tracker.db.clickhouse.lib import ChClientBulk
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
+from fastapi import Request
+import requests
+
 
 
 @asynccontextmanager
 async def lifespan(application):
-    application.state.ch_session = ClientSession()
 
     ch_conn = settings.clickhouse.connection
     ch_bulk_conn = ch_conn.pop("bulk")
     ch_config = settings.clickhouse.configuration
 
-    application.state.ch_client = ChClient(application.state.ch_session, **ch_conn)
+    application.state.ch_bulk_url = None
+    application.state.ch_client = await get_async_client(**ch_conn)
     application.state.connector = ClickHouseConnector(
         application.state.ch_client,
         **ch_config,
@@ -36,17 +37,10 @@ async def lifespan(application):
     await application.state.connector.create_all()
 
     if ch_bulk_conn["enabled"]:
-        await application.state.ch_client.close()
-        await application.state.ch_session.close()
-
-        application.state.ch_session = ClientSession()
-
+        application.state.ch_bulk_url = ch_bulk_conn["url"]
         ch_conn["url"] = ch_bulk_conn["url"]
         ch_config["chbulk_enabled"] = True
-        application.state.ch_client = ChClientBulk(
-            application.state.ch_session,
-            **ch_conn,
-        )
+        application.state.ch_client = get_async_client(**ch_conn)
         application.state.connector = ClickHouseConnector(
             application.state.ch_client,
             **ch_config,
@@ -57,11 +51,11 @@ async def lifespan(application):
 
     yield
 
-    await application.state.ch_client.close()
-    await application.state.ch_session.close()
+    application.state.ch_client.close()
 
 
-app = FastAPI(title="Simple Snowplow", version="0.2.1", lifespan=lifespan)
+
+app = FastAPI(title="Simple Snowplow", version="0.2.2", lifespan=lifespan)
 
 init_logging()
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -110,8 +104,16 @@ if settings.prometheus.enabled:
 
 
 @app.get("/", include_in_schema=True)
-async def probe():
-    status = {"clickhouse": await app.state.ch_client.is_alive()}
+async def probe(request: Request):
+
+    if request.app.state.ch_bulk_url is None:
+        query = await app.state.ch_client.query("SELECT 1")
+        ch_status = query.first_row[0] == 1
+    else:
+        query = requests.get(f"{request.app.state.ch_bulk_url}/status")
+        ch_status = query.ok and query.json().get("status") == "ok"
+
+    status = {"clickhouse": ch_status}
     status = jsonable_encoder(status)
 
     for v in status.values():
