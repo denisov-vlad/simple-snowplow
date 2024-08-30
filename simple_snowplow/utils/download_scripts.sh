@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPTS_VERSION=${SCRIPTS_VERSION:-3.23.1}
+SCRIPTS_VERSION=${SCRIPTS_VERSION:-3.24.2}
 SCRIPTS_URL="https://github.com/snowplow/snowplow-javascript-tracker/releases/download/$SCRIPTS_VERSION"
 SCRIPTS_OUTPUT_DIR=${SCRIPTS_OUTPUT_DIR:-./simple_snowplow/static}
 
