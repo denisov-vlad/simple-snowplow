@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 
-import requests
 from brotli_asgi import BrotliMiddleware
 from clickhouse_connect import get_async_client
 from config import settings
@@ -22,31 +21,14 @@ from starlette.status import HTTP_502_BAD_GATEWAY
 
 @asynccontextmanager
 async def lifespan(application):
-
-    ch_conn = settings.clickhouse.connection
-    ch_bulk_conn = ch_conn.pop("bulk")
-    ch_config = settings.clickhouse.configuration
-
-    application.state.ch_bulk_url = None
-    application.state.ch_client = await get_async_client(**ch_conn)
+    application.state.ch_client = await get_async_client(
+        **settings.clickhouse.connection
+    )
     application.state.connector = ClickHouseConnector(
         application.state.ch_client,
-        **ch_config,
+        **settings.clickhouse.configuration,
     )
     await application.state.connector.create_all()
-
-    if ch_bulk_conn["enabled"]:
-        application.state.ch_bulk_url = ch_bulk_conn["url"]
-        ch_conn["url"] = ch_bulk_conn["url"]
-        ch_config["chbulk_enabled"] = True
-        application.state.ch_client = get_async_client(**ch_conn)
-        application.state.connector = ClickHouseConnector(
-            application.state.ch_client,
-            **ch_config,
-        )
-        application.state.ch_conn_type = "bulk"
-    else:
-        application.state.ch_conn_type = "direct"
 
     yield
 
@@ -104,12 +86,8 @@ if settings.prometheus.enabled:
 @app.get("/", include_in_schema=True)
 async def probe(request: Request):
 
-    if request.app.state.ch_bulk_url is None:
-        query = await app.state.ch_client.query("SELECT 1")
-        ch_status = query.first_row[0] == 1
-    else:
-        query = requests.get(f"{request.app.state.ch_bulk_url}/status")
-        ch_status = query.ok and query.json().get("status") == "ok"
+    query = await app.state.ch_client.query("SELECT 1")
+    ch_status = query.first_row[0] == 1
 
     status = {"clickhouse": ch_status}
     status = jsonable_encoder(status)

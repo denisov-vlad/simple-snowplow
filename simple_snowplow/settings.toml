@@ -34,14 +34,11 @@ enabled = false
 [clickhouse]
 [clickhouse.connection]
 interface = "http"
-host = "clickhouse" # "http://clickhouse:8123"
+host = "clickhouse"
 port = 8123
 username = "default"
 database = "default"
 password = ""
-[clickhouse.connection.bulk]
-enabled = false
-url = "http://clickhouse-bulk:8124"
 [clickhouse.configuration]
 database = "snowplow"
 cluster_name = ""

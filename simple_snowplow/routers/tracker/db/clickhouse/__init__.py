@@ -24,10 +24,7 @@ class ClickHouseConnector:
         self.tables = self.get_tables()
         self.table = self.get_table_name()
 
-        if params.get("chbulk_enabled", False):
-            self.async_settings = ""
-        else:
-            self.async_settings = "SETTINGS async_insert=1, wait_for_async_insert=0"
+        self.async_settings = {"async_insert": 1, "wait_for_async_insert": 0}
 
     def get_tables(self):
         tables_names = {}
@@ -144,6 +141,7 @@ class ClickHouseConnector:
                     data=[row],
                     column_names=column_names,
                     column_types=column_types,
+                    settings=self.async_settings,
                 )
 
     def get_table_name(self):
