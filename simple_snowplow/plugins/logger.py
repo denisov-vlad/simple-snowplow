@@ -1,5 +1,3 @@
-"""Configure handlers and formats for application loggers.
-Source: https://gist.github.com/nkhitrov/a3e31cfcc1b19cba8e1b626276148c49"""
 import logging
 import sys
 from pprint import pformat
@@ -16,6 +14,9 @@ from loguru._defaults import LOGURU_FORMAT
 
 class InterceptHandler(logging.Handler):
     """
+    Configure handlers and formats for application loggers.
+    Source: https://gist.github.com/nkhitrov/a3e31cfcc1b19cba8e1b626276148c49
+
     Default handler from examples in loguru documentaion.
     See https://loguru.readthedocs.io/en/stable/overview.html#entirely-compatible-with-standard-logging
     """
