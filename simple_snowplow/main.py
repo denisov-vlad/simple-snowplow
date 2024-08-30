@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
 
-from clickhouse_connect import get_async_client
+import requests
 from brotli_asgi import BrotliMiddleware
+from clickhouse_connect import get_async_client
 from config import settings
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -16,9 +18,6 @@ from routers.tracker import router as app_router
 from routers.tracker.db.clickhouse import ClickHouseConnector
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
-from fastapi import Request
-import requests
-
 
 
 @asynccontextmanager
@@ -52,7 +51,6 @@ async def lifespan(application):
     yield
 
     application.state.ch_client.close()
-
 
 
 app = FastAPI(title="Simple Snowplow", version="0.2.2", lifespan=lifespan)

@@ -8,12 +8,18 @@ from routers.tracker import snowplow
 from routers.tracker.useragent import parse_agent
 
 
-async def convert_ip(ip: IPv4Address | IPv6Address | None) -> IPv4Address | None:
+async def convert_ip(ip: IPv4Address | IPv6Address | None) -> IPv4Address:
+
+    none_ip = IPv4Address("0.0.0.0")
+
+    if ip is None:
+        return none_ip
+
     if isinstance(ip, str):
         try:
             ip = IPvAnyAddress(ip)
         except PydanticCustomError:
-            return None
+            return none_ip
 
     if isinstance(ip, IPv6Address):
         return ip.ipv4_mapped

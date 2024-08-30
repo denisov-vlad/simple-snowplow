@@ -1,8 +1,8 @@
-from datetime import datetime
 from typing import List
 from typing import Optional
 
 import elasticapm
+from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from orjson import dumps
 from routers.tracker.db.clickhouse.convert import table_fields
@@ -56,144 +56,35 @@ class ClickHouseConnector:
         for table_name in self.tables.values():
             db, table = table_name.split(".")
             await self.conn.command(
-                f"""
-                CREATE DATABASE IF NOT EXISTS {db} {self.cluster_condition}
-            """,
+                f"CREATE DATABASE IF NOT EXISTS {db} {self.cluster_condition}",
             )
 
     async def create_local_table(self):
-        await self.conn.command(
-            f"""
-        CREATE TABLE IF NOT EXISTS {self.tables["local"]} {self.cluster_condition}
-        (
-            `app_id` LowCardinality(String),
-            `platform` Enum8(
-                'web' = 1,
-                'mob' = 2,
-                'pc' = 3,
-                'srv' = 4,
-                'app' = 5,
-                'tv' = 6,
-                'cnsl' = 7,
-                'iot' = 8
-            ),
-            `app` Tuple(
-                version String,
-                build String
-            ),
-            `page` String DEFAULT '',
-            `referer` Nullable(String) DEFAULT NULL,
-            `event_type` Enum8(
-                'pv' = 1, 'pp' = 2, 'ue' = 3, 'se' = 4, 'tr' = 5, 'ti' = 6, 's' = 7
-            ),
-            `event_id` UUID,
-            `view_id` UUID,
-            `session_id` UUID,
-            `visit_count` Nullable(UInt64),
-            `session` Tuple(
-                event_index Nullable(UInt64),
-                previous_session_id Nullable(UUID),
-                first_event_id Nullable(UUID),
-                first_event_time Nullable(DateTime64(3, 'UTC')),
-                storage_mechanism LowCardinality(String),
-                unstructured String
-            ),
 
-            `amp` Tuple(
-                device_id String,
-                client_id String,
-                session_id UInt64,
-                visit_count UInt64,
-                session_engaged UInt8,
-                first_event_time Nullable(DateTime64(3, 'UTC')),
-                previous_session_time Nullable(DateTime64(3, 'UTC')),
-                view_id String
-            ),
-            `device_id` UUID,
-            `user_id` Nullable(String) DEFAULT NULL,
-            `time` DateTime64(3, 'UTC'),
-            `timezone` Nullable(String) DEFAULT NULL,
-            `time_extra` Tuple(
-                `time_user` DateTime64(3, 'UTC'),
-                `time_sent` DateTime64(3, 'UTC')
-            ),
-            `title` Nullable(String) DEFAULT NULL,
-            `screen` Tuple(
-                type String,
-                view_controller String,
-                top_view_controller String,
-                activity String,
-                fragment String,
-                unstructured String),
-            `page_data` String,
-            `user_data` String,
-            `user_ip` IPv4,
-            `geolocation` String,
-            `user_agent` String DEFAULT '',
-            `browser` Tuple(
-                family LowCardinality(String),
-                version String,
-                cookie UInt8,
-                charset LowCardinality(String),
-                color_depth UInt8,
-                unstructured String),
-            `os` Tuple(
-                family LowCardinality(String),
-                version String,
-                language LowCardinality(String)
-            ),
-            `device` Tuple(
-                brand LowCardinality(String),
-                model LowCardinality(String)
-            ),
-            `device_is` Tuple(mobile Int8, tablet Int8, touch Int8, pc Int8, bot Int8),
-            `device_extra` Tuple(
-                carrier LowCardinality(String),
-                network_type LowCardinality(String),
-                network_technology LowCardinality(String),
-                open_idfa String,
-                apple_idfa String,
-                apple_idfv String,
-                android_idfa String,
-                battery_level UInt8,
-                battery_state LowCardinality(String),
-                low_power_mode Int8
-            ),
-            `resolution` Tuple(browser String, viewport String, page String),
-            `event` Tuple(
-                action LowCardinality(String),
-                category LowCardinality(String),
-                label String,
-                property String,
-                value Float32,
-                unstructured String
-            ),
-            `extra` String,
-            `tracker` Tuple(
-                version LowCardinality(String),
-                namespace LowCardinality(String)
-            )
-        )
-        ENGINE = {self.params["tables"]["local"]["engine"]}
-        PARTITION BY (toYYYYMM(time), event_type)
-        ORDER BY ({self.params["tables"]["local"]["order_by"]})
-        SAMPLE BY cityHash64(device_id)
-        SETTINGS index_granularity = 8192;
-        """,
+        columns = []
+        for c in table_fields:
+            col = f"`{c['column_name']}` {c['type'].name}"
+            if c.get("default_type") is not None:
+                col += f" {c['default_type']} {c['default_expression']}"
+            columns.append(col)
+
+        await self.conn.command(
+            f"CREATE TABLE IF NOT EXISTS {self.tables["local"]} {self.cluster_condition} "
+            f"({', '.join(columns)}) "
+            f"ENGINE = {self.params['tables']['local']['engine']} "
+            "PARTITION BY (toYYYYMM(time), event_type) "
+            f"ORDER BY ({self.params['tables']['local']['order_by']}) "
+            "SAMPLE BY cityHash64(device_id) "
+            "SETTINGS index_granularity = 8192;",
         )
 
     async def create_buffer_table(self):
         source_db, source_table = self.tables["local"].split(".")
 
         await self.conn.command(
-            f"""
-        CREATE TABLE IF NOT EXISTS {self.tables["buffer"]}  {self.cluster_condition}
-        AS {self.tables["local"]} ENGINE = Buffer(
-            '{source_db}',
-            '{source_table}',
-            16, 10, 100, 10000, 1000000, 10000000, 100000000
-        );
-        """,
+            f"CREATE TABLE IF NOT EXISTS {self.tables["buffer"]}  {self.cluster_condition} "
+            f"AS {self.tables["local"]} ENGINE = Buffer("
+            f"'{source_db}', '{source_table}', 16, 10, 100, 10000, 1000000, 10000000, 100000000);",
         )
 
     async def create_distributed_table(self):
@@ -203,12 +94,9 @@ class ClickHouseConnector:
             source_db, source_table = self.tables["local"].split(".")
 
         await self.conn.command(
-            f"""
-        CREATE TABLE IF NOT EXISTS {self.tables["distributed"]} {self.cluster_condition}
-        AS {self.tables["local"]} ENGINE = Distributed(
-            '{self.cluster}', '{source_db}', '{source_table}', cityHash64(device_id)
-        );
-        """,
+            f"CREATE TABLE IF NOT EXISTS {self.tables["distributed"]} {self.cluster_condition} "
+            f"AS {self.tables["local"]} ENGINE = Distributed("
+            f"'{self.cluster}', '{source_db}', '{source_table}', cityHash64(device_id));",
         )
 
     async def create_all(self):
@@ -224,15 +112,13 @@ class ClickHouseConnector:
     async def _convert_types(value):
         if isinstance(value, dict):
             value = str(dumps(value), "utf-8")
-        elif isinstance(value, datetime):
-            # clickhouse driver doesn't support Datetime64 insert from datetime type
-            value = value.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
         return value
 
     @elasticapm.async_capture_span()
     async def insert(self, rows: List[dict]):
         for r in rows:
-            columns_names = []
+            column_names = []
+            column_types = []
 
             row = []
 
@@ -248,18 +134,17 @@ class ClickHouseConnector:
                 if value is None or value == "":
                     continue
 
-                columns_names.append(field["column_name"])
+                column_names.append(field["column_name"])
+                column_types.append(get_from_name(field["type"].name))
                 row.append(value)
 
-            print(columns_names)
-            columns_names = f"({','.join(columns_names)})"
-
-            # async with elasticapm.async_capture_span("clickhouse_query"):
-            #     await self.conn.command(
-            #         f"INSERT INTO {self.table} {columns_names} "
-            #         f"{self.async_settings} VALUES ",
-            #         tuple(row),
-            #     )
+            async with elasticapm.async_capture_span("clickhouse_query"):
+                await self.conn.insert(
+                    self.table,
+                    data=[row],
+                    column_names=column_names,
+                    column_types=column_types,
+                )
 
     def get_table_name(self):
         if self.cluster:
