@@ -19,6 +19,7 @@ EMPTY_DICTS = (
     "page_data",
     "screen_unstructured",
     "session_unstructured",
+    "browser_unstructured",
 )
 EMPTY_STRINGS = (
     "app_version",
@@ -29,6 +30,26 @@ EMPTY_STRINGS = (
     "screen_tvc",
     "screen_activity",
     "screen_fragment",
+    "device_model",
+    "device_brand",
+    "carrier",
+    "network_type",
+    "network_technology",
+    "open_idfa",
+    "apple_idfa",
+    "apple_idfv",
+    "android_idfa",
+    "battery_state",
+    "amp_device_id",
+    "amp_client_id",
+    "amp_view_id",
+)
+EMPTY_INTS = (
+    "amp_session_id",
+    "amp_visit_count",
+    "amp_session_engaged",
+    "battery_level",
+    "low_power_mode",
 )
 
 schemas = settings.common.snowplow.schemas
@@ -188,6 +209,8 @@ async def parse_contexts(contexts: dict) -> dict:
         result[col] = {}
     for col in EMPTY_STRINGS:
         result[col] = ""
+    for col in EMPTY_INTS:
+        result[col] = 0
 
     for item in contexts["data"]:
         if "schema" not in item:

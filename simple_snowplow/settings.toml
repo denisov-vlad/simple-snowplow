@@ -33,13 +33,12 @@ enabled = false
 
 [clickhouse]
 [clickhouse.connection]
-url = "http://clickhouse:8123"
-user = "default"
+interface = "http"
+host = "clickhouse"
+port = 8123
+username = "default"
 database = "default"
 password = ""
-[clickhouse.connection.bulk]
-enabled = false
-url = "http://clickhouse-bulk:8124"
 [clickhouse.configuration]
 database = "snowplow"
 cluster_name = ""

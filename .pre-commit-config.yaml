@@ -9,7 +9,7 @@ repos:
   - id: check-toml
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.5.1
+  rev: v0.6.3
   hooks:
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix]
@@ -20,7 +20,7 @@ repos:
   - id: add-trailing-comma
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.13.0
+  rev: v2.14.0
   hooks:
   - id: pretty-format-yaml
     args:
@@ -29,7 +29,7 @@ repos:
     - --indent=2
 
 - repo: https://github.com/psf/black
-  rev: 24.4.2
+  rev: 24.8.0
   hooks:
   - id: black
     language_version: python3.12
