@@ -266,9 +266,9 @@ async def parse_contexts(contexts: dict) -> dict:
             result["apple_idfa"] = data.get("appleIdfa", "")
             result["apple_idfv"] = data.get("appleIdfv", "")
             result["android_idfa"] = data.get("androidIdfa", "")
-            result["battery_level"] = data.get("batteryLevel", "")
+            result["battery_level"] = data.get("batteryLevel", 0)
             result["battery_state"] = data.get("batteryState", "")
-            result["low_power_mode"] = data.get("lowPowerMode", -1)
+            result["low_power_mode"] = data.get("lowPowerMode", False)
         elif schema.startswith("iglu:com.snowplowanalytics.mobile/application/"):
             result["app_version"] = item["data"]["version"]
             result["app_build"] = item["data"]["build"]
