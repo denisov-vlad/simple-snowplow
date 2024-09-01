@@ -105,12 +105,6 @@ class ClickHouseConnector:
         if self.cluster:
             await self.create_distributed_table()
 
-    @staticmethod
-    async def _convert_types(value):
-        if isinstance(value, dict):
-            value = str(dumps(value), "utf-8")
-        return value
-
     @elasticapm.async_capture_span()
     async def insert(self, rows: List[dict]):
         for r in rows:
@@ -121,12 +115,7 @@ class ClickHouseConnector:
 
             for field in table_fields:
                 payload_name = field["payload_name"]
-                if isinstance(payload_name, tuple):
-                    value = tuple(
-                        [await self._convert_types(r.get(v)) for v in payload_name],
-                    )
-                else:
-                    value = await self._convert_types(r.get(payload_name))
+                value = r.get(payload_name)
 
                 if value is None or value == "":
                     continue
@@ -134,6 +123,10 @@ class ClickHouseConnector:
                 column_names.append(field["column_name"])
                 column_types.append(get_from_name(field["type"].name))
                 row.append(value)
+
+            for u, uu in enumerate(row):
+                print(column_names[u], column_types[u].name, uu)
+            print("=========")
 
             async with elasticapm.async_capture_span("clickhouse_query"):
                 await self.conn.insert(

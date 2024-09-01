@@ -3,6 +3,7 @@ from enum import Enum
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import DateTime64
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Enum8
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import IPv4
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import JSON
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import LowCardinality
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Nullable
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import String
@@ -104,7 +105,7 @@ table_fields = [
                     "Nullable(UUID)",
                     "Nullable(DateTime64(3, 'UTC'))",
                     "LowCardinality(String)",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
@@ -209,18 +210,18 @@ table_fields = [
                     "String",
                     "String",
                     "String",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
     },
-    {"column_name": "page_data", "payload_name": "page_data", "type": String()},
-    {"column_name": "user_data", "payload_name": "user_data", "type": String()},
+    {"column_name": "page_data", "payload_name": "page_data", "type": JSON()},
+    {"column_name": "user_data", "payload_name": "user_data", "type": JSON()},
     {"column_name": "user_ip", "payload_name": "user_ip", "type": IPv4()},
     {
         "column_name": "geolocation",
         "payload_name": "geolocation",
-        "type": String(),
+        "type": JSON(),
     },
     {
         "column_name": "user_agent",
@@ -255,7 +256,7 @@ table_fields = [
                     "Bool",
                     "LowCardinality(String)",
                     "UInt8",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
@@ -360,14 +361,14 @@ table_fields = [
                     "LowCardinality(String)",
                     "LowCardinality(String)",
                     "String",
-                    "String",
+                    "JSON",
                     "Float32",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
     },
-    {"column_name": "extra", "payload_name": "extra", "type": String()},
+    {"column_name": "extra", "payload_name": "extra", "type": JSON()},
     {
         "column_name": "tracker",
         "payload_name": ("tv", "tna"),

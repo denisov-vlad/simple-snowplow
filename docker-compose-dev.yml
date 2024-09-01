@@ -18,7 +18,9 @@ services:
 
   clickhouse:
     container_name: simple-snowplow-ch
-    image: clickhouse/clickhouse-server:24.6.2.17
+    build:
+      context: clickhouse
+      dockerfile: Dockerfile
     environment:
     - "ALLOW_EMPTY_PASSWORD=yes"
     ports:
