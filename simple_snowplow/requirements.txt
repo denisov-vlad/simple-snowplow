@@ -2,7 +2,7 @@ aiofiles==24.1.0
 aiohttp==3.10.5
 brotli==1.1.0
 brotli-asgi==1.4.0
-clickhouse-connect==0.7.18
+clickhouse-connect==0.8.3
 dynaconf==3.2.6
 elastic-apm==6.23.0
 fastapi==0.112.2
