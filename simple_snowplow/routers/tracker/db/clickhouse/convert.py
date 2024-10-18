@@ -158,15 +158,15 @@ table_fields = [
     },
     {
         "column_name": "time",
-        "payload_name": "rtm",
+        "payload_name": "dtm",
         "type": DateTime64(3, "UTC"),
     },
     {
         "column_name": "time_extra",
-        "payload_name": ("dtm", "stm"),
+        "payload_name": ("rtm", "stm"),
         "type": Tuple(
             type_def=TypeDef(
-                keys=("user", "sent"),
+                keys=("received", "sent"),
                 values=("DateTime64(3, 'UTC')", "DateTime64(3, 'UTC')"),
             ),
         ),
