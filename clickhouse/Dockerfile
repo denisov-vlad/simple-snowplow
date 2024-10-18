@@ -1,4 +1,4 @@
-FROM clickhouse/clickhouse-server:24.8.2.3-alpine
+FROM clickhouse/clickhouse-server:24.9.2.42-alpine
 
 RUN apk update && apk add xmlstarlet \
     && xmlstarlet ed --inplace --subnode '/clickhouse/profiles/default' --type elem \
