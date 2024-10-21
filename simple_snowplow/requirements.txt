@@ -11,7 +11,7 @@ loguru==0.7.2
 orjson==3.10.7
 PyYAML==6.0.2
 requests==2.32.3
-SQLAlchemy==2.0.32
+SQLAlchemy==2.0.36
 starlette_exporter==0.23.0
 ua-parser==0.18.0
 user-agents==2.2.0
