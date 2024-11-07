@@ -3,8 +3,6 @@ from enum import Enum
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import DateTime64
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Enum8
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import IPv4
-# from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import JSON
-from clickhouse_connect.datatypes.dynamic import JSON
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import LowCardinality
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Nullable
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import String
@@ -12,6 +10,7 @@ from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Tuple
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UInt64
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UUID
 from clickhouse_connect.datatypes.base import TypeDef
+from clickhouse_connect.datatypes.dynamic import JSON
 
 
 class Platform(Enum):
@@ -216,14 +215,23 @@ table_fields = [
             ),
         ),
     },
-    {"column_name": "page_data", "payload_name": "page_data", "type": JSON(type_def=TypeDef())},
-    {"column_name": "user_data", "payload_name": "user_data", "type": JSON(type_def=TypeDef()), "default_expression": {}},
+    {
+        "column_name": "page_data",
+        "payload_name": "page_data",
+        "type": JSON(type_def=TypeDef()),
+    },
+    {
+        "column_name": "user_data",
+        "payload_name": "user_data",
+        "type": JSON(type_def=TypeDef()),
+        "default_expression": {},
+    },
     {"column_name": "user_ip", "payload_name": "user_ip", "type": IPv4()},
     {
         "column_name": "geolocation",
         "payload_name": "geolocation",
         "type": JSON(type_def=TypeDef()),
-        "default_expression": {}
+        "default_expression": {},
     },
     {
         "column_name": "user_agent",
@@ -370,7 +378,12 @@ table_fields = [
             ),
         ),
     },
-    {"column_name": "extra", "payload_name": "extra", "type": JSON(type_def=TypeDef()), "default_expression": {}},
+    {
+        "column_name": "extra",
+        "payload_name": "extra",
+        "type": JSON(type_def=TypeDef()),
+        "default_expression": {},
+    },
     {
         "column_name": "tracker",
         "payload_name": ("tv", "tna"),

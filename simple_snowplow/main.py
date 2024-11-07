@@ -22,7 +22,7 @@ from starlette.status import HTTP_502_BAD_GATEWAY
 @asynccontextmanager
 async def lifespan(application):
     application.state.ch_client = await get_async_client(
-        **settings.clickhouse.connection
+        **settings.clickhouse.connection,
     )
     application.state.connector = ClickHouseConnector(
         application.state.ch_client,
