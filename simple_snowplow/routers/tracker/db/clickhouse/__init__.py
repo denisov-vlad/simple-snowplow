@@ -4,7 +4,6 @@ from typing import Optional
 import elasticapm
 from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
-from orjson import dumps
 from routers.tracker.db.clickhouse.convert import table_fields
 
 
@@ -123,10 +122,6 @@ class ClickHouseConnector:
                 column_names.append(field["column_name"])
                 column_types.append(get_from_name(field["type"].name))
                 row.append(value)
-
-            for u, uu in enumerate(row):
-                print(column_names[u], column_types[u].name, uu)
-            print("=========")
 
             async with elasticapm.async_capture_span("clickhouse_query"):
                 await self.conn.insert(
