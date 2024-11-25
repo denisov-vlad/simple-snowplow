@@ -8,7 +8,7 @@ elastic-apm==6.23.0
 fastapi==0.112.2
 inflection==0.5.1
 loguru==0.7.2
-orjson==3.10.7
+orjson==3.10.12
 PyYAML==6.0.2
 requests==2.32.3
 SQLAlchemy==2.0.32
