@@ -4,7 +4,6 @@ from typing import Optional
 import elasticapm
 from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
-from orjson import dumps
 from routers.tracker.db.clickhouse.convert import table_fields
 
 
@@ -105,12 +104,6 @@ class ClickHouseConnector:
         if self.cluster:
             await self.create_distributed_table()
 
-    @staticmethod
-    async def _convert_types(value):
-        if isinstance(value, dict):
-            value = str(dumps(value), "utf-8")
-        return value
-
     @elasticapm.async_capture_span()
     async def insert(self, rows: List[dict]):
         for r in rows:
@@ -121,12 +114,7 @@ class ClickHouseConnector:
 
             for field in table_fields:
                 payload_name = field["payload_name"]
-                if isinstance(payload_name, tuple):
-                    value = tuple(
-                        [await self._convert_types(r.get(v)) for v in payload_name],
-                    )
-                else:
-                    value = await self._convert_types(r.get(payload_name))
+                value = r.get(payload_name)
 
                 if value is None or value == "":
                     continue

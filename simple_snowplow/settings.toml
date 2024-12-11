@@ -43,7 +43,7 @@ password = ""
 database = "snowplow"
 cluster_name = ""
 [clickhouse.configuration.tables.local]
-name = ""
+name = "local"
 engine = "MergeTree()"
 order_by = "app_id, toDate(time), event_type, page, device_id, cityHash64(device_id), session_id, time"
 [clickhouse.configuration.tables.distributed]

@@ -10,6 +10,7 @@ from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Tuple
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UInt64
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UUID
 from clickhouse_connect.datatypes.base import TypeDef
+from clickhouse_connect.datatypes.dynamic import JSON
 
 
 class Platform(Enum):
@@ -104,7 +105,7 @@ table_fields = [
                     "Nullable(UUID)",
                     "Nullable(DateTime64(3, 'UTC'))",
                     "LowCardinality(String)",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
@@ -156,15 +157,15 @@ table_fields = [
     },
     {
         "column_name": "time",
-        "payload_name": "rtm",
+        "payload_name": "dtm",
         "type": DateTime64(3, "UTC"),
     },
     {
         "column_name": "time_extra",
-        "payload_name": ("dtm", "stm"),
+        "payload_name": ("rtm", "stm"),
         "type": Tuple(
             type_def=TypeDef(
-                keys=("user", "sent"),
+                keys=("received", "sent"),
                 values=("DateTime64(3, 'UTC')", "DateTime64(3, 'UTC')"),
             ),
         ),
@@ -209,18 +210,28 @@ table_fields = [
                     "String",
                     "String",
                     "String",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
     },
-    {"column_name": "page_data", "payload_name": "page_data", "type": String()},
-    {"column_name": "user_data", "payload_name": "user_data", "type": String()},
+    {
+        "column_name": "page_data",
+        "payload_name": "page_data",
+        "type": JSON(type_def=TypeDef()),
+    },
+    {
+        "column_name": "user_data",
+        "payload_name": "user_data",
+        "type": JSON(type_def=TypeDef()),
+        "default_expression": {},
+    },
     {"column_name": "user_ip", "payload_name": "user_ip", "type": IPv4()},
     {
         "column_name": "geolocation",
         "payload_name": "geolocation",
-        "type": String(),
+        "type": JSON(type_def=TypeDef()),
+        "default_expression": {},
     },
     {
         "column_name": "user_agent",
@@ -255,7 +266,7 @@ table_fields = [
                     "Bool",
                     "LowCardinality(String)",
                     "UInt8",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
@@ -360,14 +371,19 @@ table_fields = [
                     "LowCardinality(String)",
                     "LowCardinality(String)",
                     "String",
-                    "String",
+                    "JSON",
                     "Float32",
-                    "String",
+                    "JSON",
                 ),
             ),
         ),
     },
-    {"column_name": "extra", "payload_name": "extra", "type": String()},
+    {
+        "column_name": "extra",
+        "payload_name": "extra",
+        "type": JSON(type_def=TypeDef()),
+        "default_expression": {},
+    },
     {
         "column_name": "tracker",
         "payload_name": ("tv", "tna"),
