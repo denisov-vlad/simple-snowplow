@@ -114,10 +114,11 @@ class ClickHouseConnector:
 
             for field in table_fields:
                 payload_name = field["payload_name"]
-                value = r.get(payload_name)
 
-                if value is None or value == "":
-                    continue
+                if isinstance(payload_name, tuple):
+                    value = tuple([r.get(v) for v in payload_name])
+                else:
+                    value = r.get(payload_name)
 
                 column_names.append(field["column_name"])
                 column_types.append(get_from_name(field["type"].name))
