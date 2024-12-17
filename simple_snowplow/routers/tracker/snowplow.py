@@ -325,6 +325,10 @@ async def parse_contexts(contexts: dict) -> dict:
             "iglu:com.snowplowanalytics.mobile/application_lifecycle/",
         ):
             result["extra"]["app_lifecycle"] = item["data"]
+        elif schema.startswith(
+            "iglu:com.android.installreferrer.api/referrer_details/",
+        ):
+            result["extra"]["install_referrer"] = item["data"]
         elif schema.startswith("iglu:com.snowplowanalytics.mobile/screen_summary/"):
             if "screen_unstructured" not in result:
                 result["screen_unstructured"] = {}
