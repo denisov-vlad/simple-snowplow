@@ -13,6 +13,6 @@ PyYAML==6.0.2
 requests==2.32.3
 SQLAlchemy==2.0.36
 starlette_exporter==0.23.0
-ua-parser==0.18.0
+ua-parser==1.0.0
 user-agents==2.2.0
 uvicorn==0.34.0
