@@ -13,15 +13,18 @@
             discoverRootDomain: true,
             contexts: {
                 webPage: true, // Default
-                session: true,
-                // performanceTiming: true,
+                session: true, // Adds client session context entity to events, off by default. Available in v3.5+.
+                browser: true, // Adds browser context entity to events, off by default. Available in v3.9+.
+                performanceNavigationTiming: true, // Adds performance navigation timing entity. Available in v4.0.2+
+                performanceTiming: true,
                 gaCookies: true,
+                geolocation: false,
                 clientHints: true,
           }
 
         })
 
-        // window.snowplow('setUserId', '{{Cookie suid}}');
+        window.snowplow('setUserId', 'test@email.com');
 
         window.snowplow('enableActivityTracking', {
             minimumVisitLength: 5,
