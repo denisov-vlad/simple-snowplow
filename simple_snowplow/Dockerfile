@@ -1,14 +1,13 @@
-FROM python:3.12-alpine3.20 AS builder
+FROM python:3.13-alpine3.21 AS builder
 
 RUN apk update
 RUN apk add g++
 RUN python -m pip install uv
-
 COPY ./requirements.txt /app/requirements.txt
 RUN python -m uv pip install -r /app/requirements.txt
 
 
-FROM python:3.12-alpine3.20
+FROM python:3.13-alpine3.21
 
 ENV PYTHONUNBUFFERED=1
 
@@ -16,12 +15,12 @@ WORKDIR /app
 
 RUN apk update && apk add --no-cache curl libstdc++  # orjson dependency
 
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY . /app
 
 ENV SCRIPTS_OUTPUT_DIR=/app/static
-ENV SCRIPTS_VERSION=3.24.2
+ENV SCRIPTS_VERSION=4.1.0
 RUN sh /app/utils/download_scripts.sh
 
 HEALTHCHECK --interval=10s --timeout=1s CMD curl -f http://localhost:80/ || exit 1
