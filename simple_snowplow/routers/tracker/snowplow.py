@@ -7,10 +7,12 @@ from uuid import uuid4
 
 import elasticapm
 import orjson
+import structlog
 from config import settings
 from inflection import underscore
-from loguru import logger
 from routers.tracker import models
+
+logger = structlog.stdlib.get_logger()
 
 
 EMPTY_DICTS = (
@@ -214,7 +216,7 @@ async def parse_contexts(contexts: dict) -> dict:
 
     for item in contexts["data"]:
         if "schema" not in item:
-            logger.warning("Empty schema for payload {}", item)
+            await logger.warning(f"Empty schema for payload {item}")
             continue
 
         schema = item["schema"]
@@ -329,13 +331,15 @@ async def parse_contexts(contexts: dict) -> dict:
             "iglu:com.android.installreferrer.api/referrer_details/",
         ):
             result["extra"]["install_referrer"] = item["data"]
+        elif schema.startswith("iglu:org.w3/PerformanceNavigationTiming/"):
+            result["extra"]["performance_navigation_timing"] = item["data"]
         elif schema.startswith("iglu:com.snowplowanalytics.mobile/screen_summary/"):
             if "screen_unstructured" not in result:
                 result["screen_unstructured"] = {}
             for k, v in data.items():
                 result["screen_unstructured"][k] = v
         else:
-            logger.warning("Schema {} has no parser", schema)
+            await logger.warning(f"Schema {schema} has no parser", data=data)
 
     return result
 

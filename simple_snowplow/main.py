@@ -1,15 +1,17 @@
 from contextlib import asynccontextmanager
 
+import structlog
 from brotli_asgi import BrotliMiddleware
 from clickhouse_connect import get_async_client
 from config import settings
 from fastapi import FastAPI
 from fastapi import Request
+from fastapi import Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from plugins.logger import init_logging
+from plugins.logger import configure_logger
 from plugins.logger import validation_exception_handler
 from routers.demo import router as demo_router
 from routers.proxy import router as proxy_router
@@ -35,9 +37,27 @@ async def lifespan(application):
     application.state.ch_client.close()
 
 
-app = FastAPI(title="Simple Snowplow", version="0.2.2", lifespan=lifespan)
+configure_logger()
+logger = structlog.stdlib.get_logger()
 
-init_logging()
+
+app = FastAPI(title="Simple Snowplow", version="0.3.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next) -> Response:
+    req_id = request.headers.get("request-id")
+
+    structlog.contextvars.clear_contextvars()
+    structlog.contextvars.bind_contextvars(
+        request_id=req_id,
+    )
+
+    response: Response = await call_next(request)
+
+    return response
+
+
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 

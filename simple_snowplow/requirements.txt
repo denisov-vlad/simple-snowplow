@@ -7,12 +7,12 @@ dynaconf==3.2.6
 elastic-apm==6.23.0
 fastapi==0.115.6
 inflection==0.5.1
-loguru==0.7.3
 orjson==3.10.12
 PyYAML==6.0.2
 requests==2.32.3
 SQLAlchemy==2.0.36
 starlette_exporter==0.23.0
+structlog==24.4.0
 ua-parser==1.0.0
 user-agents==2.2.0
 uvicorn==0.34.0
