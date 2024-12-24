@@ -19,6 +19,7 @@ from routers.tracker import router as app_router
 from routers.tracker.db.clickhouse import ClickHouseConnector
 from starlette.middleware.cors import CORSMiddleware
 from starlette.status import HTTP_502_BAD_GATEWAY
+from uvicorn.protocols.utils import get_path_with_query_string
 
 
 @asynccontextmanager
@@ -37,7 +38,7 @@ async def lifespan(application):
     application.state.ch_client.close()
 
 
-configure_logger()
+configure_logger(settings.logging.json, settings.logging.level)
 logger = structlog.stdlib.get_logger()
 
 
@@ -46,14 +47,33 @@ app = FastAPI(title="Simple Snowplow", version="0.3.0", lifespan=lifespan)
 
 @app.middleware("http")
 async def logging_middleware(request: Request, call_next) -> Response:
-    req_id = request.headers.get("request-id")
-
     structlog.contextvars.clear_contextvars()
-    structlog.contextvars.bind_contextvars(
-        request_id=req_id,
-    )
-
-    response: Response = await call_next(request)
+    response = Response(status_code=500)
+    try:
+        response: Response = await call_next(request)
+    except Exception:
+        # TODO: Validate that we don't swallow exceptions (unit test?)
+        await structlog.stdlib.get_logger("api.error").exception("Uncaught exception")
+        raise
+    finally:
+        status_code = response.status_code
+        url = get_path_with_query_string(request.scope)
+        client_host = request.client.host
+        client_port = request.client.port
+        http_method = request.method
+        http_version = request.scope["http_version"]
+        # Recreate the Uvicorn access log format, but add all parameters as structured information
+        await logger.info(
+            f"""{client_host}:{client_port} - "{http_method} {url} HTTP/{http_version}" {status_code}""",
+            http={
+                "url": str(request.url),
+                "status_code": status_code,
+                "method": http_method,
+                "version": http_version,
+            },
+            network={"client": {"ip": client_host, "port": client_port}},
+        )
+        return response
 
     return response
 

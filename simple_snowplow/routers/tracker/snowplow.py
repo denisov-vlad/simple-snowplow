@@ -339,7 +339,7 @@ async def parse_contexts(contexts: dict) -> dict:
             for k, v in data.items():
                 result["screen_unstructured"][k] = v
         else:
-            await logger.warning(f"Schema {schema} has no parser", data=data)
+            await logger.warning("Schema has no parser", data=data, schema=schema)
 
     return result
 

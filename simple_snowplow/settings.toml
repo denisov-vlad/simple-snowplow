@@ -24,6 +24,9 @@ paths = [
     "gtm.js"
 ]
 
+[logging]
+json = false
+level = "WARNING"
 
 [elastic_apm]
 enabled = false
