@@ -4,11 +4,11 @@ database = "clickhouse"
 demo = false
 hostname = "http://localhost:8000"
 [common.snowplow.schemas]
-user_data = "iglu:dev.snowplow.simple/user_data"
-page_data = "iglu:dev.snowplow.simple/page_data"
-screen_data = "iglu:dev.snowplow.simple/screen_data"
-ad_data = "iglu:dev.snowplow.simple/ad_data"
-u2s_data = "iglu:dev.snowplow.simple/u2s_data"
+user_data = "dev.snowplow.simple/user_data"
+page_data = "dev.snowplow.simple/page_data"
+screen_data = "dev.snowplow.simple/screen_data"
+ad_data = "dev.snowplow.simple/ad_data"
+u2s_data = "dev.snowplow.simple/u2s_data"
 [common.snowplow.endpoints]
 post_endpoint = "/tracker"
 get_endpoint = "/i"

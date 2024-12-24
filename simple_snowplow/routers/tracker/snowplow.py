@@ -216,27 +216,28 @@ async def parse_contexts(contexts: dict) -> dict:
 
     for item in contexts["data"]:
         if "schema" not in item:
-            await logger.warning(f"Empty schema for payload {item}")
+            await logger.warning("Empty schema for payload", item=item)
             continue
 
-        schema = item["schema"]
+        schema = "/".join(item["schema"][5:].split("/")[:2])
         data = item["data"]
 
         if not isinstance(data, dict):
+            await logger.warning("Wrong data type", data=data)
             continue
 
-        if schema.startswith("iglu:com.acme/static_context"):
+        if schema == "com.acme/static_context":
             for k, v in item["data"].items():
                 result["extra"][k] = v
-        elif schema.startswith("iglu:org.w3/PerformanceTiming"):
+        elif schema == "org.w3/PerformanceTiming":
             result["extra"]["performance_timing"] = item["data"]
-        elif schema.startswith("iglu:org.ietf/http_client_hints"):
+        elif schema == "org.ietf/http_client_hints":
             result["extra"]["client_hints"] = item["data"]
-        elif schema.startswith("iglu:com.google.analytics/cookies"):
+        elif schema in ("com.google.analytics/cookies", "com.google.ga4/cookies"):
             result["extra"]["ga_cookies"] = item["data"]
-        elif schema.startswith("iglu:com.snowplowanalytics.snowplow/web_page"):
+        elif schema == "com.snowplowanalytics.snowplow/web_page":
             result["view_id"] = item["data"]["id"]
-        elif schema.startswith("iglu:dev.amp.snowplow/amp_session"):
+        elif schema == "dev.amp.snowplow/amp_session":
             if "ampSessionId" in data:
                 result["amp_session_id"] = data["ampSessionId"]
             if "sessionCreationTimestamp" in data:
@@ -247,15 +248,15 @@ async def parse_contexts(contexts: dict) -> dict:
                 result["amp_session_engaged"] = data["sessionEngaged"]
             if "ampSessionIndex" in data:
                 result["amp_visit_count"] = data["ampSessionIndex"]
-        elif schema.startswith("iglu:dev.amp.snowplow/amp_id"):
+        elif schema == "dev.amp.snowplow/amp_id":
             result["amp_client_id"] = data["ampClientId"]
             result["amp_device_id"] = data.get("domainUserid", "")
             result["amp_uid"] = data.get("userId", "")
-        elif schema.startswith("iglu:dev.amp.snowplow/amp_web_page"):
+        elif schema == "dev.amp.snowplow/amp_web_page":
             result["amp_view_id"] = item["data"]["ampPageViewId"]
-        elif schema.startswith(schemas.page_data):
+        elif schema == schemas.page_data:
             result["page_data"] = item["data"]
-        elif schema.startswith("iglu:com.snowplowanalytics.snowplow/mobile_context"):
+        elif schema == "com.snowplowanalytics.snowplow/mobile_context":
             result["device_brand"] = data.pop("deviceManufacturer")
             result["device_model"] = data.pop("deviceModel")
             result["os_family"] = data.pop("osType")
@@ -271,10 +272,10 @@ async def parse_contexts(contexts: dict) -> dict:
             result["battery_level"] = data.get("batteryLevel", 0)
             result["battery_state"] = data.get("batteryState", "")
             result["low_power_mode"] = data.get("lowPowerMode", False)
-        elif schema.startswith("iglu:com.snowplowanalytics.mobile/application/"):
+        elif schema == "com.snowplowanalytics.mobile/application":
             result["app_version"] = item["data"]["version"]
             result["app_build"] = item["data"]["build"]
-        elif schema.startswith("iglu:com.snowplowanalytics.snowplow/client_session"):
+        elif schema == "com.snowplowanalytics.snowplow/client_session":
             result["vid"] = data.pop("sessionIndex")
             result["sid"] = data.pop("sessionId")
             result["duid"] = data.pop("userId")
@@ -285,7 +286,7 @@ async def parse_contexts(contexts: dict) -> dict:
             result["previous_session_id"] = data.get("previousSessionId", "")
             result["first_event_id"] = data.get("firstEventId", "")
             result["storage_mechanism"] = data.get("storageMechanism", "")
-        elif schema.startswith("iglu:com.snowplowanalytics.mobile/screen/"):
+        elif schema == "com.snowplowanalytics.mobile/screen":
             # data is duplicated in event field is it's view
             result["url"] = data.pop("name")
             result["view_id"] = data.pop("id")
@@ -294,7 +295,7 @@ async def parse_contexts(contexts: dict) -> dict:
             result["screen_tvc"] = data.get("topViewController", "")
             result["screen_activity"] = data.get("activity", "")
             result["screen_fragment"] = data.get("fragment", "")
-        elif schema.startswith("iglu:com.snowplowanalytics.snowplow/browser_context/"):
+        elif schema == "com.snowplowanalytics.snowplow/browser_context":
             if "cookiesEnabled" in data:
                 result["cookie"] = data.pop("cookiesEnabled")
             if "documentSize" in data:
@@ -308,32 +309,26 @@ async def parse_contexts(contexts: dict) -> dict:
             if "browserLanguage" in data:
                 result["lang"] = data.pop("browserLanguage")
             result["browser_unstructured"] = data
-        elif schema.startswith(
-            "iglu:com.snowplowanalytics.snowplow/geolocation_context/",
-        ):
+        elif schema == "com.snowplowanalytics.snowplow/geolocation_context":
             geo_data = {k: v for k, v in data.items() if v is not None}
             result["geolocation"] = geo_data
-        elif schema.startswith(schemas.screen_data):
+        elif schema == schemas.screen_data:
             if "screen_unstructured" not in result:
                 result["screen_unstructured"] = {}
             for k, v in data.items():
                 result["screen_unstructured"][k] = v
-        elif schema.startswith(schemas.user_data):
+        elif schema == schemas.user_data:
             for k, v in data.items():
                 result["user_data"][k] = v
-        elif schema.startswith(schemas.ad_data):
+        elif schema == schemas.ad_data:
             result["extra"]["ad_data"] = item["data"]
-        elif schema.startswith(
-            "iglu:com.snowplowanalytics.mobile/application_lifecycle/",
-        ):
+        elif schema == "com.snowplowanalytics.mobile/application_lifecycle":
             result["extra"]["app_lifecycle"] = item["data"]
-        elif schema.startswith(
-            "iglu:com.android.installreferrer.api/referrer_details/",
-        ):
+        elif schema == "com.android.installreferrer.api/referrer_details":
             result["extra"]["install_referrer"] = item["data"]
-        elif schema.startswith("iglu:org.w3/PerformanceNavigationTiming/"):
+        elif schema == "org.w3/PerformanceNavigationTiming":
             result["extra"]["performance_navigation_timing"] = item["data"]
-        elif schema.startswith("iglu:com.snowplowanalytics.mobile/screen_summary/"):
+        elif schema == "com.snowplowanalytics.mobile/screen_summary":
             if "screen_unstructured" not in result:
                 result["screen_unstructured"] = {}
             for k, v in data.items():
@@ -347,7 +342,7 @@ async def parse_contexts(contexts: dict) -> dict:
 @elasticapm.async_capture_span()
 async def parse_event(event: dict) -> dict:
     event = event["data"]
-    if event["schema"].startswith(schemas.u2s_data):
+    if event["schema"] == schemas.u2s_data:
         result = models.StructuredEvent.model_validate(event["data"]).model_dump()
         result["e"] = "se"
     else:
