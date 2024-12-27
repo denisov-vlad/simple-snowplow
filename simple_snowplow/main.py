@@ -42,7 +42,7 @@ configure_logger(settings.logging.json, settings.logging.level)
 logger = structlog.stdlib.get_logger()
 
 
-app = FastAPI(title="Simple Snowplow", version="0.3.0", lifespan=lifespan)
+app = FastAPI(title="Simple Snowplow", version="0.3.1", lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -74,8 +74,6 @@ async def logging_middleware(request: Request, call_next) -> Response:
             network={"client": {"ip": client_host, "port": client_port}},
         )
         return response
-
-    return response
 
 
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -126,7 +124,7 @@ if settings.prometheus.enabled:
 @app.get("/", include_in_schema=True)
 async def probe(request: Request):
 
-    query = await app.state.ch_client.query("SELECT 1")
+    query = await request.app.state.ch_client.query("SELECT 1")
     ch_status = query.first_row[0] == 1
 
     status = {"clickhouse": ch_status}

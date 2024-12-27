@@ -46,7 +46,7 @@ table_fields = [
         "type": Enum8(enum=Platform),
     },
     {
-        "column_name": "app",
+        "column_name": "app_info",
         "payload_name": ("app_version", "app_build"),
         "type": Tuple(
             type_def=TypeDef(keys=("version", "build"), values=("String", "String")),
@@ -62,9 +62,9 @@ table_fields = [
     {
         "column_name": "referer",
         "payload_name": "refr",
-        "type": Nullable(String),
+        "type": String(),
         "default_type": "DEFAULT",
-        "default_expression": "NULL",
+        "default_expression": "''",
     },
     {
         "column_name": "event_type",
@@ -112,46 +112,15 @@ table_fields = [
     },
     {
         "column_name": "amp",
-        "payload_name": (
-            "amp_device_id",
-            "amp_client_id",
-            "amp_session_id",
-            "amp_visit_count",
-            "amp_session_engaged",
-            "amp_first_event_time",
-            "amp_previous_session_time",
-            "amp_view_id",
-        ),
-        "type": Tuple(
-            type_def=TypeDef(
-                keys=(
-                    "device_id",
-                    "client_id",
-                    "session_id",
-                    "visit_count",
-                    "session_engaged",
-                    "first_event_time",
-                    "previous_session_time",
-                    "view_id",
-                ),
-                values=(
-                    "String",
-                    "String",
-                    "UInt64",
-                    "UInt64",
-                    "UInt8",
-                    "Nullable(DateTime64(3, 'UTC'))",
-                    "Nullable(DateTime64(3, 'UTC'))",
-                    "String",
-                ),
-            ),
-        ),
+        "payload_name": "amp",
+        "type": JSON(type_def=TypeDef()),
+        "default_expression": {},
     },
     {"column_name": "device_id", "payload_name": "duid", "type": UUID()},
     {
         "column_name": "user_id",
         "payload_name": "uid",
-        "type": Nullable(String),
+        "type": String(),
         "default_type": "DEFAULT",
         "default_expression": "''",
     },
@@ -173,47 +142,21 @@ table_fields = [
     {
         "column_name": "timezone",
         "payload_name": "tz",
-        "type": Nullable(String),
+        "type": String(),
         "default_type": "DEFAULT",
-        "default_expression": "NULL",
+        "default_expression": "''",
     },
     {
         "column_name": "title",
         "payload_name": "page",
-        "type": Nullable(String),
+        "type": String(),
         "default_type": "DEFAULT",
         "default_expression": "''",
     },
     {
         "column_name": "screen",
-        "payload_name": (
-            "screen_type",
-            "screen_vc",
-            "screen_tvc",
-            "screen_activity",
-            "screen_fragment",
-            "screen_unstructured",
-        ),
-        "type": Tuple(
-            type_def=TypeDef(
-                keys=(
-                    "type",
-                    "view_controller",
-                    "top_view_controller",
-                    "activity",
-                    "fragment",
-                    "unstructured",
-                ),
-                values=(
-                    "String",
-                    "String",
-                    "String",
-                    "String",
-                    "String",
-                    "JSON",
-                ),
-            ),
-        ),
+        "payload_name": "screen",
+        "type": JSON(type_def=TypeDef()),
     },
     {
         "column_name": "page_data",
@@ -242,32 +185,11 @@ table_fields = [
     },
     {
         "column_name": "browser",
-        "payload_name": (
-            "browser_family",
-            "browser_version_string",
-            "cookie",
-            "cs",
-            "cd",
-            "browser_unstructured",
-        ),
+        "payload_name": ("browser_family", "browser_version_string", "browser_extra"),
         "type": Tuple(
             type_def=TypeDef(
-                keys=(
-                    "family",
-                    "version",
-                    "cookie",
-                    "charset",
-                    "color_depth",
-                    "unstructured",
-                ),
-                values=(
-                    "LowCardinality(String)",
-                    "String",
-                    "Bool",
-                    "LowCardinality(String)",
-                    "UInt8",
-                    "JSON",
-                ),
+                keys=("family", "version", "extra"),
+                values=("LowCardinality(String)", "String", "JSON"),
             ),
         ),
     },
@@ -283,11 +205,11 @@ table_fields = [
     },
     {
         "column_name": "device",
-        "payload_name": ("device_brand", "device_model"),
+        "payload_name": ("device_brand", "device_model", "device_extra"),
         "type": Tuple(
             type_def=TypeDef(
-                keys=("brand", "model"),
-                values=("LowCardinality(String)", "LowCardinality(String)"),
+                keys=("brand", "model", "extra"),
+                values=("LowCardinality(String)", "LowCardinality(String)", "JSON"),
             ),
         ),
     },
@@ -302,53 +224,11 @@ table_fields = [
         ),
     },
     {
-        "column_name": "device_extra",
-        "payload_name": (
-            "carrier",
-            "network_type",
-            "network_technology",
-            "open_idfa",
-            "apple_idfa",
-            "apple_idfv",
-            "android_idfa",
-            "battery_level",
-            "battery_state",
-            "low_power_mode",
-        ),
-        "type": Tuple(
-            type_def=TypeDef(
-                keys=(
-                    "carrier",
-                    "network_type",
-                    "network_technology",
-                    "open_idfa",
-                    "apple_idfa",
-                    "apple_idfv",
-                    "android_idfa",
-                    "battery_level",
-                    "battery_state",
-                    "low_power_mode",
-                ),
-                values=(
-                    "LowCardinality(String)",
-                    "LowCardinality(String)",
-                    "LowCardinality(String)",
-                    "String",
-                    "String",
-                    "String",
-                    "String",
-                    "UInt8",
-                    "LowCardinality(String)",
-                    "Bool",
-                ),
-            ),
-        ),
-    },
-    {
         "column_name": "resolution",
         "payload_name": ("res", "vp", "ds"),
         "type": Tuple(
             type_def=TypeDef(
+                # LC?
                 keys=("browser", "viewport", "page"),
                 values=("String", "String", "String"),
             ),
@@ -393,5 +273,12 @@ table_fields = [
                 values=("LowCardinality(String)", "LowCardinality(String)"),
             ),
         ),
+    },
+    {
+        "column_name": "app",
+        "payload_name": None,
+        "type": LowCardinality(String),
+        "default_type": "MATERIALIZED",
+        "default_expression": "if(platform = 'mob', tracker.2, app_id)",
     },
 ]

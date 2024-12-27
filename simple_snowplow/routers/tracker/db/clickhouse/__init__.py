@@ -115,6 +115,9 @@ class ClickHouseConnector:
             for field in table_fields:
                 payload_name = field["payload_name"]
 
+                if payload_name is None:
+                    continue
+
                 if isinstance(payload_name, tuple):
                     value = tuple([r.get(v) for v in payload_name])
                 else:

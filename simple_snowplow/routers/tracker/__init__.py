@@ -1,25 +1,55 @@
 import base64
+from typing import Any
+from typing import Callable
+from typing import Coroutine
 from typing import Optional
 
+import orjson
 from config import settings
 from fastapi import Depends
 from fastapi import Header
 from fastapi import Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
+from fastapi.routing import APIRoute
 from fastapi.routing import APIRouter
+from json_repair import repair_json
 from pydantic import IPvAnyAddress
 from routers.tracker import models
 from routers.tracker.handlers import process_data
 from starlette.status import HTTP_204_NO_CONTENT
 
 
-router = APIRouter(tags=["snowplow"])
+custom_route_response = Callable[[Request], Coroutine[Any, Any, Response]]
+
+
+class CustomRoute(APIRoute):
+    def get_route_handler(self) -> custom_route_response:
+        original_route_handler = super().get_route_handler()
+
+        async def custom_route_handler(request: Request) -> custom_route_response:
+            if request.method == "POST":
+                raw_body = await request.body()
+                try:
+                    body = orjson.loads(raw_body)
+                    request._json = body
+                except orjson.JSONDecodeError:
+                    try:
+                        body = orjson.loads(repair_json(raw_body.decode("utf-8")))
+                        request._json = body
+                    except Exception as e:
+                        raise RequestValidationError([e])
+            return await original_route_handler(request)
+
+        return custom_route_handler
+
+
+router = APIRouter(tags=["snowplow"], route_class=CustomRoute)
 
 
 def pixel_gif():
-    return base64.b64decode(
-        b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",
-    )
+    img = b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+    return base64.b64decode(img)
 
 
 pixel = pixel_gif()

@@ -3,12 +3,51 @@ from typing import Any
 from typing import List
 
 from fastapi import Query
+from fastapi.exceptions import RequestValidationError
+from json_repair import repair_json
 from pydantic import AliasChoices
 from pydantic import BaseModel
 from pydantic import Field
+from typing_extensions import Self
 
 
-class SnowPlowModel(BaseModel):
+class Model(BaseModel):
+    @classmethod
+    def model_validate_json(
+        cls,
+        json_data: str | bytes | bytearray,
+        *,
+        strict: bool | None = None,
+        context: Any | None = None,
+    ) -> Self:
+        """Usage docs: https://docs.pydantic.dev/2.10/concepts/json/#json-parsing
+
+        Validate the given JSON data against the Pydantic model.
+
+        Args:
+            json_data: The JSON data to validate.
+            strict: Whether to enforce types strictly.
+            context: Extra variables to pass to the validator.
+
+        Returns:
+            The validated Pydantic model.
+
+        Raises:
+            ValidationError: If `json_data` is not a JSON string or the object could not be validated.
+        """
+        # `__tracebackhide__` tells pytest and some other tools to omit this function from tracebacks
+        __tracebackhide__ = True
+        kwargs = {"input": json_data, "strict": strict, "context": context}
+
+        try:
+            return cls.__pydantic_validator__.validate_json(**kwargs)
+        except RequestValidationError:
+            kwargs["input"] = repair_json(json_data)
+
+        return cls.__pydantic_validator__.validate_json(**kwargs)
+
+
+class SnowPlowModel(Model):
     data: List[Any | None] = Query(...)
     json_schema: str | None = Query(
         None,
@@ -20,7 +59,7 @@ class SnowPlowModel(BaseModel):
 se_description = "Only for event_type = se"
 
 
-class StructuredEvent(BaseModel):
+class StructuredEvent(Model):
 
     se_ac: str = Query(
         "",
@@ -83,12 +122,12 @@ class PayloadElementBaseModel(StructuredEvent):
     eid: str | None = Query(None, title="Event UUID")
     lang: str = Query("", title="Language the browser is set to")
     p: str = Query(..., title="The platform the app runs on", description="ex. web")
-    page: str | None = Query(None, title="Page title")
+    page: str = Query("", title="Page title")
     pp_mix: int = Query(0, title="Minimum page x offset seen in the last ping period")
     pp_max: int = Query(0, title="Maximum page x offset seen in the last ping period")
     pp_miy: int = Query(0, title="Minimum page y offset seen in the last ping period")
     pp_may: int = Query(0, title="Maximum page y offset seen in the last ping period")
-    refr: str | None = Query(None, title="Referrer URL")
+    refr: str = Query("", title="Referrer URL")
     res: str = Query(..., title="Screen / monitor resolution")
     sid: str | None = Query(
         None,
