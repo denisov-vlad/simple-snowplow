@@ -142,8 +142,8 @@ class PayloadElementBaseModel(StructuredEvent):
     tz: str | None = Query(None, title="Time zone of client device’s OS")
     ue_pr: str = Query("", title="The properties of the event")
     ue_px: str = Query("", title="The properties of the event (b64)")
-    uid: str | None = Query(
-        None,
+    uid: str = Query(
+        "",
         title="Unique identifier for user, set by the business using setUserId",
     )
     url: str = Query("", title="Page URL")
