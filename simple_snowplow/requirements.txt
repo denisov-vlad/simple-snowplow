@@ -5,7 +5,7 @@ brotli-asgi==1.4.0
 clickhouse-connect==0.8.15
 dynaconf==3.2.10
 elastic-apm==6.23.0
-fastapi==0.115.6
+fastapi==0.115.11
 inflection==0.5.1
 json-repair==0.35.0
 orjson==3.10.15
