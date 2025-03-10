@@ -7,7 +7,7 @@ dynaconf==3.2.10
 elastic-apm==6.23.0
 fastapi==0.115.11
 inflection==0.5.1
-json-repair==0.35.0
+json-repair==0.39.1
 orjson==3.10.15
 PyYAML==6.0.2
 requests==2.32.3
