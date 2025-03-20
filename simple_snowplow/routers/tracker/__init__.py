@@ -104,3 +104,24 @@ async def get_tracker(
     await request.app.state.connector.insert(data)
 
     return Response(content=pixel, media_type="image/gif")
+
+
+@router.post(endpoints.sendgrid_endpoint, summary="Sendgrid event endpoint")
+async def sendgrid_event(
+    request: Request,
+    body: list[models.SendgridElementBaseModel],
+):
+    """
+    Collects data from Sendgrid events
+    \f
+    :param request: FastApi request instance
+    :param body: Sendgrid payload data
+    :param user_agent: Browser User-Agent header
+    :param x_forwarded_for: User IP
+    :param cookie: Browser's cookies
+    :return:
+    """
+
+    await request.app.state.connector.insert(body, table_group="sendgrid")
+
+    return Response(status_code=HTTP_204_NO_CONTENT)

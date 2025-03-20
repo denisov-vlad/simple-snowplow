@@ -1,5 +1,7 @@
 from enum import Enum
 
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Array
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import DateTime
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import DateTime64
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Enum8
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import IPv4
@@ -7,6 +9,8 @@ from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import LowCardinality
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Nullable
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import String
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Tuple
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UInt16
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UInt32
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UInt64
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UUID
 from clickhouse_connect.datatypes.base import TypeDef
@@ -34,7 +38,7 @@ class EventType(Enum):
     s = 7
 
 
-table_fields = [
+snowplow_fields = [
     {
         "column_name": "app_id",
         "payload_name": "aid",
@@ -282,3 +286,99 @@ table_fields = [
         "default_expression": "if(platform = 'mob', tracker.2, app_id)",
     },
 ]
+
+
+sendgrid_fields = [
+    {
+        "column_name": "email",
+        "payload_name": "email",
+        "type": String(),
+    },
+    {
+        "column_name": "time",
+        "payload_name": "timestamp",
+        "type": DateTime("UTC"),
+    },
+    {
+        "column_name": "smtp_id",
+        "payload_name": "smtp_id",
+        "type": String(),
+    },
+    {
+        "column_name": "event",
+        "payload_name": "event",
+        "type": LowCardinality(String),
+    },
+    {
+        "column_name": "category",
+        "payload_name": "category",
+        "type": Array(String),
+    },
+    {
+        "column_name": "sg_event_id",
+        "payload_name": "sg_event_id",
+        "type": String(),
+    },
+    {
+        "column_name": "sg_message_id",
+        "payload_name": "sg_message_id",
+        "type": String(),
+    },
+    {
+        "column_name": "response",
+        "payload_name": "response",
+        "type": LowCardinality(String),
+        "default_type": "DEFAULT",
+        "default_expression": "''",
+    },
+    {
+        "column_name": "attempt",
+        "payload_name": "attempt",
+        "type": UInt16(),
+        "default_type": "DEFAULT",
+        "default_expression": 0,
+    },
+    {
+        "column_name": "user_agent",
+        "payload_name": "useragent",
+        "type": String(),
+        "default_type": "DEFAULT",
+        "default_expression": "''",
+    },
+    {
+        "column_name": "ip",
+        "payload_name": "ip",
+        "type": IPv4(),
+    },
+    {
+        "column_name": "url",
+        "payload_name": "url",
+        "type": String(),
+        "default_type": "DEFAULT",
+        "default_expression": "''",
+    },
+    {
+        "column_name": "reason",
+        "payload_name": "reason",
+        "type": LowCardinality(String),
+        "default_type": "DEFAULT",
+        "default_expression": "''",
+    },
+    {
+        "column_name": "status",
+        "payload_name": "status",
+        "type": LowCardinality(String),
+        "default_type": "DEFAULT",
+        "default_expression": "''",
+    },
+    {
+        "column_name": "asm_group_id",
+        "payload_name": "asm_group_id",
+        "type": UInt32(),
+        "default_type": "DEFAULT",
+        "default_expression": 0,
+    },
+]
+
+
+fields = {"snowplow": snowplow_fields, "sendgrid": sendgrid_fields}

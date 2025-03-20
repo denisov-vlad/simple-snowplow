@@ -13,6 +13,7 @@ u2s_data = "dev.snowplow.simple/u2s_data"
 post_endpoint = "/tracker"
 get_endpoint = "/i"
 proxy_endpoint = "/proxy"
+sendgrid_endpoint = "/sendgrid"
 
 [proxy]
 domains = [
@@ -34,6 +35,38 @@ enabled = false
 [prometheus]
 enabled = false
 
+# Performance tuning options
+[performance]
+# Maximum concurrent connections to handle
+max_concurrent_connections = 100
+# Number of database connections in the pool
+db_pool_size = 5
+# Additional connections allowed when pool is under high load
+db_pool_overflow = 10
+
+# Security configuration
+[security]
+# Disable API documentation in production
+disable_docs = false
+# Require HTTPS for all connections
+https_redirect = false
+# Trusted hosts (domains) allowed to access the application
+trusted_hosts = ["*"]
+# Trust X-Forwarded-* headers when behind a proxy/load-balancer
+trust_proxy_headers = true
+
+# Rate limiting configuration
+[security.rate_limiting]
+enabled = false
+# Maximum requests per IP address in the time window
+max_requests = 100
+# Time window in seconds
+window_seconds = 60
+# IPs or CIDR ranges to exclude from rate limiting
+ip_whitelist = ["127.0.0.1", "::1", "10.0.0.0/8"]
+# URL paths to exclude from rate limiting (like health checks)
+path_whitelist = ["/", "/health", "/metrics"]
+
 [clickhouse]
 [clickhouse.connection]
 interface = "http"
@@ -42,15 +75,42 @@ port = 8123
 username = "default"
 database = "default"
 password = ""
+# Connection timeout in seconds
+connect_timeout = 10
 [clickhouse.configuration]
 database = "snowplow"
 cluster_name = ""
-[clickhouse.configuration.tables.local]
+
+[clickhouse.configuration.tables.snowplow.local]
 name = "local"
 engine = "MergeTree()"
+partition_by = "(toYYYYMM(time), event_type)"
 order_by = "app, platform, app_id, toDate(time), event_type, page, device_id, cityHash64(device_id), session_id, time"
-[clickhouse.configuration.tables.distributed]
-name = ""
-[clickhouse.configuration.tables.buffer]
-name = ""
-enabled = false  # currently not supported
+sample_by = "cityHash64(device_id)"
+settings = "index_granularity = 8192"
+[clickhouse.configuration.tables.snowplow.distributed]
+name = "distributed"
+sample_by = "cityHash64(device_id)"
+[clickhouse.configuration.tables.sendgrid]
+enabled = true
+[clickhouse.configuration.tables.sendgrid.local]
+name = "sendgrid_local"
+engine = "MergeTree()"
+partition_by = "toYYYYMM(time)"
+order_by = "toDate(time), event, email, cityHash64(email), time"
+sample_by = "cityHash64(email)"
+settings = "index_granularity = 8192"
+[clickhouse.configuration.tables.sendgrid.distributed]
+name = "sendgrid"
+sample_by = "cityHash64(email)"
+
+# Environment-specific overrides
+[development]
+logging.level = "DEBUG"
+security.disable_docs = false
+security.rate_limiting.enabled = false
+
+[production]
+logging.level = "WARNING"
+security.disable_docs = true
+performance.db_pool_size = 10

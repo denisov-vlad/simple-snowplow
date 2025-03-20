@@ -1,0 +1,197 @@
+/* General page styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+h1, h2 {
+    color: #2c3e50;
+    margin-top: 20px;
+}
+
+h1 {
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+/* Button styles */
+.button-container {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.button {
+    background-color: #3498db;
+    color: white;
+}
+
+.button.toggle {
+    background-color: #2ecc71;
+}
+
+.button.toggle.paused {
+    background-color: #e74c3c;
+}
+
+.clear-log {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* Tracking status indicator */
+.tracking-status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.tracking-status.active {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.tracking-status.paused {
+    background-color: #e74c3c;
+    color: white;
+}
+
+/* Log container styles */
+.log-container {
+    margin-top: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+    background-color: #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.log-entry {
+    margin-bottom: 15px;
+    padding: 12px;
+    background-color: #f9f9f9;
+    border-left: 4px solid #3498db;
+    border-radius: 0 4px 4px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.log-time {
+    color: #7f8c8d;
+    font-size: 12px;
+}
+
+.log-type {
+    font-weight: bold;
+    background-color: #2980b9;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+/* JSON formatting styles */
+.json-viewer {
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow: auto;
+    position: relative;
+}
+
+.json-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.json-toggle:before {
+    content: "+";
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+}
+
+.json-toggle.collapsed:before {
+    content: "-";
+}
+
+.json-content {
+    display: none;
+    margin-left: 20px;
+}
+
+.json-content.expanded {
+    display: block;
+}
+
+.json-key {
+    color: #2c3e50;
+    font-weight: bold;
+}
+
+.json-string {
+    color: #e67e22;
+}
+
+.json-number {
+    color: #3498db;
+}
+
+.json-boolean {
+    color: #9b59b6;
+}
+
+.json-null {
+    color: #95a5a6;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .log-container {
+        max-height: 400px;
+    }
+} 

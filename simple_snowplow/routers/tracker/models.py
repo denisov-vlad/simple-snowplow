@@ -163,3 +163,25 @@ class PayloadElementPostModel(PayloadElementBaseModel):
 
 class PayloadModel(SnowPlowModel):
     data: List[PayloadElementPostModel] = Query([])
+
+
+class SendgridElementBaseModel(Model):
+    email: str = Query(..., title="Email address")
+    timestamp: datetime = Query(..., title="Event timestamp")
+    smtp_id: str = Query(..., validation_alias="smtp-id", title="SMTP ID")
+    event: str = Query(..., title="Event type")
+    category: List[str] = Query(..., title="Event categories")
+    sg_event_id: str = Query(..., title="SendGrid event ID")
+    sg_message_id: str = Query(..., title="SendGrid message ID")
+    response: str = Query("", title="Response")
+    attempt: int = Query(0, title="Attempt number")
+    useragent: str = Query("", title="User agent string")
+    ip: str = Query("", title="IP address")
+    url: str = Query("", title="URL")
+    reason: str = Query("", title="Reason")
+    status: str = Query("", title="Status")
+    asm_group_id: int = Query(0, title="ASM Group ID")
+
+
+class SendgridModel(Model):
+    data: List[SendgridElementBaseModel] = Query([])
