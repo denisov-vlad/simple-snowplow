@@ -23,5 +23,5 @@ async def sendgrid_event(
     Returns:
         Empty response with 204 status code
     """
-    await request.app.state.connector.insert(body, table_group="sendgrid")
+    await request.app.state.connector.insert_rows(body, table_group="sendgrid")
     return Response(status_code=HTTP_204_NO_CONTENT)

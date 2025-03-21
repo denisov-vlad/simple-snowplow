@@ -65,7 +65,7 @@ async def tracker_post(
         Empty response with 204 status code
     """
     data = await process_data(body, user_agent, x_forwarded_for, cookie)
-    await request.app.state.connector.insert(data)
+    await request.app.state.connector.insert_rows(data)
 
     return Response(status_code=HTTP_204_NO_CONTENT)
 
@@ -92,6 +92,6 @@ async def tracker_get(
         1x1 transparent GIF pixel response
     """
     data = await process_data(params, user_agent, x_forwarded_for, cookie)
-    await request.app.state.connector.insert(data)
+    await request.app.state.connector.insert_rows(data)
 
     return Response(content=pixel, media_type="image/gif")

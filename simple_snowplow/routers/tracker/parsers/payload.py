@@ -389,5 +389,17 @@ async def parse_payload(element: PayloadType, cookies: Optional[str]) -> Dict[st
             result["se_pr"] = orjson.loads(result["se_pr"])
         except (orjson.JSONDecodeError, TypeError):
             pass
+    else:
+        result["se_pr"] = {}
+
+    if "se_va" in result and result["se_va"]:
+        if not isinstance(result["se_va"], (float, int)):
+            try:
+                result["se_va"] = float(result["se_va"])
+            except ValueError:
+                result["se_pr"]["ex-value"] = result["se_va"]
+                result["se_va"] = 0.0
+    else:
+        result["se_va"] = 0.0
 
     return result

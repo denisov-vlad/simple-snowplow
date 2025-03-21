@@ -230,14 +230,37 @@ snowplow_fields = [
                     "unstructured",
                 ),
                 values=(
-                    "Nullable(String)",
-                    "Nullable(String)",
-                    "Nullable(String)",
-                    "Nullable(String)",
-                    "Nullable(String)",
+                    "LowCardinality(String)",
+                    "LowCardinality(String)",
+                    "String",
+                    "JSON",
+                    "Float32",
                     "JSON",
                 ),
             ),
         ),
+    },
+    {
+        "column_name": "extra",
+        "payload_name": "extra",
+        "type": JSON(type_def=TypeDef()),
+        "default_expression": {},
+    },
+    {
+        "column_name": "tracker",
+        "payload_name": ("tv", "tna"),
+        "type": Tuple(
+            type_def=TypeDef(
+                keys=("version", "namespace"),
+                values=("LowCardinality(String)", "LowCardinality(String)"),
+            ),
+        ),
+    },
+    {
+        "column_name": "app",
+        "payload_name": None,
+        "type": LowCardinality(String),
+        "default_type": "MATERIALIZED",
+        "default_expression": "if(platform = 'mob', tracker.2, app_id)",
     },
 ]

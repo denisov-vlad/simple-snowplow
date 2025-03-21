@@ -16,9 +16,11 @@ from typing import Union
 
 import elasticapm
 import structlog
+from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError
 from routers.tracker.schemas.models import Model
+
 
 T = TypeVar("T")
 
@@ -254,19 +256,36 @@ class ClickHouseConnector:
         full_table_name = await self.get_full_table_name(table_name)
         fields = get_fields_for_table_group(table_group)
 
-        # Convert any Model objects to dictionaries
-        processed_rows = []
         for row in rows:
-            if isinstance(row, Model):
-                processed_rows.append(row.model_dump())
-            else:
-                processed_rows.append(row)
+            column_names = []
+            column_types = []
+            values = []
 
-        await self._execute_with_retry(
-            "insert_data",
-            self.conn.insert,
-            full_table_name,
-            processed_rows,
-            column_names=None,  # Let ClickHouse determine columns from dict
-            settings=self.async_settings,
-        )
+            for field in fields:
+                payload_name = field["payload_name"]
+
+                if payload_name is None:
+                    continue
+
+                if isinstance(payload_name, tuple):
+                    value = tuple([row.get(v) for v in payload_name])
+                else:
+                    value = row.get(payload_name)
+
+                column_names.append(field["column_name"])
+                column_types.append(get_from_name(field["type"].name))
+                values.append(value)
+
+            async with elasticapm.async_capture_span("clickhouse_query"):
+                await logger.info(values)
+                await logger.info(column_names)
+                await logger.info(column_types)
+                await self._execute_with_retry(
+                    "insert_data",
+                    self.conn.insert,
+                    full_table_name,
+                    data=[values],
+                    column_names=column_names,
+                    column_types=column_types,
+                    settings=self.async_settings,
+                )
