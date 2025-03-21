@@ -269,9 +269,6 @@ class ClickHouseConnector:
                 values.append(value)
 
             async with elasticapm.async_capture_span("clickhouse_query"):
-                await logger.info(values)
-                await logger.info(column_names)
-                await logger.info(column_types)
                 await self._execute_with_retry(
                     "insert_data",
                     self.conn.insert,
