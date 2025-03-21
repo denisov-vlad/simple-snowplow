@@ -12,7 +12,7 @@ ignore = [
     # Allow boolean positional values in function calls, like `dict.get(... True)`
     "FBT003",
     # Ignore complexity
-    "C901", 
+    "C901",
     # Ignore line length (handled by formatter)
     "E501",
     # whitespace before ':' - formatter handles this
@@ -63,4 +63,4 @@ indent-style = "space"
 # Like Black, respect magic trailing commas.
 skip-magic-trailing-comma = false
 # Like Black, automatically detect the appropriate line ending.
-line-ending = "auto" 
+line-ending = "auto"

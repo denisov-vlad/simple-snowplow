@@ -3,7 +3,6 @@ Route handlers for Snowplow events.
 """
 
 import base64
-from typing import Optional
 
 import elasticapm
 from fastapi import Depends, Header, Request, Response
@@ -43,9 +42,9 @@ async def tracker_cors():
 async def tracker_post(
     request: Request,
     body: PayloadModel,
-    user_agent: Optional[str] = Header(None),
-    x_forwarded_for: Optional[IPvAnyAddress | str] = Header(None),
-    cookie: Optional[str] = Header(None),
+    user_agent: str | None = Header(None),
+    x_forwarded_for: IPvAnyAddress | str | None = Header(None),
+    cookie: str | None = Header(None),
 ):
     """
     Handle POST requests from Snowplow JS Tracker.
@@ -70,9 +69,9 @@ async def tracker_post(
 async def tracker_get(
     request: Request,
     params: PayloadElementBaseModel = Depends(),
-    user_agent: Optional[str] = Header(None),
-    x_forwarded_for: Optional[IPvAnyAddress | str] = Header(None),
-    cookie: Optional[str] = Header(None),
+    user_agent: str | None = Header(None),
+    x_forwarded_for: IPvAnyAddress | str | None = Header(None),
+    cookie: str | None = Header(None),
 ):
     """
     Handle GET requests from Snowplow JS Tracker.

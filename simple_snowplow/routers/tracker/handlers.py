@@ -2,7 +2,7 @@
 Core data processing handlers for Snowplow events.
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List
 
 import elasticapm
 import structlog
@@ -17,15 +17,15 @@ from routers.tracker.schemas.models import (
 
 logger = structlog.get_logger(__name__)
 
-PayloadType = Union[PayloadElementBaseModel, PayloadElementPostModel, PayloadModel]
+PayloadType = PayloadElementBaseModel | PayloadElementPostModel | PayloadModel
 
 
 @elasticapm.async_capture_span()
 async def process_data(
     body: PayloadType,
-    user_agent: Optional[str],
+    user_agent: str | None,
     user_ip: Any,
-    cookies: Optional[str],
+    cookies: str | None,
 ) -> List[Dict[str, Any]]:
     """
     Process incoming event data from various sources.

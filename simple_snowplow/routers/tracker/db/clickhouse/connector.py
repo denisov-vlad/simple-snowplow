@@ -5,7 +5,7 @@ This module provides a connection pool and retry mechanism for ClickHouse.
 """
 
 import asyncio
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Awaitable, Callable, Dict, List, Tuple, TypeVar
 
 import elasticapm
 import structlog
@@ -27,13 +27,13 @@ class ClickHouseConnector:
     def __init__(
         self,
         conn: AsyncClient,
-        cluster_name: Optional[str] = None,
+        cluster_name: str | None = None,
         database: str = "snowplow",
         max_retries: int = 3,
         retry_delay: float = 1.0,
-        pool: Optional[List[AsyncClient]] = None,
-        pool_in_use: Optional[List[bool]] = None,
-        pool_lock: Optional[Any] = None,
+        pool: List[AsyncClient] | None = None,
+        pool_in_use: List[bool] | None = None,
+        pool_lock: Any = None,
         **params,
     ):
         """
@@ -66,7 +66,7 @@ class ClickHouseConnector:
         self.pool_lock = pool_lock
 
     @staticmethod
-    def _make_on_cluster(cluster_name: Optional[str] = None) -> str:
+    def _make_on_cluster(cluster_name: str | None = None) -> str:
         """
         Create the ON CLUSTER clause for ClickHouse queries.
 
@@ -113,7 +113,7 @@ class ClickHouseConnector:
     async def _execute_with_retry(
         self,
         operation_name: str,
-        operation: Union[Callable[[Any], Awaitable[T]], Any],
+        operation: Callable[[Any], Awaitable[T]] | Any,
         *args: Any,
         **kwargs: Any,
     ) -> T:
@@ -191,7 +191,7 @@ class ClickHouseConnector:
     async def query(
         self,
         query: str,
-        parameters: Optional[Dict[str, Any]] = None,
+        parameters: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """
         Execute a ClickHouse query.
@@ -228,7 +228,7 @@ class ClickHouseConnector:
     @elasticapm.async_capture_span()
     async def insert_rows(
         self,
-        rows: List[Union[Dict[str, Any], Model]],
+        rows: List[Dict[str, Any] | Model],
         table_group: str = "snowplow",
     ) -> None:
         """

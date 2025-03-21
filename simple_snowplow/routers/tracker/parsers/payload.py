@@ -6,7 +6,7 @@ import base64
 import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict
 from uuid import uuid4
 
 import elasticapm
@@ -45,7 +45,7 @@ schemas = settings.common.snowplow.schemas
 
 
 @elasticapm.async_capture_span()
-async def parse_base64(data: Union[str, bytes], altchars: bytes = b"+/") -> str:
+async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
     """
     Parse base64 encoded data.
 
@@ -254,7 +254,7 @@ async def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @elasticapm.async_capture_span()
-async def parse_payload(element: PayloadType, cookies: Optional[str]) -> Dict[str, Any]:
+async def parse_payload(element: PayloadType, cookies: str | None) -> Dict[str, Any]:
     """
     Parse a Snowplow event payload.
 

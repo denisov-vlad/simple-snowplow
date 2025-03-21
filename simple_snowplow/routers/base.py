@@ -2,8 +2,6 @@
 Base router classes for Simple Snowplow.
 """
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends
 from fastapi.security import APIKeyHeader
 
@@ -16,7 +14,7 @@ class BaseRouter:
         prefix: str,
         tags: list[str],
         include_in_schema: bool = True,
-        security: Optional[APIKeyHeader] = None,
+        security: APIKeyHeader | None = None,
     ):
         self.router = APIRouter(
             prefix=prefix,

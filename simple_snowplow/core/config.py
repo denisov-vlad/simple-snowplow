@@ -6,7 +6,7 @@ Uses Pydantic for type checking while getting values from dynaconf.
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from dynaconf import Dynaconf
 from pydantic_settings import BaseSettings
@@ -173,7 +173,7 @@ class ElasticAPMConfig(BaseSettings):
 
     enabled: bool = dynaconf_settings.get("elastic_apm.enabled", False)
     service_name: str = dynaconf_settings.get("common.service_name", "simple-snowplow")
-    server_url: Optional[str] = dynaconf_settings.get("elastic_apm.server_url")
+    server_url: str | None = dynaconf_settings.get("elastic_apm.server_url")
 
 
 class PrometheusConfig(BaseSettings):

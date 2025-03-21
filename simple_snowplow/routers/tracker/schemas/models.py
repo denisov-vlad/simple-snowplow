@@ -3,7 +3,7 @@ Data models for Snowplow events.
 """
 
 from datetime import datetime
-from typing import Any, List, Optional, Union
+from typing import Any, List
 
 from fastapi import Query
 from fastapi.exceptions import RequestValidationError
@@ -18,10 +18,10 @@ class Model(BaseModel):
     @classmethod
     def model_validate_json(
         cls,
-        json_data: Union[str, bytes, bytearray],
+        json_data: str | bytes | bytearray,
         *,
-        strict: Optional[bool] = None,
-        context: Optional[Any] = None,
+        strict: bool | None = None,
+        context: Any = None,
     ) -> Self:
         """
         Validate the given JSON data against the Pydantic model with auto-repair.
@@ -54,7 +54,7 @@ class SnowPlowModel(Model):
     """Base model for Snowplow data."""
 
     data: List[Any | None] = Query(...)
-    json_schema: Optional[str] = Query(
+    json_schema: str | None = Query(
         None,
         alias="schema",
         title="Snowplow schema definition",
@@ -106,8 +106,8 @@ class PayloadElementBaseModel(StructuredEvent):
 
     # Identifiers
     aid: str = Query(..., title="Unique identifier for website / application")
-    eid: Optional[str] = Query(None, title="Event UUID")
-    duid: Optional[str] = Query(
+    eid: str | None = Query(None, title="Event UUID")
+    duid: str | None = Query(
         None,
         title="Unique identifier for a user, based on a first party cookie",
     )
@@ -115,11 +115,11 @@ class PayloadElementBaseModel(StructuredEvent):
         "",
         title="Unique identifier for user, set by the business using setUserId",
     )
-    sid: Optional[str] = Query(
+    sid: str | None = Query(
         None,
         title="Unique identifier (UUID) for this visit of this user_id to this domain",
     )
-    vid: Optional[int] = Query(
+    vid: int | None = Query(
         None,
         title="Index of number of visits that this user_id has made to this domain",
     )
@@ -135,7 +135,7 @@ class PayloadElementBaseModel(StructuredEvent):
         default_factory=lambda: datetime.now(),
         title="Timestamp when event occurred, as recorded by client device",
     )
-    stm: Optional[datetime] = Field(
+    stm: datetime | None = Field(
         default_factory=lambda: datetime.now(),
         title="Timestamp when event was sent by client device to collector",
     )
@@ -144,7 +144,7 @@ class PayloadElementBaseModel(StructuredEvent):
     p: str = Query(..., title="The platform the app runs on", description="ex. web")
     tv: str = Query(..., title="Identifier for Snowplow tracker")
     tna: str = Query("", title="The tracker namespace")
-    tz: Optional[str] = Query(None, title="Time zone of client device's OS")
+    tz: str | None = Query(None, title="Time zone of client device's OS")
     lang: str = Query("", title="Language the browser is set to")
 
     # Browser/viewport information
@@ -153,7 +153,7 @@ class PayloadElementBaseModel(StructuredEvent):
     vp: str = Query("0x0", title="Browser viewport width and height")
     ds: str = Query("0x0", title="Web page width and height")
     cd: int = Query(0, title="Browser color depth")
-    cookie: Optional[int] = Query(None, title="Does the browser permit cookies?")
+    cookie: int | None = Query(None, title="Does the browser permit cookies?")
 
     # Page ping information (for pp event type)
     pp_mix: int = Query(0, title="Minimum page x offset seen in the last ping period")
@@ -162,8 +162,8 @@ class PayloadElementBaseModel(StructuredEvent):
     pp_may: int = Query(0, title="Maximum page y offset seen in the last ping period")
 
     # Context information
-    co: Optional[str] = Query(None, title="An array of custom contexts")
-    cx: Optional[str] = Query(None, title="An array of custom contexts (b64)")
+    co: str | None = Query(None, title="An array of custom contexts")
+    cx: str | None = Query(None, title="An array of custom contexts (b64)")
 
     # Unstructured event information
     ue_pr: str = Query("", title="The properties of the event")
