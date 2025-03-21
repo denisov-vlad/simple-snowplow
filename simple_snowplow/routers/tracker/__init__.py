@@ -9,7 +9,7 @@ from typing import Callable
 from typing import Coroutine
 
 import orjson
-from config import settings
+from core.config import settings
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response

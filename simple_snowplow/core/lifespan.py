@@ -2,23 +2,21 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from clickhouse_connect import get_async_client
-from config import settings
+from core.config import settings
 from routers.tracker.db.clickhouse import ClickHouseConnector
 from routers.tracker.db.clickhouse import TableManager
 
-# Configuration constants for performance tuning
-MAX_CONCURRENT_CONNECTIONS = settings.get("performance.max_concurrent_connections", 100)
-DB_POOL_SIZE = settings.get("performance.db_pool_size", 5)
-DB_POOL_OVERFLOW = settings.get("performance.db_pool_overflow", 10)
+PERFORMANCE_CONFIG = settings.performance
+CLIKCHOUSE_CONFIG = settings.clickhouse
 
 
 @asynccontextmanager
 async def lifespan(application):
     # Create database connection pool with improved parameters
     ch_clients = []
-    for _ in range(DB_POOL_SIZE):
+    for _ in range(PERFORMANCE_CONFIG.db_pool_size):
         client = await get_async_client(
-            **settings.clickhouse.connection,
+            **CLIKCHOUSE_CONFIG.connection.model_dump(),
             query_limit=0,  # No query size limit
         )
         ch_clients.append(client)
@@ -28,7 +26,7 @@ async def lifespan(application):
     application.state.ch_client = ch_clients[
         0
     ]  # Default client for backward compatibility
-    application.state.pool_in_use = [False] * DB_POOL_SIZE
+    application.state.pool_in_use = [False] * PERFORMANCE_CONFIG.db_pool_size
     application.state.pool_lock = asyncio.Lock()
 
     # Initialize connector with the primary client
@@ -37,7 +35,7 @@ async def lifespan(application):
         pool=ch_clients,
         pool_in_use=application.state.pool_in_use,
         pool_lock=application.state.pool_lock,
-        **settings.clickhouse.configuration,
+        **CLIKCHOUSE_CONFIG.configuration.model_dump(),
     )
 
     table_manager = TableManager(application.state.connector)

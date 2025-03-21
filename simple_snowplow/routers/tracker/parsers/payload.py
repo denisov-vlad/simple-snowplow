@@ -14,9 +14,10 @@ from uuid import uuid4
 import elasticapm
 import orjson
 import structlog
-from config import settings
+from core.config import settings
 from routers.tracker.schemas.models import PayloadElementBaseModel
 from routers.tracker.schemas.models import PayloadElementPostModel
+from routers.tracker.schemas.models import StructuredEvent
 
 logger = structlog.stdlib.get_logger()
 
@@ -39,7 +40,7 @@ EMPTY_STRINGS = (
     "device_brand",
 )
 
-PayloadType = Union[PayloadElementBaseModel, PayloadElementPostModel]
+PayloadType = PayloadElementBaseModel | PayloadElementPostModel
 schemas = settings.common.snowplow.schemas
 
 
@@ -65,7 +66,7 @@ async def parse_base64(data: Union[str, bytes], altchars: bytes = b"+/") -> str:
 
 
 @elasticapm.async_capture_span()
-async def parse_cookies(cookies_str: Optional[str]) -> Dict[str, Any]:
+async def parse_cookies(cookies_str: str) -> Dict[str, Any]:
     """
     Parse cookies string.
 
@@ -93,10 +94,15 @@ async def parse_cookies(cookies_str: Optional[str]) -> Dict[str, Any]:
             parts = cookie.value.split(".")
             if len(parts) > 0:
                 result["device_id"] = parts[0]
+                result["created_time"] = parts[1]
+                result["visit_count"] = parts[2]
+                result["now_time"] = parts[3]
+                result["last_visit_time"] = parts[4]
+                result["session_id"] = parts[5]
 
-        # Extract session ID from sp cookie
-        if name.startswith("_sp_ses"):
-            result["session_id"] = cookie.value
+        # # Extract session ID from sp cookie
+        # if name.startswith("_sp_ses"):
+        #     result["session_id"] = cookie.value
 
     return result
 
@@ -118,62 +124,110 @@ async def parse_contexts(contexts: Dict[str, Any]) -> Dict[str, Any]:
     if not contexts or "data" not in contexts:
         return result
 
-    for context in contexts.get("data", []):
-        # Skip invalid contexts
-        if (
-            not isinstance(context, dict)
-            or "schema" not in context
-            or "data" not in context
-        ):
-            continue
+    for context in contexts["data"]:
+        for key in ("schema", "data"):
+            if key not in context:
+                await logger.warning(f"Empty {key} for payload", context=context)
+                continue
 
-        schema = context["schema"]
+        schema = "/".join(context["schema"][5:].split("/")[:2])
         data = context["data"]
 
+        if not isinstance(data, dict):
+            await logger.warning("Wrong data type", context=context)
+            continue
+
         # Process different context types based on schema
-        if schemas.session in schema:
-            result["event_index"] = data.get("eventIndex")
-            result["previous_session_id"] = data.get("previousSessionId")
-            result["first_event_id"] = data.get("firstEventId")
-            result["first_event_time"] = data.get("firstEventTimestamp")
-            result["storage_mechanism"] = data.get("storageMechanism", "")
-            result["session_unstructured"] = data
-
-        elif schemas.webpage in schema:
-            if data.get("referrer"):
-                result["refr"] = data["referrer"]
+        if schema == "com.acme/static_context":
+            for k, v in data.items():
+                result["extra"][k] = v
+        elif schema == "org.w3/PerformanceTiming":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceTiming/jsonschema/1-0-0
+            result["extra"]["performance_timing"] = data
+        elif schema == "org.ietf/http_client_hints":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/org.ietf/http_client_hints/jsonschema/1-0-0
+            result["extra"]["client_hints"] = data
+        elif schema in ("com.google.analytics/cookies", "com.google.ga4/cookies"):
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.google.analytics/cookies/jsonschema/1-0-0
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.google.ga4/cookies/jsonschema/1-0-0
+            result["extra"]["ga_cookies"] = data
+        elif schema == "com.snowplowanalytics.snowplow/web_page":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0
+            result["view_id"] = data["id"]
+        elif schema in (
+            "dev.amp.snowplow/amp_session",
+            "dev.amp.snowplow/amp_id",
+            "dev.amp.snowplow/amp_web_page",
+        ):
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_session/jsonschema/1-0-0
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_id/jsonschema/1-0-0
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_web_page/jsonschema/1-0-0
+            result["amp"] = dict(result["amp"], **data)
+        elif schema == schemas.page_data:
             result["page_data"] = data
-
-        elif schemas.user in schema:
+        elif schema == "com.snowplowanalytics.snowplow/mobile_context":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-3
+            result["device_brand"] = data.pop("deviceManufacturer")
+            result["device_model"] = data.pop("deviceModel")
+            result["os_family"] = data.pop("osType")
+            result["os_version_string"] = data.pop("osVersion")
+            result["device_is"] = (1, 0, 1, 0, 0)
+            result["device_extra"] = data
+        elif schema == "com.snowplowanalytics.mobile/application":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application/jsonschema/1-0-0
+            # TODO: support for web
+            result["app_version"] = data["version"]
+            result["app_build"] = data["build"]
+        elif schema == "com.snowplowanalytics.snowplow/client_session":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2
+            result["vid"] = data.pop("sessionIndex")
+            result["sid"] = data.pop("sessionId")
+            result["duid"] = data.pop("userId")
+            result["event_index"] = data.get("eventIndex")
+            first_event_time = data.get("firstEventTimestamp")
+            if first_event_time is not None:
+                result["first_event_time"] = datetime.fromisoformat(first_event_time)
+            result["previous_session_id"] = data.get("previousSessionId", "")
+            result["first_event_id"] = data.get("firstEventId", "")
+            result["storage_mechanism"] = data.get("storageMechanism", "")
+        elif schema == "com.snowplowanalytics.mobile/screen":
+            # data is duplicated in event field is it's view
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen/jsonschema/1-0-0
+            result["url"] = data.pop("name")
+            result["view_id"] = data.pop("id")
+            result["screen"] = dict(result["screen"], **data)
+        elif schema == "com.snowplowanalytics.snowplow/browser_context":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0
+            if "resolution" in data:
+                result["res"] = data.pop("resolution")
+            if "viewport" in data:
+                result["vp"] = data.pop("viewport")
+            if "documentSize" in data:
+                result["ds"] = data.pop("documentSize")
+            result["browser_extra"] = data
+        elif schema == "com.snowplowanalytics.snowplow/geolocation_context":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0
+            result["geolocation"] = data
+        elif schema == schemas.screen_data:
+            result["screen"] = dict(result["screen"], **data)
+        elif schema == schemas.user_data:
             result["user_data"] = data
-
-        elif schemas.screen in schema:
-            result["screen"] = data
-
-        elif schemas.amp in schema:
-            result["amp"] = data
-
-        elif schemas.client in schema:
-            # Process client-specific data
-            result["browser_extra"] = data.get("browser", {})
-            if "deviceType" in data:
-                result["device_extra"]["type"] = data["deviceType"]
-
-            result["lang"] = data.get("language", "")
-
-            if "mobile" in data:
-                result["device_is"] = (
-                    data["mobile"].get("deviceClass") == "Mobile",
-                    data["mobile"].get("deviceClass") == "Tablet",
-                    data["mobile"].get("touchCapable", False),
-                    not data["mobile"].get("touchCapable", False),
-                    False,
-                )
-
-        # Add any other contexts to extra
-        elif "schema" in context and "data" in context:
-            schema_name = schema.split("/")[-1].split("-")[0]
-            result["extra"][schema_name] = data
+        elif schema == schemas.ad_data:
+            result["extra"]["ad_data"] = data
+        elif schema == "com.snowplowanalytics.mobile/screen_summary":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen_summary/jsonschema/1-0-0
+            result["extra"]["screen_summary"] = data
+        elif schema == "com.snowplowanalytics.mobile/application_lifecycle":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application_lifecycle/jsonschema/1-0-0
+            result["extra"]["app_lifecycle"] = data
+        elif schema == "com.android.installreferrer.api/referrer_details":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.android.installreferrer.api/referrer_details/jsonschema/1-0-0
+            result["extra"]["install_referrer"] = data
+        elif schema == "org.w3/PerformanceNavigationTiming":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceNavigationTiming/jsonschema/1-0-0
+            result["extra"]["performance_navigation_timing"] = data
+        else:
+            await logger.warning("Schema has no parser", data=data, schema=schema)
 
     return result
 
@@ -189,18 +243,13 @@ async def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
     Returns:
         Processed event dictionary
     """
-    result = {"ue": {}}
-
-    if not event or "schema" not in event or "data" not in event:
-        return result
-
-    schema = event["schema"]
-    data = event["data"]
-
-    # Extract schema name
-    schema_name = schema.split("/")[-1].split("-")[0]
-    result["ue"][schema_name] = data
-
+    event = event["data"]
+    if event["schema"] == schemas.u2s_data:
+        result = StructuredEvent.model_validate(event["data"]).model_dump()
+        result["e"] = "se"
+    else:
+        event_name = event["schema"].split("/")[-3]
+        result = {"ue": {event_name: event["data"]}}
     return result
 
 

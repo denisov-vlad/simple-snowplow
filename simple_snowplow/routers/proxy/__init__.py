@@ -1,18 +1,18 @@
 import base64
 
 import requests
-from config import settings
+from core.config import settings
 from fastapi.responses import Response
 from fastapi.routing import APIRouter
 from routers.proxy import models
 
 
-proxy_settings = settings["proxy"]
-hostname = settings["common"]["hostname"]
-proxy_endpoint = settings["common"]["snowplow"]["endpoints"]["proxy_endpoint"]
+PROXY_CONFIG = settings.proxy
+PROXY_ENDPOINT = settings.common.snowplow.endpoints.proxy_endpoint
+HOSTNAME = settings.common.hostname
 
 
-router = APIRouter(tags=["proxy"], prefix=proxy_endpoint)
+router = APIRouter(tags=["proxy"], prefix=PROXY_ENDPOINT)
 
 
 def encode(s: str) -> str:
@@ -28,7 +28,7 @@ async def proxy_hash(data: models.HashModel):
     return_encoded = False
 
     domain = data.url.host
-    if domain in proxy_settings["domains"]:
+    if domain in PROXY_CONFIG.domains:
         domain = encode(domain)
         return_encoded = True
 
@@ -36,14 +36,14 @@ async def proxy_hash(data: models.HashModel):
     if data.url.query is not None:
         full_path += f"?{data.url.query}"
 
-    if data.url.path[1:] in proxy_settings["paths"]:
+    if data.url.path[1:] in PROXY_CONFIG.paths:
         full_path = encode(full_path)
         return_encoded = True
 
     if not return_encoded:
         return data.url
 
-    result = f"{hostname}{proxy_endpoint}/route/{data.url.scheme}/{encode(data.url.host)}/{full_path}"
+    result = f"{HOSTNAME}{PROXY_ENDPOINT}/route/{data.url.scheme}/{encode(data.url.host)}/{full_path}"
 
     return result
 
