@@ -30,7 +30,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="Simple Snowplow",
-        version="0.3.1",
+        version="0.4.0",
         lifespan=lifespan,
         docs_url=None if settings.security.disable_docs else "/docs",
         redoc_url=None if settings.security.disable_docs else "/redoc",

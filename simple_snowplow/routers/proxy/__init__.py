@@ -4,6 +4,7 @@ import requests
 from core.config import settings
 from fastapi.responses import Response
 from fastapi.routing import APIRouter
+
 from routers.proxy import models
 
 PROXY_CONFIG = settings.proxy

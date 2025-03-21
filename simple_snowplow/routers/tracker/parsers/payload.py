@@ -13,6 +13,7 @@ import elasticapm
 import orjson
 import structlog
 from core.config import settings
+
 from routers.tracker.schemas.models import (
     PayloadElementBaseModel,
     PayloadElementPostModel,

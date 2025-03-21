@@ -13,6 +13,7 @@ import structlog
 from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError
+
 from routers.tracker.schemas.models import Model
 
 T = TypeVar("T")

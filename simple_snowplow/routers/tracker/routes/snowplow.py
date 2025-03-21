@@ -7,9 +7,10 @@ import base64
 import elasticapm
 from fastapi import Depends, Header, Request, Response
 from pydantic import IPvAnyAddress
+from starlette.status import HTTP_204_NO_CONTENT
+
 from routers.tracker.handlers import process_data
 from routers.tracker.schemas.models import PayloadElementBaseModel, PayloadModel
-from starlette.status import HTTP_204_NO_CONTENT
 
 
 def pixel_gif() -> bytes:

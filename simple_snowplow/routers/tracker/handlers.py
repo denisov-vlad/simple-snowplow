@@ -6,6 +6,7 @@ from typing import Any
 
 import elasticapm
 import structlog
+
 from routers.tracker.parsers.ip import convert_ip
 from routers.tracker.parsers.payload import parse_payload
 from routers.tracker.parsers.useragent import parse_agent

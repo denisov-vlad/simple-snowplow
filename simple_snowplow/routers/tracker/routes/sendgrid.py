@@ -4,8 +4,9 @@ Route handlers for SendGrid webhook events.
 
 import elasticapm
 from fastapi import Request, Response
-from routers.tracker.schemas.models import SendgridElementBaseModel
 from starlette.status import HTTP_204_NO_CONTENT
+
+from routers.tracker.schemas.models import SendgridElementBaseModel
 
 
 @elasticapm.async_capture_span()
