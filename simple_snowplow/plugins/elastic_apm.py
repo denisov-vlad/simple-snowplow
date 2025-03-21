@@ -1,8 +1,9 @@
-from config import settings
+from core.config import settings
 from elasticapm.contrib.starlette import make_apm_client
 
+ELASTIC_APM_CONFIG = settings.elastic_apm
 
-elastic_config = settings.elastic_apm.copy()
+elastic_config = ELASTIC_APM_CONFIG.model_dump()
 elastic_enabled = elastic_config.pop("enabled")
 elastic_config["SERVICE_NAME"] = settings.common.service_name
 

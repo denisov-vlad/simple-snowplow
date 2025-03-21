@@ -1,40 +1,25 @@
-from enum import Enum
+"""
+Snowplow schema field definitions for ClickHouse.
+"""
 
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import DateTime64
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Enum8
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import IPv4
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import LowCardinality
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Nullable
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import String
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Tuple
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UInt64
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UUID
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import (
+    UUID,
+    DateTime64,
+    Enum8,
+    IPv4,
+    LowCardinality,
+    Nullable,
+    String,
+    Tuple,
+    UInt64,
+)
 from clickhouse_connect.datatypes.base import TypeDef
 from clickhouse_connect.datatypes.dynamic import JSON
 
+from .enums import EventType, Platform
 
-class Platform(Enum):
-    web = 1
-    mob = 2
-    pc = 3
-    srv = 4
-    app = 5
-    tv = 6
-    cnsl = 7
-    iot = 8
-
-
-class EventType(Enum):
-    pv = 1
-    pp = 2
-    ue = 3
-    se = 4
-    tr = 5
-    ti = 6
-    s = 7
-
-
-table_fields = [
+# Field definitions for the Snowplow table
+snowplow_fields = [
     {
         "column_name": "app_id",
         "payload_name": "aid",
@@ -228,7 +213,6 @@ table_fields = [
         "payload_name": ("res", "vp", "ds"),
         "type": Tuple(
             type_def=TypeDef(
-                # LC?
                 keys=("browser", "viewport", "page"),
                 values=("String", "String", "String"),
             ),

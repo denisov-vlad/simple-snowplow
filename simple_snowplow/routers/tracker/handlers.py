@@ -1,50 +1,71 @@
-from ipaddress import IPv4Address
-from ipaddress import IPv6Address
+"""
+Core data processing handlers for Snowplow events.
+"""
+
+from typing import Any
 
 import elasticapm
-from pydantic import IPvAnyAddress
-from pydantic_core import PydanticCustomError
-from routers.tracker import snowplow
-from routers.tracker.useragent import parse_agent
+import structlog
 
+from routers.tracker.parsers.ip import convert_ip
+from routers.tracker.parsers.payload import parse_payload
+from routers.tracker.parsers.useragent import parse_agent
+from routers.tracker.schemas.models import (
+    PayloadElementBaseModel,
+    PayloadElementPostModel,
+    PayloadModel,
+)
 
-async def convert_ip(ip: IPv4Address | IPv6Address | None) -> IPv4Address:
+logger = structlog.get_logger(__name__)
 
-    none_ip = IPv4Address("0.0.0.0")
-
-    if ip is None:
-        return none_ip
-
-    if isinstance(ip, str):
-        try:
-            ip = IPvAnyAddress(ip)
-        except PydanticCustomError:
-            return none_ip
-
-    if isinstance(ip, IPv6Address):
-        return ip.ipv4_mapped
-
-    return ip
+PayloadType = PayloadElementBaseModel | PayloadElementPostModel | PayloadModel
 
 
 @elasticapm.async_capture_span()
-async def process_data(body, user_agent, user_ip, cookies):
+async def process_data(
+    body: PayloadType,
+    user_agent: str | None,
+    user_ip: Any,
+    cookies: str | None,
+) -> list[dict[str, Any]]:
+    """
+    Process incoming event data from various sources.
+
+    This function:
+    1. Processes the IP address
+    2. Parses the user agent
+    3. Extracts and processes payload data
+    4. Combines all information into complete event records
+
+    Args:
+        body: The request body or parameters
+        user_agent: User agent string from headers
+        user_ip: IP address from headers
+        cookies: Cookie string from headers
+
+    Returns:
+        List of processed event records ready for storage
+    """
+    # Create base record with IP address
     base = {"user_ip": await convert_ip(user_ip)}
+
+    # Add user agent information if available
     if user_agent:
         ua_data = await parse_agent(user_agent)
-        base = dict(base, **ua_data)
+        base.update(ua_data)
 
+    # Extract payload data
     try:
         data = body.data
     except AttributeError:
+        # If body is not a batch payload, treat as single element
         data = [body]
 
+    # Process each payload element
     result = []
-
-    for i in data:
-        payload_data = await snowplow.parse_payload(i, cookies)
-        item_data = dict(base, **payload_data)
-
+    for item in data:
+        payload_data = await parse_payload(item, cookies)
+        item_data = {**base, **payload_data}
         result.append(item_data)
 
     return result

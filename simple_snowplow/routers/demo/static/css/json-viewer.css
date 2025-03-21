@@ -1,0 +1,120 @@
+/**
+ * JSONViewer - Tree-based JSON viewer for better JSON visualization
+ */
+
+.json-viewer {
+    font-family: 'Monaco', 'Menlo', 'Consolas', 'Bitstream Vera Sans Mono', monospace;
+    font-size: 14px;
+    line-height: 1.4;
+    background-color: #fff;
+    overflow: auto;
+    position: relative;
+    padding: 12px;
+    border-radius: 4px;
+}
+
+.json-viewer .line {
+    margin: 4px 0;
+    display: flex;
+    flex-wrap: nowrap;
+}
+
+.json-viewer .caret-icon {
+    width: 18px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.json-viewer .empty-icon {
+    width: 18px;
+}
+
+.json-viewer .json-indent {
+    margin-left: 12px;
+}
+
+.json-viewer .json-literal {
+    margin-left: 4px;
+    color: #0B7500;
+}
+
+.json-viewer .json-literal-null {
+    color: #999;
+}
+
+.json-viewer .json-literal-number {
+    color: #1A01CC;
+}
+
+.json-viewer .json-literal-boolean {
+    color: #1A01CC;
+}
+
+.json-viewer .json-string {
+    color: #C41A16;
+}
+
+.json-viewer .json-key {
+    color: #881391;
+    margin-right: 4px;
+}
+
+.json-viewer .json-brace {
+    color: #111;
+}
+
+.hidden {
+    display: none;
+}
+
+.json-viewer .caret-icon.collapsed::before {
+    content: "▶";
+    font-size: 10px;
+    color: #555;
+}
+
+.json-viewer .caret-icon.expanded::before {
+    content: "▼";
+    font-size: 10px;
+    color: #555;
+}
+
+.json-viewer .collapsable {
+    transition: height 0.2s;
+    overflow: hidden;
+}
+
+.json-toolbar {
+    margin-bottom: 8px;
+}
+
+.json-toolbar button {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    margin-right: 8px;
+    padding: 3px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.json-toolbar button:hover {
+    background-color: #e0e0e0;
+}
+
+.copy-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 11px;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.copy-button:hover {
+    opacity: 1;
+}

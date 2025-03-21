@@ -9,6 +9,7 @@ fastapi==0.115.11
 inflection==0.5.1
 json-repair==0.35.0
 orjson==3.10.15
+pydantic-settings==2.7.0
 PyYAML==6.0.2
 requests==2.32.3
 SQLAlchemy==2.0.37
