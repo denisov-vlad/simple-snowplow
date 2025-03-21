@@ -2,7 +2,7 @@
 Core data processing handlers for Snowplow events.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import elasticapm
 import structlog
@@ -26,7 +26,7 @@ async def process_data(
     user_agent: str | None,
     user_ip: Any,
     cookies: str | None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Process incoming event data from various sources.
 

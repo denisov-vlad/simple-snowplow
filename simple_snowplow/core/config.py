@@ -130,25 +130,19 @@ class LoggingConfig(BaseSettings):
     level: str = dynaconf_settings.get("logging.level", "INFO")
 
 
-class RateLimitingConfig(BaseSettings):
+class RateLimitConfig(BaseSettings):
     """Rate limiting configuration."""
 
-    enabled: bool = dynaconf_settings.get("security.rate_limiting.enabled", False)
-    max_requests: int = dynaconf_settings.get(
-        "security.rate_limiting.max_requests",
-        100,
+    enabled: bool = dynaconf_settings.get("rate_limit.enabled", False)
+    limit: int = dynaconf_settings.get("rate_limit.limit", 100)
+    timeframe: int = dynaconf_settings.get("rate_limit.timeframe", 60)
+    ip_whitelist: list[str] = dynaconf_settings.get(
+        "rate_limit.ip_whitelist",
+        [],
     )
-    window_seconds: int = dynaconf_settings.get(
-        "security.rate_limiting.window_seconds",
-        60,
-    )
-    ip_whitelist: List[str] = dynaconf_settings.get(
-        "security.rate_limiting.ip_whitelist",
-        ["127.0.0.1", "::1"],
-    )
-    path_whitelist: List[str] = dynaconf_settings.get(
-        "security.rate_limiting.path_whitelist",
-        ["/", "/health"],
+    path_whitelist: list[str] = dynaconf_settings.get(
+        "rate_limit.path_whitelist",
+        ["/health"],
     )
 
 
@@ -156,7 +150,7 @@ class SecurityConfig(BaseSettings):
     """Security configuration."""
 
     disable_docs: bool = dynaconf_settings.get("security.disable_docs", False)
-    trusted_hosts: List[str] = dynaconf_settings.get("security.trusted_hosts", ["*"])
+    trusted_hosts: list[str] = dynaconf_settings.get("security.trusted_hosts", ["*"])
     enable_https_redirect: bool = dynaconf_settings.get(
         "security.https_redirect",
         False,
@@ -165,7 +159,7 @@ class SecurityConfig(BaseSettings):
         "security.trust_proxy_headers",
         True,
     )
-    rate_limiting: RateLimitingConfig = RateLimitingConfig()
+    rate_limiting: RateLimitConfig = RateLimitConfig()
 
 
 class ElasticAPMConfig(BaseSettings):
@@ -250,6 +244,10 @@ class ClickHouseConfig(BaseSettings):
 
     connection: ClickHouseConnection = ClickHouseConnection()
     configuration: ClickHouseConfiguration = ClickHouseConfiguration()
+    tables: dict[str, Any] = dynaconf_settings.get(
+        "databases.clickhouse.tables",
+        {},
+    )
 
 
 class CommonConfig(BaseSettings):

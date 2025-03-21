@@ -2,7 +2,7 @@
 Schema definitions for ClickHouse tables in Simple Snowplow.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 from .snowplow import snowplow_fields
 
@@ -12,7 +12,7 @@ _FIELD_REGISTRY = {
 }
 
 
-def register_fields(table_group: str, fields: List[Dict[str, Any]]) -> None:
+def register_fields(table_group: str, fields: list[dict[str, Any]]) -> None:
     """
     Register fields for a table group.
 
@@ -23,7 +23,7 @@ def register_fields(table_group: str, fields: List[Dict[str, Any]]) -> None:
     _FIELD_REGISTRY[table_group] = fields
 
 
-def get_fields_for_table_group(table_group: str) -> List[Dict[str, Any]]:
+def get_fields_for_table_group(table_group: str) -> list[dict[str, Any]]:
     """
     Get field definitions for a table group.
 

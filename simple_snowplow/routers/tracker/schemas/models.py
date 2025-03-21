@@ -3,13 +3,12 @@ Data models for Snowplow events.
 """
 
 from datetime import datetime
-from typing import Any, List
+from typing import Any, Self
 
 from fastapi import Query
 from fastapi.exceptions import RequestValidationError
 from json_repair import repair_json
 from pydantic import AliasChoices, BaseModel, Field
-from typing_extensions import Self
 
 
 class Model(BaseModel):
@@ -53,7 +52,7 @@ class Model(BaseModel):
 class SnowPlowModel(Model):
     """Base model for Snowplow data."""
 
-    data: List[Any | None] = Query(...)
+    data: list[Any] = Query(...)
     json_schema: str | None = Query(
         None,
         alias="schema",
@@ -180,9 +179,9 @@ class PayloadElementPostModel(PayloadElementBaseModel):
 
 
 class PayloadModel(SnowPlowModel):
-    """Model for batch payloads."""
+    """Model for JSON payload in POST requests."""
 
-    data: List[PayloadElementPostModel] = Query([])
+    data: list[PayloadElementPostModel] = Query([])
 
 
 class SendgridElementBaseModel(Model):
@@ -192,7 +191,7 @@ class SendgridElementBaseModel(Model):
     timestamp: datetime = Query(..., title="Event timestamp")
     smtp_id: str = Query(..., validation_alias="smtp-id", title="SMTP ID")
     event: str = Query(..., title="Event type")
-    category: List[str] = Query(..., title="Event categories")
+    category: list[str] = Query(..., title="Event categories")
     sg_event_id: str = Query(..., title="SendGrid event ID")
     sg_message_id: str = Query(..., title="SendGrid message ID")
     response: str = Query("", title="Response")
@@ -208,4 +207,4 @@ class SendgridElementBaseModel(Model):
 class SendgridModel(Model):
     """Model for batch Sendgrid events."""
 
-    data: List[SendgridElementBaseModel] = Query([])
+    data: list[SendgridElementBaseModel] = Query([])

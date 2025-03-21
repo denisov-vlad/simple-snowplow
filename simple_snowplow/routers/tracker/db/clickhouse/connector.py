@@ -5,7 +5,8 @@ This module provides a connection pool and retry mechanism for ClickHouse.
 """
 
 import asyncio
-from typing import Any, Awaitable, Callable, Dict, List, Tuple, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 import elasticapm
 import structlog
@@ -31,9 +32,9 @@ class ClickHouseConnector:
         database: str = "snowplow",
         max_retries: int = 3,
         retry_delay: float = 1.0,
-        pool: List[AsyncClient] | None = None,
-        pool_in_use: List[bool] | None = None,
-        pool_lock: Any = None,
+        pool: list[AsyncClient] | None = None,
+        pool_in_use: list[bool] | None = None,
+        pool_lock: Any | None = None,
         **params,
     ):
         """
@@ -80,7 +81,7 @@ class ClickHouseConnector:
             return ""
         return f"ON CLUSTER {cluster_name}"
 
-    async def get_connection(self) -> Tuple[AsyncClient, int]:
+    async def get_connection(self) -> tuple[AsyncClient, int]:
         """
         Get an available connection from the pool.
 
@@ -191,8 +192,8 @@ class ClickHouseConnector:
     async def query(
         self,
         query: str,
-        parameters: Dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
+        parameters: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Execute a ClickHouse query.
 
@@ -228,7 +229,7 @@ class ClickHouseConnector:
     @elasticapm.async_capture_span()
     async def insert_rows(
         self,
-        rows: List[Dict[str, Any] | Model],
+        rows: list[dict[str, Any] | Model],
         table_group: str = "snowplow",
     ) -> None:
         """

@@ -6,7 +6,7 @@ import base64
 import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 
 import elasticapm
@@ -66,7 +66,7 @@ async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
 
 
 @elasticapm.async_capture_span()
-async def parse_cookies(cookies_str: str) -> Dict[str, Any]:
+async def parse_cookies(cookies_str: str) -> dict[str, Any]:
     """
     Parse cookies string.
 
@@ -108,7 +108,7 @@ async def parse_cookies(cookies_str: str) -> Dict[str, Any]:
 
 
 @elasticapm.async_capture_span()
-async def parse_contexts(contexts: Dict[str, Any]) -> Dict[str, Any]:
+async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
     """
     Parse Snowplow contexts.
 
@@ -233,7 +233,7 @@ async def parse_contexts(contexts: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @elasticapm.async_capture_span()
-async def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
+async def parse_event(event: dict[str, Any]) -> dict[str, Any]:
     """
     Parse Snowplow event data.
 
@@ -254,7 +254,7 @@ async def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @elasticapm.async_capture_span()
-async def parse_payload(element: PayloadType, cookies: str | None) -> Dict[str, Any]:
+async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, Any]:
     """
     Parse a Snowplow event payload.
 

@@ -2,14 +2,14 @@
 User agent parsing functionality.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import elasticapm
 from user_agents import parse
 
 
 @elasticapm.async_capture_span()
-async def parse_agent(string: str) -> Dict[str, Any]:
+async def parse_agent(string: str) -> dict[str, Any]:
     """
     Parse a user agent string into structured data.
 
