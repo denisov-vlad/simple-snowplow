@@ -1,10 +1,10 @@
 """
 Base router classes for Simple Snowplow.
 """
+
 from typing import Optional
 
-from fastapi import APIRouter
-from fastapi import Depends
+from fastapi import APIRouter, Depends
 from fastapi.security import APIKeyHeader
 
 

@@ -1,10 +1,9 @@
 """
 IP address parsing and handling.
 """
-from ipaddress import IPv4Address
-from ipaddress import IPv6Address
-from typing import Optional
-from typing import Union
+
+from ipaddress import IPv4Address, IPv6Address
+from typing import Optional, Union
 
 import elasticapm
 from pydantic import IPvAnyAddress

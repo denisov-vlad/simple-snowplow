@@ -1,20 +1,19 @@
 """
 Core data processing handlers for Snowplow events.
 """
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
+
+from typing import Any, Dict, List, Optional, Union
 
 import elasticapm
 import structlog
 from routers.tracker.parsers.ip import convert_ip
 from routers.tracker.parsers.payload import parse_payload
 from routers.tracker.parsers.useragent import parse_agent
-from routers.tracker.schemas.models import PayloadElementBaseModel
-from routers.tracker.schemas.models import PayloadElementPostModel
-from routers.tracker.schemas.models import PayloadModel
+from routers.tracker.schemas.models import (
+    PayloadElementBaseModel,
+    PayloadElementPostModel,
+    PayloadModel,
+)
 
 logger = structlog.get_logger(__name__)
 

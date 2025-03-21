@@ -2,8 +2,7 @@ import logging
 import sys
 
 import structlog
-from fastapi import Request
-from fastapi import status
+from fastapi import Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse

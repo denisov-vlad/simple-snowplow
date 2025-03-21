@@ -1,18 +1,14 @@
 """
 Data models for Snowplow events.
 """
+
 from datetime import datetime
-from typing import Any
-from typing import List
-from typing import Optional
-from typing import Union
+from typing import Any, List, Optional, Union
 
 from fastapi import Query
 from fastapi.exceptions import RequestValidationError
 from json_repair import repair_json
-from pydantic import AliasChoices
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import AliasChoices, BaseModel, Field
 from typing_extensions import Self
 
 

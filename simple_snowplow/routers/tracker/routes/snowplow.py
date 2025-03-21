@@ -1,19 +1,15 @@
 """
 Route handlers for Snowplow events.
 """
+
 import base64
 from typing import Optional
 
 import elasticapm
-from fastapi import Depends
-from fastapi import Header
-from fastapi import Request
-from fastapi import Response
-from fastapi.responses import Response
+from fastapi import Depends, Header, Request, Response
 from pydantic import IPvAnyAddress
 from routers.tracker.handlers import process_data
-from routers.tracker.schemas.models import PayloadElementBaseModel
-from routers.tracker.schemas.models import PayloadModel
+from routers.tracker.schemas.models import PayloadElementBaseModel, PayloadModel
 from starlette.status import HTTP_204_NO_CONTENT
 
 

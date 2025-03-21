@@ -3,12 +3,10 @@ Configuration management for Simple Snowplow.
 
 Uses Pydantic for type checking while getting values from dynaconf.
 """
+
 import os
 from pathlib import Path
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from dynaconf import Dynaconf
 from pydantic_settings import BaseSettings

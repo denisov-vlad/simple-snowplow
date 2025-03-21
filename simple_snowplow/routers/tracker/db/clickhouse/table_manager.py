@@ -1,6 +1,7 @@
 """
 Table management operations for ClickHouse databases.
 """
+
 import structlog
 from routers.tracker.db.clickhouse.connector import ClickHouseConnector
 from routers.tracker.db.clickhouse.schemas import get_fields_for_table_group
@@ -39,7 +40,8 @@ class TableManager:
 
         for db in databases:
             await self.connector.command(
-                f"CREATE DATABASE IF NOT EXISTS {db} {self.connector.cluster_condition}",
+                f"CREATE DATABASE IF NOT EXISTS {db} "
+                f"{self.connector.cluster_condition}",
             )
             logger.info(f"Created database: {db}")
 
@@ -100,8 +102,9 @@ class TableManager:
 
         query = (
             f"CREATE TABLE IF NOT EXISTS {full_table_name} "
-            f"{self.connector.cluster_condition} AS {source_db}.{source_table} ENGINE = Distributed("
-            f"'{self.connector.cluster}', '{source_db}', '{source_table}', {table_data['sample_by']});"
+            f"{self.connector.cluster_condition} AS {source_db}.{source_table} "
+            f"ENGINE = Distributed('{self.connector.cluster}', '{source_db}', "
+            f"'{source_table}', {table_data['sample_by']});"
         )
 
         await self.connector.command(query)

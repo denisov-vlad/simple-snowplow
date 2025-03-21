@@ -1,8 +1,7 @@
 from datetime import datetime
 
 import structlog
-from fastapi import Request
-from fastapi import Response
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from uvicorn.protocols.utils import get_path_with_query_string
 
@@ -35,9 +34,11 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             http_version = request.scope["http_version"]
             process_time = (datetime.now() - start_time).total_seconds()
 
-            # Recreate the Uvicorn access log format, but add all parameters as structured information
+            # Recreate the Uvicorn access log format, but add all parameters
+            # as structured information
             await logger.info(
-                f"""{client_host}:{client_port} - "{http_method} {url} HTTP/{http_version}" {status_code} - {process_time:.3f}s""",
+                f"""{client_host}:{client_port} - "{http_method} {url} """
+                f"""HTTP/{http_version}" {status_code} - {process_time:.3f}s""",
                 http={
                     "url": str(request.url),
                     "status_code": status_code,

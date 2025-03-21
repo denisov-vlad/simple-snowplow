@@ -1,13 +1,9 @@
 """
 Schema definitions for ClickHouse tables in Simple Snowplow.
 """
-from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
-from .enums import EventType
-from .enums import Platform
+from typing import Any, Dict, List
+
 from .snowplow import snowplow_fields
 
 # Map of table groups to their field definitions

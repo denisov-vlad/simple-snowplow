@@ -1,6 +1,7 @@
 """
 Enum definitions used in ClickHouse schemas.
 """
+
 from enum import Enum
 
 

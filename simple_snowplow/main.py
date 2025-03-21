@@ -1,6 +1,7 @@
 """
 Main application entry point for Simple Snowplow.
 """
+
 import structlog
 from brotli_asgi import BrotliMiddleware
 from core.config import settings
@@ -14,8 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from middleware.logging import LoggingMiddleware
 from middleware.rate_limit import RateLimitMiddleware
 from middleware.security import SecurityHeadersMiddleware
-from plugins.logger import configure_logger
-from plugins.logger import validation_exception_handler
+from plugins.logger import configure_logger, validation_exception_handler
 from routers.demo import router as demo_router
 from routers.proxy import router as proxy_router
 from routers.tracker import router as app_router
@@ -89,7 +89,7 @@ def create_app() -> FastAPI:
 
     # Add Prometheus middleware if enabled
     if settings.prometheus.enabled:
-        from starlette_exporter import handle_metrics, PrometheusMiddleware
+        from starlette_exporter import PrometheusMiddleware, handle_metrics
 
         app.add_middleware(
             PrometheusMiddleware,

@@ -285,7 +285,7 @@ Example of adding a new configuration section:
 # In core/config.py
 class NewFeatureConfig(BaseSettings):
     """Configuration for new feature."""
-    
+
     enabled: bool = dynaconf_settings.get("new_feature.enabled", False)
     timeout: int = dynaconf_settings.get("new_feature.timeout", 30)
 

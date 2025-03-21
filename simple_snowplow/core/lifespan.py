@@ -3,8 +3,7 @@ from contextlib import asynccontextmanager
 
 from clickhouse_connect import get_async_client
 from core.config import settings
-from routers.tracker.db.clickhouse import ClickHouseConnector
-from routers.tracker.db.clickhouse import TableManager
+from routers.tracker.db.clickhouse import ClickHouseConnector, TableManager
 
 PERFORMANCE_CONFIG = settings.performance
 CLIKCHOUSE_CONFIG = settings.clickhouse

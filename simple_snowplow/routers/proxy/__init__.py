@@ -6,7 +6,6 @@ from fastapi.responses import Response
 from fastapi.routing import APIRouter
 from routers.proxy import models
 
-
 PROXY_CONFIG = settings.proxy
 PROXY_ENDPOINT = settings.common.snowplow.endpoints.proxy_endpoint
 HOSTNAME = settings.common.hostname
@@ -43,7 +42,10 @@ async def proxy_hash(data: models.HashModel):
     if not return_encoded:
         return data.url
 
-    result = f"{HOSTNAME}{PROXY_ENDPOINT}/route/{data.url.scheme}/{encode(data.url.host)}/{full_path}"
+    result = (
+        f"{HOSTNAME}{PROXY_ENDPOINT}/route/{data.url.scheme}/"
+        f"{encode(data.url.host)}/{full_path}"
+    )
 
     return result
 

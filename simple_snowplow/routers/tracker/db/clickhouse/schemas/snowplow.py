@@ -1,20 +1,22 @@
 """
 Snowplow schema field definitions for ClickHouse.
 """
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import DateTime64
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Enum8
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import IPv4
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import LowCardinality
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Nullable
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import String
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import Tuple
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UInt64
-from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import UUID
+
+from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import (
+    UUID,
+    DateTime64,
+    Enum8,
+    IPv4,
+    LowCardinality,
+    Nullable,
+    String,
+    Tuple,
+    UInt64,
+)
 from clickhouse_connect.datatypes.base import TypeDef
 from clickhouse_connect.datatypes.dynamic import JSON
 
-from .enums import EventType
-from .enums import Platform
+from .enums import EventType, Platform
 
 # Field definitions for the Snowplow table
 snowplow_fields = [

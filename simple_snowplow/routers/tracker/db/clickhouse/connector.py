@@ -3,16 +3,9 @@ ClickHouse database connector for Simple Snowplow.
 
 This module provides a connection pool and retry mechanism for ClickHouse.
 """
+
 import asyncio
-from typing import Any
-from typing import Awaitable
-from typing import Callable
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-from typing import TypeVar
-from typing import Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, TypeVar, Union
 
 import elasticapm
 import structlog
@@ -20,7 +13,6 @@ from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError
 from routers.tracker.schemas.models import Model
-
 
 T = TypeVar("T")
 

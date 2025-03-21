@@ -1,26 +1,21 @@
 """
 Tracker module for Snowplow event collection.
 
-This module provides endpoints for collecting tracking data from web applications and services
-using the Snowplow tracking protocol.
+This module provides endpoints for collecting tracking data from web applications
+and services using the Snowplow tracking protocol.
 """
-from typing import Any
-from typing import Callable
-from typing import Coroutine
+
+from typing import Any, Callable, Coroutine
 
 import orjson
 from core.config import settings
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
-from fastapi.routing import APIRoute
-from fastapi.routing import APIRouter
+from fastapi.routing import APIRoute, APIRouter
 from json_repair import repair_json
 
-from .routes import sendgrid_event
-from .routes import tracker_cors
-from .routes import tracker_get
-from .routes import tracker_post
+from .routes import sendgrid_event, tracker_cors, tracker_get, tracker_post
 
 # Get endpoint configuration from settings
 endpoints = settings.common.snowplow.endpoints

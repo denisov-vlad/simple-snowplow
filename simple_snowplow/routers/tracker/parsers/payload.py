@@ -1,23 +1,23 @@
 """
 Payload parsing functionality for Snowplow events.
 """
+
 import base64
 import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
-from typing import Any
-from typing import Dict
-from typing import Optional
-from typing import Union
+from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
 import elasticapm
 import orjson
 import structlog
 from core.config import settings
-from routers.tracker.schemas.models import PayloadElementBaseModel
-from routers.tracker.schemas.models import PayloadElementPostModel
-from routers.tracker.schemas.models import StructuredEvent
+from routers.tracker.schemas.models import (
+    PayloadElementBaseModel,
+    PayloadElementPostModel,
+    StructuredEvent,
+)
 
 logger = structlog.stdlib.get_logger()
 

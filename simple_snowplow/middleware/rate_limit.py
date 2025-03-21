@@ -3,11 +3,9 @@ import random
 import time
 
 from core.config import settings
-from fastapi import Request
-from fastapi import Response
+from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_429_TOO_MANY_REQUESTS
-
 
 SECURITY_CONFIG = settings.security
 RATE_LIMITING_CONFIG = SECURITY_CONFIG.rate_limiting

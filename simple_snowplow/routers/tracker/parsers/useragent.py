@@ -1,8 +1,8 @@
 """
 User agent parsing functionality.
 """
-from typing import Any
-from typing import Dict
+
+from typing import Any, Dict
 
 import elasticapm
 from user_agents import parse

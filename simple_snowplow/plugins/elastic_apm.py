@@ -1,7 +1,6 @@
 from core.config import settings
 from elasticapm.contrib.starlette import make_apm_client
 
-
 ELASTIC_APM_CONFIG = settings.elastic_apm
 
 elastic_config = ELASTIC_APM_CONFIG.model_dump()
