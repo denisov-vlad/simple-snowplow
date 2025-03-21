@@ -65,33 +65,84 @@ For Kubernetes deployment, check the example manifests in the `.github/k8s` dire
 
 ## Configuration
 
-Simple Snowplow can be configured via a TOML configuration file and environment variables. The application uses the following configuration hierarchy:
+Simple Snowplow uses a combined configuration system with Dynaconf for loading settings and Pydantic for type validation. Configuration can be managed through:
 
 1. Default settings from `settings.toml`
-2. Environment variables with `SNOWPLOW_` prefix
-3. Custom settings file specified with `SNOWPLOW_SETTINGS_FILE`
+2. Secret settings from `.secrets.toml` (if exists)
+3. Environment variables with `SNOWPLOW_` prefix
+4. Custom settings file specified with `SNOWPLOW_SETTINGS_FILE`
+
+The configuration system prioritizes these sources in the order listed.
+
+### Configuration Structure
+
+The configuration is organized into logical sections:
+
+- `common`: Basic application settings
+- `clickhouse`: Database connection and table settings
+- `logging`: Log formatting and level
+- `security`: Security settings including rate limiting
+- `proxy`: Configuration for proxy endpoints
+- `performance`: Application performance tuning
+- `elastic_apm`: APM monitoring configuration
+- `prometheus`: Metrics and monitoring settings
 
 ### Main Configuration Options
 
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `common.service_name` | Application name | `simple-snowplow` |
+| `common.debug` | Enable debug mode | `false` |
 | `common.demo` | Enable demo mode | `false` |
 | `logging.level` | Log level (DEBUG, INFO, WARNING, ERROR) | `WARNING` |
+| `logging.json` | Use JSON formatting for logs | `false` |
+| `security.rate_limiting.enabled` | Enable request rate limiting | `false` |
 | `clickhouse.connection.host` | ClickHouse host | `clickhouse` |
 | `clickhouse.connection.port` | ClickHouse port | `8123` |
 | `clickhouse.configuration.database` | ClickHouse database | `snowplow` |
 | `clickhouse.configuration.cluster_name` | ClickHouse cluster name (if using) | `""` |
+| `performance.max_concurrent_connections` | Max concurrent connections | `100` |
+| `performance.db_pool_size` | Database connection pool size | `5` |
 
 For a complete list of configuration options, refer to the `settings.toml` file.
 
 ### Environment Variables
 
-You can override any configuration setting using environment variables with the `SNOWPLOW_` prefix. For example:
+You can override any configuration setting using environment variables with the `SNOWPLOW_` prefix and double underscores to represent nested keys:
 
 ```bash
 SNOWPLOW_COMMON__DEMO=true
 SNOWPLOW_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-server
+SNOWPLOW_SECURITY__RATE_LIMITING__ENABLED=true
+```
+
+### Custom Configuration File
+
+To use a custom configuration file:
+
+```bash
+export SNOWPLOW_SETTINGS_FILE=/path/to/your/custom.toml
+```
+
+The custom file only needs to include settings you want to override.
+
+### Environment-Specific Configuration
+
+Simple Snowplow supports environment-specific settings through the `SNOWPLOW_ENV` variable:
+
+```bash
+export SNOWPLOW_ENV=production
+```
+
+Settings for specific environments can be defined in the configuration file:
+
+```toml
+[development]
+logging.level = "DEBUG"
+
+[production]
+logging.level = "WARNING"
+security.disable_docs = true
 ```
 
 ## Usage
@@ -208,6 +259,41 @@ For more verbose logging, set `logging.level = "DEBUG"` in your configuration.
    cd simple_snowplow
    uvicorn main:app --reload
    ```
+
+### Configuration System
+
+Simple Snowplow uses a dual-layer configuration system:
+
+1. **Dynaconf** - Handles loading settings from files, environment variables, etc.
+2. **Pydantic** - Provides type validation and default values with BaseSettings classes
+
+The main configuration is in `simple_snowplow/core/config.py`, with these components:
+
+- `dynaconf_settings` - Raw Dynaconf settings object
+- Pydantic model classes (e.g., `SecurityConfig`, `ClickHouseConfig`)
+- `settings` - Main Pydantic settings instance that provides typed access
+
+When extending the configuration:
+
+1. Add new settings to `settings.toml` with appropriate defaults
+2. Create or update the corresponding Pydantic model in `core/config.py`
+3. Add the new settings class to the main `Settings` class
+
+Example of adding a new configuration section:
+
+```python
+# In core/config.py
+class NewFeatureConfig(BaseSettings):
+    """Configuration for new feature."""
+    
+    enabled: bool = dynaconf_settings.get("new_feature.enabled", False)
+    timeout: int = dynaconf_settings.get("new_feature.timeout", 30)
+
+# Update the main Settings class
+class Settings(BaseSettings):
+    # Existing settings...
+    new_feature: NewFeatureConfig = NewFeatureConfig()
+```
 
 ### Running Tests
 
