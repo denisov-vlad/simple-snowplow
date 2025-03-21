@@ -34,9 +34,9 @@ window.snowplow('enableActivityTracking', {
 });
 
 // Enable link click tracking
-window.snowplow('enableLinkClickTracking', { 
-    pseudoClicks: true, 
-    trackContent: true 
+window.snowplow('enableLinkClickTracking', {
+    pseudoClicks: true,
+    trackContent: true
 });
 
 // Add global contexts
@@ -63,7 +63,7 @@ window.snowplow('addGlobalContexts', [pageContext, userContext]);
 document.addEventListener('DOMContentLoaded', function() {
     // Track page view on load
     window.snowplow('trackPageView');
-    
+
     // Initialize UI components
     initUI();
-}); 
+});

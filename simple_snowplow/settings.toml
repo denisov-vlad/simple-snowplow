@@ -91,18 +91,18 @@ settings = "index_granularity = 8192"
 [clickhouse.configuration.tables.snowplow.distributed]
 name = "distributed"
 sample_by = "cityHash64(device_id)"
-[clickhouse.configuration.tables.sendgrid]
-enabled = true
-[clickhouse.configuration.tables.sendgrid.local]
-name = "sendgrid_local"
-engine = "MergeTree()"
-partition_by = "toYYYYMM(time)"
-order_by = "toDate(time), event, email, cityHash64(email), time"
-sample_by = "cityHash64(email)"
-settings = "index_granularity = 8192"
-[clickhouse.configuration.tables.sendgrid.distributed]
-name = "sendgrid"
-sample_by = "cityHash64(email)"
+# [clickhouse.configuration.tables.sendgrid]
+# enabled = true
+# [clickhouse.configuration.tables.sendgrid.local]
+# name = "sendgrid_local"
+# engine = "MergeTree()"
+# partition_by = "toYYYYMM(time)"
+# order_by = "toDate(time), event, email, cityHash64(email), time"
+# sample_by = "cityHash64(email)"
+# settings = "index_granularity = 8192"
+# [clickhouse.configuration.tables.sendgrid.distributed]
+# name = "sendgrid"
+# sample_by = "cityHash64(email)"
 
 # Environment-specific overrides
 [development]

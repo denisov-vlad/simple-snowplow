@@ -1,11 +1,13 @@
+from .logging import LoggingMiddleware
 from .rate_limit import RateLimitMiddleware
-from .security import SecurityHeadersMiddleware, TRUSTED_HOSTS, ENABLE_HTTPS_REDIRECT
-from .logging import logging_middleware
+from .security import ENABLE_HTTPS_REDIRECT
+from .security import SecurityHeadersMiddleware
+from .security import TRUSTED_HOSTS
 
 __all__ = [
-    'RateLimitMiddleware',
-    'SecurityHeadersMiddleware',
-    'logging_middleware',
-    'TRUSTED_HOSTS',
-    'ENABLE_HTTPS_REDIRECT',
-] 
+    "RateLimitMiddleware",
+    "SecurityHeadersMiddleware",
+    "LoggingMiddleware",
+    "TRUSTED_HOSTS",
+    "ENABLE_HTTPS_REDIRECT",
+]
