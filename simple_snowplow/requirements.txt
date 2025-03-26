@@ -14,7 +14,7 @@ PyYAML==6.0.2
 requests==2.32.3
 SQLAlchemy==2.0.37
 starlette_exporter==0.23.0
-structlog==25.1.0
+structlog==25.2.0
 ua-parser==1.0.1
 user-agents==2.2.0
 uvicorn==0.34.0
