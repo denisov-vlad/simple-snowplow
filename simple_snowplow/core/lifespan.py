@@ -46,4 +46,4 @@ async def lifespan(application):
 
     # Close all connections in the pool
     for client in ch_clients:
-        client.close()
+        await client.close()
