@@ -1,106 +1,98 @@
-import base64
-from typing import Any
-from typing import Callable
-from typing import Coroutine
-from typing import Optional
+"""
+Tracker module for Snowplow event collection.
+
+This module provides endpoints for collecting tracking data from web applications
+and services using the Snowplow tracking protocol.
+"""
+
+from typing import Any, Callable, Coroutine
 
 import orjson
-from config import settings
-from fastapi import Depends
-from fastapi import Header
+from core.config import settings
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
-from fastapi.routing import APIRoute
-from fastapi.routing import APIRouter
+from fastapi.routing import APIRoute, APIRouter
 from json_repair import repair_json
-from pydantic import IPvAnyAddress
-from routers.tracker import models
-from routers.tracker.handlers import process_data
-from starlette.status import HTTP_204_NO_CONTENT
 
+from .routes import sendgrid_event, tracker_cors, tracker_get, tracker_post
 
-custom_route_response = Callable[[Request], Coroutine[Any, Any, Response]]
+# Get endpoint configuration from settings
+endpoints = settings.common.snowplow.endpoints
 
 
 class CustomRoute(APIRoute):
-    def get_route_handler(self) -> custom_route_response:
+    """
+    Custom route class that handles JSON parsing with repair capability.
+
+    This is used to automatically fix malformed JSON in request bodies
+    before they are processed by the route handlers.
+    """
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        """
+        Get a custom route handler that pre-processes request body.
+
+        Returns:
+            Asynchronous route handler function
+        """
         original_route_handler = super().get_route_handler()
 
-        async def custom_route_handler(request: Request) -> custom_route_response:
+        async def custom_route_handler(request: Request) -> Response:
+            """
+            Custom route handler with JSON repair functionality.
+
+            Args:
+                request: FastAPI request object
+
+            Returns:
+                Response from the original route handler
+
+            Raises:
+                RequestValidationError: If JSON cannot be parsed after repair
+            """
             if request.method == "POST":
                 raw_body = await request.body()
                 try:
+                    # Try normal JSON parsing first
                     body = orjson.loads(raw_body)
                     request._json = body
                 except orjson.JSONDecodeError:
                     try:
+                        # If that fails, try repairing the JSON
                         body = orjson.loads(repair_json(raw_body.decode("utf-8")))
                         request._json = body
                     except Exception as e:
+                        # If repair fails, raise validation error
                         raise RequestValidationError([e])
+
+            # Continue with normal request processing
             return await original_route_handler(request)
 
         return custom_route_handler
 
 
+# Create the router with custom route class
 router = APIRouter(tags=["snowplow"], route_class=CustomRoute)
 
+# Register the CORS options handlers
+router.options(endpoints.post_endpoint, include_in_schema=False)(tracker_cors)
+router.options(endpoints.get_endpoint, include_in_schema=False)(tracker_cors)
 
-def pixel_gif():
-    img = b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-    return base64.b64decode(img)
+# Register the main Snowplow endpoints
+router.post(
+    endpoints.post_endpoint,
+    summary="Snowplow JS Tracker endpoint",
+)(tracker_post)
 
-
-pixel = pixel_gif()
-
-endpoints = settings.common.snowplow.endpoints
-
-
-@router.options(endpoints.post_endpoint, include_in_schema=False)
-@router.options(endpoints.get_endpoint, include_in_schema=False)
-async def tracker_cors():
-    return
-
-
-@router.post(endpoints.post_endpoint, summary="Snowplow JS Tracker endpoint")
-async def tracker(
-    request: Request,
-    body: models.PayloadModel,
-    user_agent: Optional[str] = Header(None),
-    x_forwarded_for: IPvAnyAddress | str | None = Header(None),
-    cookie: Optional[str] = Header(None),
-):
-    """
-    Collects data from web with sp.js
-    \f
-    :param request: FastApi request instance
-    :param body: Snowplow payload data
-    :param user_agent: Browser User-Agent header
-    :param x_forwarded_for: User IP
-    :param cookie: Browser's cookies
-    :return:
-    """
-
-    data = await process_data(body, user_agent, x_forwarded_for, cookie)
-    await request.app.state.connector.insert(data)
-
-    return Response(status_code=HTTP_204_NO_CONTENT)
-
-
-@router.get(
+router.get(
     endpoints.get_endpoint,
     summary="Snowplow JS Tracker GET endpoint",
     response_class=Response,
-)
-async def get_tracker(
-    request: Request,
-    params: models.PayloadElementBaseModel = Depends(),
-    user_agent: Optional[str] = Header(None),
-    x_forwarded_for: IPvAnyAddress | str | None = Header(None),
-    cookie: Optional[str] = Header(None),
-):
-    data = await process_data(params, user_agent, x_forwarded_for, cookie)
-    await request.app.state.connector.insert(data)
+)(tracker_get)
 
-    return Response(content=pixel, media_type="image/gif")
+# Register the SendGrid webhook endpoint
+router.post(
+    endpoints.sendgrid_endpoint,
+    summary="Sendgrid event endpoint",
+)(sendgrid_event)

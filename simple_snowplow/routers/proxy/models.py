@@ -1,6 +1,5 @@
 from fastapi import Query
-from pydantic import AnyUrl
-from pydantic import BaseModel
+from pydantic import AnyUrl, BaseModel
 
 
 class HashModel(BaseModel):

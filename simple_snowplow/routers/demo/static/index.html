@@ -2,58 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Snowplow Tracker demo</title>
-    <script>
-       ;(function(p,l,o,w,i,n,g){if(!p[i]){p.GlobalSnowplowNamespace=p.GlobalSnowplowNamespace||[]; p.GlobalSnowplowNamespace.push(i);p[i]=function(){(p[i].q=p[i].q||[]).push(arguments) };p[i].q=p[i].q||[];n=l.createElement(o);g=l.getElementsByTagName(o)[0];n.async=1; n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,"script","http://127.0.0.1:8000/static/sp.js","snowplow"));
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/json-viewer.css">
 
-        window.snowplow('newTracker', 'sp1', 'http://127.0.0.1:8000', {
-            appId: 'example',
-            postPath: '/tracker', // Collector must be configured
-            encodeBase64: false,
-            discoverRootDomain: true,
-            contexts: {
-                webPage: true, // Default
-                session: true, // Adds client session context entity to events, off by default. Available in v3.5+.
-                browser: true, // Adds browser context entity to events, off by default. Available in v3.9+.
-                performanceNavigationTiming: true, // Adds performance navigation timing entity. Available in v4.0.2+
-                performanceTiming: true,
-                gaCookies: true,
-                geolocation: false,
-                clientHints: true,
-          }
+    <!-- Libraries -->
+    <script src="js/json-viewer.js"></script>
 
-        })
-
-        window.snowplow('setUserId', 'test@email.com');
-
-        window.snowplow('enableActivityTracking', {
-            minimumVisitLength: 5,
-            heartbeatDelay: 5
-        });
-
-        window.snowplow('enableLinkClickTracking', { pseudoClicks: true, trackContent: true });
-
-        let pageContext = {
-            schema: "iglu:dev.snowplow.simple/page_data",
-            data: {
-              "id": "qwe123",
-              "type": "main",
-              "section": null
-          }
-        };
-
-        let userContext = {
-            schema: "iglu:dev.snowplow.simple/user_data",
-            data: {
-              "name": "John",
-              "type": "contributor"
-          }
-        };
-
-        window.snowplow('addGlobalContexts', [pageContext, userContext]);
-        window.snowplow('trackPageView');
-
-    </script>
+    <!-- Custom JS -->
+    <script src="js/logger.js"></script>
+    <script src="js/snowplow-init.js"></script>
 </head>
 <body>
     <h1>Snowplow Tracker demo</h1>
@@ -61,8 +21,18 @@
         Hi. It looks like you've successfully passed the tutorial step.
         Open the Network tab and reload this page. You'll see /tracker requests.
     </p>
-    <p>
 
-    </p>
+    <h2>Tracking Data Log</h2>
+    <p>This section shows the actual data being sent to the backend. Use the expand/collapse buttons to navigate the JSON data.</p>
+
+    <div class="button-container">
+        <button id="track-event-btn" class="button">Track Test Event</button>
+        <button id="toggle-tracking-btn" class="button toggle">Pause Tracking</button>
+        <button id="clear-log-btn" class="clear-log">Clear Log</button>
+    </div>
+
+    <div id="tracking-log" class="log-container">
+        <p>Waiting for tracking events...</p>
+    </div>
 </body>
 </html>
