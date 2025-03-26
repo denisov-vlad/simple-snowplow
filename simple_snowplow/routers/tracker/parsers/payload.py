@@ -84,7 +84,7 @@ async def parse_cookies(cookies_str: str) -> dict[str, Any]:
     try:
         cookies.load(cookies_str)
     except Exception as e:
-        logger.warning(f"Failed to parse cookies: {e}")
+        await logger.warning(f"Failed to parse cookies: {e}")
         return {}
 
     # Extract Snowplow specific cookies
@@ -344,7 +344,7 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
                 amp_device_id = await parse_base64(amp_device_id)
                 result["amp"]["device_id"] = amp_device_id
             except Exception as e:
-                logger.warning(f"Failed to parse AMP linker: {e}")
+                await logger.warning(f"Failed to parse AMP linker: {e}")
 
     # Get cookie information if device ID is missing
     if result.get("duid") is None:

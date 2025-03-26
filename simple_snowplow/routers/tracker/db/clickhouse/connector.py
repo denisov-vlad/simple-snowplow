@@ -243,7 +243,7 @@ class ClickHouseConnector:
         from routers.tracker.db.clickhouse.schemas import get_fields_for_table_group
 
         if not rows:
-            logger.debug("No rows to insert")
+            await logger.debug("No rows to insert")
             return
 
         table_name = await self.get_table_name(table_group)

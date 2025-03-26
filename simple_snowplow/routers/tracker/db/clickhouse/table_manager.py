@@ -44,7 +44,7 @@ class TableManager:
                 f"CREATE DATABASE IF NOT EXISTS {db} "
                 f"{self.connector.cluster_condition}",
             )
-            logger.info(f"Created database: {db}")
+            await logger.info(f"Created database: {db}")
 
     async def create_local_table(self, table_group: str = "snowplow") -> None:
         """
@@ -86,7 +86,9 @@ class TableManager:
             table_group: The table group
         """
         if not self.connector.cluster:
-            logger.info("Skipping distributed table creation (no cluster defined)")
+            await logger.info(
+                "Skipping distributed table creation (no cluster defined)",
+            )
             return
 
         table_data = self.connector.tables[table_group]["distributed"]
@@ -109,7 +111,7 @@ class TableManager:
         )
 
         await self.connector.command(query)
-        logger.info(f"Created distributed table: {full_table_name}")
+        await logger.info(f"Created distributed table: {full_table_name}")
 
     async def create_all_tables(self) -> None:
         """
