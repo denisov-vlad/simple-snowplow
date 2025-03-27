@@ -126,13 +126,18 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
         return result
 
     for context in contexts["data"]:
+        bad_contexts = False
         for key in ("schema", "data"):
             if not isinstance(context, dict):
-                await logger.warning("Wrong context type", context=context)
+                bad_contexts = True
                 continue
             if key not in context:
                 await logger.warning(f"Empty {key} for payload", context=context)
                 continue
+
+        if bad_contexts:
+            await logger.error("Bad contexts", contexts=contexts)
+            continue
 
         schema = "/".join(context["schema"][5:].split("/")[:2])
         data = context["data"]
