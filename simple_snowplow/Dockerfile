@@ -28,7 +28,7 @@ FROM python:3.13-alpine3.21
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     SCRIPTS_OUTPUT_DIR=/app/static \
-    SCRIPTS_VERSION=4.1.0
+    SCRIPTS_VERSION=4.4.0
 
 # Create a non-root user to run the app
 RUN addgroup -S appgroup && \
