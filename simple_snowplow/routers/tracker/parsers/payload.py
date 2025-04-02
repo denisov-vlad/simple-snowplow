@@ -32,6 +32,7 @@ EMPTY_DICTS = (
     "browser_extra",
     "amp",
     "device_extra",
+    "geolocation",
 )
 EMPTY_STRINGS = (
     "app_version",
