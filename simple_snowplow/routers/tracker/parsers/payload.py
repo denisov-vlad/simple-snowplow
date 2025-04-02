@@ -397,10 +397,10 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if "se_pr" in result and result["se_pr"]:
         try:
             result["se_pr"] = orjson.loads(result["se_pr"])
-            if not isinstance(result["se_pr"], dict):
-                result["se_pr"] = {}
-        except orjson.JSONDecodeError:
+        except (orjson.JSONDecodeError, TypeError):
             result["se_pr"] = {"ex-property": result["se_pr"]}
+    else:
+        result["se_pr"] = {}
 
     if "se_va" in result and result["se_va"]:
         if not isinstance(result["se_va"], (float, int)):
