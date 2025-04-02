@@ -397,7 +397,7 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
         try:
             result["se_pr"] = orjson.loads(result["se_pr"])
         except (orjson.JSONDecodeError, TypeError):
-            pass
+            result["se_pr"] = {"ex-property": result["se_pr"]}
     else:
         result["se_pr"] = {}
 
