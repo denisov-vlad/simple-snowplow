@@ -44,7 +44,7 @@ class ClickHouseConnector:
         self.database = database
         self.params = params
         self.tables = self.params["tables"]
-        self.async_settings = {"async_insert": 1, "wait_for_async_insert": 1}
+        self.async_settings = {"async_insert": 1, "wait_for_async_insert": 0}
 
     @staticmethod
     def _make_on_cluster(cluster_name: str | None = None) -> str:
