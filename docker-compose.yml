@@ -12,12 +12,9 @@ services:
     - clickhouse
 
   clickhouse:
-    container_name: simple-snowplow-ch
-    build:
-      context: clickhouse
-      dockerfile: Dockerfile
+    image: clickhouse/clickhouse-server:25.3.2.39-alpine
     environment:
-    - "ALLOW_EMPTY_PASSWORD=yes"
+    - "CLICKHOUSE_PASSWORD=password"
     ports:
     - "8123:8123"
     - "9000:9000"
