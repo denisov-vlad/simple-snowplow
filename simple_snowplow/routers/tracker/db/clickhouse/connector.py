@@ -1,29 +1,25 @@
 """
 ClickHouse database connector for Simple Snowplow.
 
-This module provides a connection pool and retry mechanism for ClickHouse.
+This module provides a connection to ClickHouse.
 """
 
-import asyncio
-from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any
 
 import elasticapm
 import structlog
 from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
-from clickhouse_connect.driver.exceptions import ClickHouseError
+from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
 
 from routers.tracker.schemas.models import Model
-
-T = TypeVar("T")
 
 logger = structlog.get_logger(__name__)
 
 
 class ClickHouseConnector:
     """
-    ClickHouse database connector with connection pooling and retry mechanism.
+    ClickHouse database connector.
     """
 
     def __init__(
@@ -31,25 +27,15 @@ class ClickHouseConnector:
         conn: AsyncClient,
         cluster_name: str | None = None,
         database: str = "snowplow",
-        max_retries: int = 3,
-        retry_delay: float = 1.0,
-        pool: list[AsyncClient] | None = None,
-        pool_in_use: list[bool] | None = None,
-        pool_lock: Any | None = None,
         **params,
     ):
         """
         Initialize the ClickHouse connector.
 
         Args:
-            conn: The primary ClickHouse connection
+            conn: The ClickHouse connection
             cluster_name: Optional cluster name for distributed tables
             database: Default database name
-            max_retries: Maximum number of retry attempts
-            retry_delay: Delay between retry attempts in seconds
-            pool: Optional connection pool
-            pool_in_use: Optional flags for connection pool usage
-            pool_lock: Optional lock for connection pool
             **params: Additional parameters
         """
         self.conn = conn
@@ -58,14 +44,7 @@ class ClickHouseConnector:
         self.database = database
         self.params = params
         self.tables = self.params["tables"]
-        self.async_settings = {"async_insert": 1, "wait_for_async_insert": 0}
-        self.max_retries = max_retries
-        self.retry_delay = retry_delay
-
-        # Connection pool support
-        self.pool = pool or [conn]
-        self.pool_in_use = pool_in_use or [False] * len(self.pool)
-        self.pool_lock = pool_lock
+        self.async_settings = {"async_insert": 1, "wait_for_async_insert": 1}
 
     @staticmethod
     def _make_on_cluster(cluster_name: str | None = None) -> str:
@@ -81,91 +60,6 @@ class ClickHouseConnector:
         if cluster_name is None or not cluster_name:
             return ""
         return f"ON CLUSTER {cluster_name}"
-
-    async def get_connection(self) -> tuple[AsyncClient, int]:
-        """
-        Get an available connection from the pool.
-
-        Returns:
-            Tuple of connection and index
-        """
-        if not self.pool_lock:
-            return self.conn, -1
-
-        async with self.pool_lock:
-            for i, in_use in enumerate(self.pool_in_use):
-                if not in_use:
-                    self.pool_in_use[i] = True
-                    return self.pool[i], i
-
-            # All connections are in use, return the default one
-            return self.conn, -1
-
-    async def release_connection(self, connection_index: int) -> None:
-        """
-        Release a connection back to the pool.
-
-        Args:
-            connection_index: The index of the connection in the pool
-        """
-        if connection_index >= 0 and self.pool_lock:
-            async with self.pool_lock:
-                self.pool_in_use[connection_index] = False
-
-    async def _execute_with_retry(
-        self,
-        operation_name: str,
-        operation: Callable[[Any], Awaitable[T]] | Any,
-        *args: Any,
-        **kwargs: Any,
-    ) -> T:
-        """
-        Execute database operation with retries on failure.
-
-        Args:
-            operation_name: Name of the operation
-            operation: The operation to execute
-            *args: Arguments for the operation
-            **kwargs: Keyword arguments for the operation
-
-        Returns:
-            The result of the operation
-
-        Raises:
-            ClickHouseError: If all retry attempts fail
-        """
-        connection, connection_index = await self.get_connection()
-
-        try:
-            for attempt in range(1, self.max_retries + 1):
-                try:
-                    if operation_name in ["insert_data", "command", "query"]:
-                        # These operations can be executed directly on the connection
-                        return await getattr(connection, operation_name.split("_")[0])(
-                            *args,
-                            **kwargs,
-                        )
-                    else:
-                        # Other operations are methods
-                        return await operation(*args, **kwargs)
-                except ClickHouseError as e:
-                    log = logger.bind(
-                        operation=operation_name,
-                        attempt=attempt,
-                        max_attempts=self.max_retries,
-                        error=str(e),
-                    )
-
-                    if attempt == self.max_retries:
-                        log.error("Database operation failed after all retries")
-                        raise
-
-                    log.warning("Database operation failed, retrying...")
-                    await asyncio.sleep(
-                        self.retry_delay * attempt,
-                    )  # Exponential backoff
-        finally:
-            await self.release_connection(connection_index)
 
     async def get_full_table_name(self, table_name: str) -> str:
         """
@@ -188,7 +82,11 @@ class ClickHouseConnector:
         Args:
             query: The query to execute
         """
-        await self._execute_with_retry("command", self.conn.command, query)
+        try:
+            await self.conn.command(query)
+        except (ClickHouseError, DatabaseError) as e:
+            await logger.error("Database command failed", error=str(e), query=query)
+            raise
 
     async def query(
         self,
@@ -205,12 +103,16 @@ class ClickHouseConnector:
         Returns:
             The query results
         """
-        return await self._execute_with_retry(
-            "query",
-            self.conn.query,
-            query,
-            parameters=parameters,
-        )
+        try:
+            return await self.conn.query(query, parameters=parameters)
+        except (ClickHouseError, DatabaseError) as e:
+            await logger.error(
+                "Database query failed",
+                error=str(e),
+                query=query,
+                parameters=parameters,
+            )
+            raise
 
     async def get_table_name(self, table_group: str = "snowplow") -> str:
         """
@@ -271,12 +173,20 @@ class ClickHouseConnector:
                 values.append(value)
 
             async with elasticapm.async_capture_span("clickhouse_query"):
-                await self._execute_with_retry(
-                    "insert_data",
-                    self.conn.insert,
-                    full_table_name,
-                    data=[values],
-                    column_names=column_names,
-                    column_types=column_types,
-                    settings=self.async_settings,
-                )
+                try:
+                    await self.conn.insert(
+                        full_table_name,
+                        data=[values],
+                        column_names=column_names,
+                        column_types=column_types,
+                        settings=self.async_settings,
+                    )
+                except (ClickHouseError, DatabaseError) as e:
+                    await logger.error(
+                        "Insert operation failed",
+                        error=str(e),
+                        column_names=column_names,
+                        column_types=column_types,
+                        values=values,
+                    )
+                    raise
