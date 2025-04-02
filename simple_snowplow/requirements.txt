@@ -12,7 +12,7 @@ orjson==3.10.15
 pydantic-settings==2.7.0
 PyYAML==6.0.2
 requests==2.32.3
-SQLAlchemy==2.0.37
+SQLAlchemy==2.0.40
 starlette_exporter==0.23.0
 structlog==25.2.0
 ua-parser==1.0.1
