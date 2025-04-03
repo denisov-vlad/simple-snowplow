@@ -1,0 +1,35 @@
+services:
+  app:
+    container_name: simple-snowplow
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+    - "8000:80"
+    environment:
+    - "SNOWPLOW_COMMON__DEMO=true"
+    - "SNOWPLOW_LOGGING__LEVEL=DEBUG"
+    restart: on-failure
+    command: ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+    depends_on:
+    - clickhouse
+    develop:
+      watch:
+      - action: sync
+        path: ./simple_snowplow
+        target: /app/simple_snowplow
+        ignore:
+        - .venv/
+        - __pycache__/
+      - action: rebuild
+        path: ./uv.lock
+
+  clickhouse:
+    container_name: simple-snowplow-ch
+    image: clickhouse/clickhouse-server:25.3.2.39-alpine
+    environment:
+    - "CLICKHOUSE_PASSWORD=password"
+    ports:
+    - "8123:8123"
+    - "9000:9000"
+    - "9009:9009"

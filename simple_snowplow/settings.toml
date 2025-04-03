@@ -74,7 +74,7 @@ host = "clickhouse"
 port = 8123
 username = "default"
 database = "default"
-password = ""
+password = "password"
 # Connection timeout in seconds
 connect_timeout = 10
 [clickhouse.configuration]

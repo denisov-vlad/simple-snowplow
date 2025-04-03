@@ -39,7 +39,7 @@ To install Simple Snowplow for local development:
    ```
 4. Start the application using Docker Compose:
    ```bash
-   docker-compose -f docker-compose-dev.yml up
+   docker compose up
    ```
 
 ### Production Deployment
@@ -237,69 +237,50 @@ For more verbose logging, set `logging.level = "DEBUG"` in your configuration.
 
 ### Setting Up the Development Environment
 
-1. Create a virtual environment:
+1. Create a virtual environment and install uv (if not already installed):
    ```bash
-   python -m venv .venv
+   # Install uv (if not already installed)
+   curl -sSf https://astral.sh/uv/install.sh | sh
+   # Or on macOS with Homebrew
+   # brew install uv
+
+   # Create a virtual environment with uv
+   uv venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
 
 2. Install dependencies:
    ```bash
-   pip install -r simple_snowplow/requirements.txt
+   uv sync
    ```
 
 3. Install development tools:
    ```bash
-   pip install pre-commit pytest black isort mypy
+   uv pip install -G dev
    pre-commit install
    ```
 
 4. Run the application locally:
    ```bash
    cd simple_snowplow
-   uvicorn main:app --reload
+   uv run uvicorn main:app --reload
    ```
-
-### Configuration System
-
-Simple Snowplow uses a dual-layer configuration system:
-
-1. **Dynaconf** - Handles loading settings from files, environment variables, etc.
-2. **Pydantic** - Provides type validation and default values with BaseSettings classes
-
-The main configuration is in `simple_snowplow/core/config.py`, with these components:
-
-- `dynaconf_settings` - Raw Dynaconf settings object
-- Pydantic model classes (e.g., `SecurityConfig`, `ClickHouseConfig`)
-- `settings` - Main Pydantic settings instance that provides typed access
-
-When extending the configuration:
-
-1. Add new settings to `settings.toml` with appropriate defaults
-2. Create or update the corresponding Pydantic model in `core/config.py`
-3. Add the new settings class to the main `Settings` class
-
-Example of adding a new configuration section:
-
-```python
-# In core/config.py
-class NewFeatureConfig(BaseSettings):
-    """Configuration for new feature."""
-
-    enabled: bool = dynaconf_settings.get("new_feature.enabled", False)
-    timeout: int = dynaconf_settings.get("new_feature.timeout", 30)
-
-# Update the main Settings class
-class Settings(BaseSettings):
-    # Existing settings...
-    new_feature: NewFeatureConfig = NewFeatureConfig()
-```
 
 ### Running Tests
 
 ```bash
-pytest
+uv run pytest
 ```
+
+### Using Docker Compose with Development Mode
+
+```bash
+docker compose up --watch
+```
+
+This activates the development mode which automatically:
+- Syncs your local code changes to the container without rebuilding
+- Rebuilds the container only when dependencies change (when uv.lock is modified)
 
 ## License
 

@@ -1,3 +1,33 @@
+[project]
+name = "simple-snowplow"
+version = "0.4.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13.2"
+dependencies = [
+    "aiofiles==24.1.0",
+    "aiohttp==3.11.14",
+    "brotli==1.1.0",
+    "brotli-asgi==1.4.0",
+    "clickhouse-connect==0.8.16",
+    "dynaconf==3.2.10",
+    "elastic-apm==6.23.0",
+    "fastapi==0.115.12",
+    "inflection==0.5.1",
+    "json-repair==0.40.0",
+    "orjson==3.10.15",
+    "pydantic-settings==2.7.0",
+    "pyyaml==6.0.2",
+    "requests==2.32.3",
+    "sqlalchemy==2.0.37",
+    "starlette-exporter==0.23.0",
+    "structlog==25.2.0",
+    "ua-parser==1.0.1",
+    "user-agents==2.2.0",
+    "uvicorn==0.34.0",
+]
+
+
 [tool.ruff]
 # Same as Black.
 line-length = 88
@@ -64,3 +94,9 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+]
