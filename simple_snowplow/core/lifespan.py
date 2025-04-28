@@ -18,7 +18,6 @@ async def lifespan(application):
         client = await get_async_client(
             **CLIKCHOUSE_CONFIG.connection.model_dump(),
             query_limit=0,  # No query size limit
-            pool_options={"maxsize": 32},
         )
         ch_clients.append(client)
 
