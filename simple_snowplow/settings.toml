@@ -40,7 +40,7 @@ enabled = false
 # Maximum concurrent connections to handle
 max_concurrent_connections = 100
 # Number of database connections in the pool
-db_pool_size = 5
+db_pool_size = 32
 # Additional connections allowed when pool is under high load
 db_pool_overflow = 10
 

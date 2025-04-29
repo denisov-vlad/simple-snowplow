@@ -31,6 +31,8 @@ class TableManager:
         databases = []
 
         for group, tables in self.connector.tables.items():
+            if group not in databases:
+                databases.append(group)
             for type_key, table_info in tables.items():
                 if not isinstance(table_info, dict):
                     continue
