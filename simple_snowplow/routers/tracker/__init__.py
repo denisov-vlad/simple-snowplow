@@ -5,15 +5,9 @@ This module provides endpoints for collecting tracking data from web application
 and services using the Snowplow tracking protocol.
 """
 
-from typing import Any, Callable, Coroutine
-
-import orjson
 from core.config import settings
-from fastapi import Request
-from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response
-from fastapi.routing import APIRoute, APIRouter
-from json_repair import repair_json
+from fastapi.routing import APIRouter
 
 from .routes import sendgrid_event, tracker_cors, tracker_get, tracker_post
 
@@ -21,59 +15,7 @@ from .routes import sendgrid_event, tracker_cors, tracker_get, tracker_post
 endpoints = settings.common.snowplow.endpoints
 
 
-class CustomRoute(APIRoute):
-    """
-    Custom route class that handles JSON parsing with repair capability.
-
-    This is used to automatically fix malformed JSON in request bodies
-    before they are processed by the route handlers.
-    """
-
-    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
-        """
-        Get a custom route handler that pre-processes request body.
-
-        Returns:
-            Asynchronous route handler function
-        """
-        original_route_handler = super().get_route_handler()
-
-        async def custom_route_handler(request: Request) -> Response:
-            """
-            Custom route handler with JSON repair functionality.
-
-            Args:
-                request: FastAPI request object
-
-            Returns:
-                Response from the original route handler
-
-            Raises:
-                RequestValidationError: If JSON cannot be parsed after repair
-            """
-            if request.method == "POST":
-                raw_body = await request.body()
-                try:
-                    # Try normal JSON parsing first
-                    body = orjson.loads(raw_body)
-                    request._json = body
-                except orjson.JSONDecodeError:
-                    try:
-                        # If that fails, try repairing the JSON
-                        body = orjson.loads(repair_json(raw_body.decode("utf-8")))
-                        request._json = body
-                    except Exception as e:
-                        # If repair fails, raise validation error
-                        raise RequestValidationError([e])
-
-            # Continue with normal request processing
-            return await original_route_handler(request)
-
-        return custom_route_handler
-
-
-# Create the router with custom route class
-router = APIRouter(tags=["snowplow"], route_class=CustomRoute)
+router = APIRouter(tags=["snowplow"])
 
 # Register the CORS options handlers
 router.options(endpoints.post_endpoint, include_in_schema=False)(tracker_cors)

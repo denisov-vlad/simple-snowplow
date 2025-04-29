@@ -7,7 +7,6 @@ from typing import Any, Self
 
 from fastapi import Query
 from fastapi.exceptions import RequestValidationError
-from json_repair import repair_json
 from pydantic import AliasChoices, BaseModel, Field
 
 
