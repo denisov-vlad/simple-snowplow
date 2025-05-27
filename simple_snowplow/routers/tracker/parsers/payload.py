@@ -97,7 +97,8 @@ async def parse_cookies(cookies_str: str) -> dict[str, Any]:
             if len(parts) > 0:
                 result["device_id"] = parts[0]
                 result["created_time"] = parts[1]
-                result["visit_count"] = parts[2]
+                if parts[2] is not None:
+                    result["vid"] = parts[2]
                 result["now_time"] = parts[3]
                 result["last_visit_time"] = parts[4]
                 result["session_id"] = parts[5]
@@ -190,10 +191,12 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             result["app_build"] = data["build"]
         elif schema == "com.snowplowanalytics.snowplow/client_session":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2
-            result["vid"] = data.pop("sessionIndex")
+            visit_count = data.pop("visitCount", 0)
+            if visit_count:
+                result["vid"] = visit_count
             result["sid"] = data.pop("sessionId")
             result["duid"] = data.pop("userId")
-            result["event_index"] = data.get("eventIndex")
+            result["event_index"] = data.get("eventIndex", 0)
             first_event_time = data.get("firstEventTimestamp")
             if first_event_time is not None:
                 result["first_event_time"] = datetime.fromisoformat(first_event_time)
@@ -414,5 +417,8 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
                 result["se_va"] = 0.0
     else:
         result["se_va"] = 0.0
+
+    if result.get("vid") is None:
+        result["vid"] = 0
 
     return result

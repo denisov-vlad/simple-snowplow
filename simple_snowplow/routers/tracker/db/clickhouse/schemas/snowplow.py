@@ -8,7 +8,6 @@ from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import (
     Enum8,
     IPv4,
     LowCardinality,
-    Nullable,
     String,
     Tuple,
     UInt64,
@@ -34,7 +33,10 @@ snowplow_fields = [
         "column_name": "app_info",
         "payload_name": ("app_version", "app_build"),
         "type": Tuple(
-            type_def=TypeDef(keys=("version", "build"), values=("String", "String")),
+            type_def=TypeDef(
+                keys=("version", "build"),
+                values=("LowCardinality(String)", "LowCardinality(String)"),
+            ),
         ),
     },
     {
@@ -62,7 +64,7 @@ snowplow_fields = [
     {
         "column_name": "visit_count",
         "payload_name": "vid",
-        "type": Nullable(UInt64),
+        "type": UInt64(),
     },
     {
         "column_name": "session",
@@ -85,7 +87,7 @@ snowplow_fields = [
                     "unstructured",
                 ),
                 values=(
-                    "Nullable(UInt64)",
+                    "UInt64",
                     "Nullable(UUID)",
                     "Nullable(UUID)",
                     "Nullable(DateTime64(3, 'UTC'))",
@@ -127,7 +129,7 @@ snowplow_fields = [
     {
         "column_name": "timezone",
         "payload_name": "tz",
-        "type": String(),
+        "type": LowCardinality(String),
         "default_type": "DEFAULT",
         "default_expression": "''",
     },
@@ -184,7 +186,11 @@ snowplow_fields = [
         "type": Tuple(
             type_def=TypeDef(
                 keys=("family", "version", "language"),
-                values=("LowCardinality(String)", "String", "LowCardinality(String)"),
+                values=(
+                    "LowCardinality(String)",
+                    "LowCardinality(String)",
+                    "LowCardinality(String)",
+                ),
             ),
         ),
     },
