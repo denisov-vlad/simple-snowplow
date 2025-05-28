@@ -439,6 +439,11 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     else:
         result["se_va"] = 0.0  # type: ignore
 
+    is_mobile = result.get("extra", {}).get("client_hints", {}).get("isMobile")
+    if is_mobile is not None:
+        result["device_is_mobile"] = int(is_mobile)  # type: ignore
+        result["device_is_pc"] = int(not is_mobile)  # type: ignore
+
     if result.get("vid") is None:
         result["vid"] = 0  # type: ignore
 
