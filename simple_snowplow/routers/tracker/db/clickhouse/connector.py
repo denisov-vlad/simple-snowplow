@@ -8,11 +8,10 @@ from typing import Any
 
 import elasticapm
 import structlog
-from clickhouse_connect.datatypes.registry import get_from_name
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
 
-from routers.tracker.schemas.models import Model
+from routers.tracker.db.clickhouse.schemas.snowplow import TupleColumnDef
 
 logger = structlog.get_logger(__name__)
 
@@ -92,7 +91,7 @@ class ClickHouseConnector:
         self,
         query: str,
         parameters: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ):
         """
         Execute a ClickHouse query.
 
@@ -132,7 +131,7 @@ class ClickHouseConnector:
     @elasticapm.async_capture_span()
     async def insert_rows(
         self,
-        rows: list[dict[str, Any] | Model],
+        rows: list[dict[str, Any]],
         table_group: str = "snowplow",
     ) -> None:
         """
@@ -158,18 +157,19 @@ class ClickHouseConnector:
             values = []
 
             for field in fields:
-                payload_name = field["payload_name"]
-
-                if payload_name is None:
-                    continue
-
-                if isinstance(payload_name, tuple):
-                    value = tuple([row.get(v) for v in payload_name])
+                if isinstance(field, TupleColumnDef):
+                    value = tuple([
+                        row.get(v.payload_name)
+                        for v in field.elements
+                        if v.payload_name is not None
+                    ])
                 else:
-                    value = row.get(payload_name)
+                    if field.payload_name is None:
+                        continue
+                    value = row.get(field.payload_name)
 
-                column_names.append(field["column_name"])
-                column_types.append(get_from_name(field["type"].name))
+                column_names.append(field.name)
+                column_types.append(field.type)
                 values.append(value)
 
             async with elasticapm.async_capture_span("clickhouse_query"):

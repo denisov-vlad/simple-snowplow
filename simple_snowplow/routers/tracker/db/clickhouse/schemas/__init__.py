@@ -2,9 +2,7 @@
 Schema definitions for ClickHouse tables in Simple Snowplow.
 """
 
-from typing import Any
-
-from .snowplow import snowplow_fields
+from .snowplow import ColumnDef, TupleColumnDef, snowplow_fields
 
 # Map of table groups to their field definitions
 _FIELD_REGISTRY = {
@@ -12,7 +10,7 @@ _FIELD_REGISTRY = {
 }
 
 
-def register_fields(table_group: str, fields: list[dict[str, Any]]) -> None:
+def register_fields(table_group: str, fields: list[ColumnDef | TupleColumnDef]) -> None:
     """
     Register fields for a table group.
 
@@ -23,7 +21,7 @@ def register_fields(table_group: str, fields: list[dict[str, Any]]) -> None:
     _FIELD_REGISTRY[table_group] = fields
 
 
-def get_fields_for_table_group(table_group: str) -> list[dict[str, Any]]:
+def get_fields_for_table_group(table_group: str) -> list[ColumnDef | TupleColumnDef]:
     """
     Get field definitions for a table group.
 

@@ -1,5 +1,61 @@
 # Clickhouse migrations
 
+
+## 2025-05-28
+
+```sql
+INSERT INTO snowplow.new (app_id, platform, app_info, page, referer, event_type, event_id, view_id, session_id, visit_count, session, amp, device_id, user_id, time, time_extra, timezone, title, screen, page_data, user_data, user_ip, geolocation, user_agent, browser, os, device, device_is, resolution, event, extra, tracker) SELECT
+    app_id,
+    platform,
+    (app.version, app.build),
+    page,
+    referer,
+    event_type,
+    event_id,
+    view_id,
+    session_id,
+    coalesce(visit_count, 0),
+    (
+        coalesce(session.event_index, 0),
+        coalesce(session.previous_session_id, toUUID('00000000-0000-0000-0000-000000000000')),
+        coalesce(session.first_event_id, toUUID('00000000-0000-0000-0000-000000000000')),
+        coalesce(session.first_event_time, toDateTime64('1970-01-01', 3)),
+        session.storage_mechanism,
+        session.unstructured
+    ),
+    amp,
+    device_id,
+    user_id,
+    time,
+    (time_extra.received, time_extra.sent),
+    timezone,
+    title,
+    screen,
+    page_data,
+    user_data,
+    user_ip,
+    geolocation,
+    user_agent,
+    (
+        browser.family,
+        browser.version,
+        browser.extra
+    ),
+    (os.family, os.version, os.language),
+    (
+        device.brand,
+        device.model,
+        device.extra
+    ),
+    (device_is.mobile, device_is.tablet, device_is.touch, device_is.pc, device_is.bot),
+    (resolution.browser, resolution.viewport, resolution.page),
+    (event.action, event.category, event.label, event.property, event.value, event.unstructured),
+    extra,
+    (tracker.version, tracker.namespace)
+FROM snowplow.old
+```
+
+
 ## 2024-12-27
 
 Use JSON column type instead of tuple in some cases. Check JSON columns before inserting with `isValidJSON` function.

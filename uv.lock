@@ -239,6 +239,15 @@ wheels = [
 ]
 
 [[package]]
+name = "crawlerdetect"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d4/15/e37598eeb987331dce58bda176e265e311b4fe1330c339ec3741936bd7e6/crawlerdetect-0.3.0.tar.gz", hash = "sha256:a269289943f6b2a8f33ed5b9a09591b6dae0e45c0c19a0d9c5ef07f5c518575c", size = 16574, upload-time = "2024-11-15T08:02:23.521Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d2/9f/e0df5531907083792578aec5ebb2ec670829317fe6bb63d9cdf78889382b/crawlerdetect-0.3.0-py3-none-any.whl", hash = "sha256:7a9144619f74941bafe76a384aab55143d41d1c999e846eaf61853b3b02633c2", size = 16058, upload-time = "2024-11-15T08:02:21.684Z" },
+]
+
+[[package]]
 name = "distlib"
 version = "0.3.9"
 source = { registry = "https://pypi.org/simple" }
@@ -751,6 +760,7 @@ dependencies = [
     { name = "brotli-asgi" },
     { name = "certifi" },
     { name = "clickhouse-connect" },
+    { name = "crawlerdetect" },
     { name = "dynaconf" },
     { name = "elastic-apm" },
     { name = "fastapi" },
@@ -763,9 +773,8 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "starlette-exporter" },
     { name = "structlog" },
-    { name = "ua-parser" },
+    { name = "ua-parser", extra = ["regex"] },
     { name = "urllib3" },
-    { name = "user-agents" },
     { name = "uvicorn" },
 ]
 
@@ -783,6 +792,7 @@ requires-dist = [
     { name = "brotli-asgi", specifier = ">=1.4.0" },
     { name = "certifi", specifier = ">=2025.4.26" },
     { name = "clickhouse-connect", specifier = ">=0.8.17" },
+    { name = "crawlerdetect", specifier = ">=0.3.0" },
     { name = "dynaconf", specifier = ">=3.2.10" },
     { name = "elastic-apm", specifier = ">=6.23.0" },
     { name = "fastapi", specifier = ">=0.115.12" },
@@ -795,9 +805,8 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.40" },
     { name = "starlette-exporter", specifier = ">=0.23.0" },
     { name = "structlog", specifier = ">=25.3.0" },
-    { name = "ua-parser", specifier = ">=1.0.1" },
+    { name = "ua-parser", extras = ["regex"], specifier = ">=1.0.1" },
     { name = "urllib3", specifier = ">=2.4.0" },
-    { name = "user-agents", specifier = ">=2.2.0" },
     { name = "uvicorn", specifier = ">=0.34.2" },
 ]
 
@@ -904,6 +913,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/94/37/be6dfbfa45719aa82c008fb4772cfe5c46db765a2ca4b6f524a1fdfee4d7/ua_parser-1.0.1-py3-none-any.whl", hash = "sha256:b059f2cb0935addea7e551251cbbf42e9a8872f86134163bc1a4f79e0945ffea", size = 31410, upload-time = "2025-02-01T14:13:28.458Z" },
 ]
 
+[package.optional-dependencies]
+regex = [
+    { name = "ua-parser-rs" },
+]
+
 [[package]]
 name = "ua-parser-builtins"
 version = "0.18.0.post1"
@@ -913,24 +927,27 @@ wheels = [
 ]
 
 [[package]]
+name = "ua-parser-rs"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/8b/6a3322c792b379b6928f881fe04e1353b98bcaec290352ce6ddfeff020e4/ua_parser_rs-0.1.2.tar.gz", hash = "sha256:8da38878f81c4d15b3a4815327e81117aa91c1efc148a74f0cc18dfada98fdbc", size = 762645, upload-time = "2024-11-24T21:00:10.799Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ad/fd/089dec30b65da91b69f6684659e869799c67d102a9f11285696af35f887e/ua_parser_rs-0.1.2-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:3f7393faff686d80acba6d8952878e1a36c8f9e6db06863c7bd30b73bcb7c5e2", size = 1027451, upload-time = "2024-11-24T20:59:59.536Z" },
+    { url = "https://files.pythonhosted.org/packages/62/1f/14e2211620c86ad05dcdfc48f12d498625609fba2c7496167b5833286f81/ua_parser_rs-0.1.2-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:25504abadef8c741c7730c4505f7983b84a156370ab2dc80170f89cd056b4dcb", size = 968417, upload-time = "2024-11-24T20:59:54.533Z" },
+    { url = "https://files.pythonhosted.org/packages/93/8c/be59ce5516a39f37ed5bfa044162edbbd9e9031889ece8849bc729feb91c/ua_parser_rs-0.1.2-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6bfd3a78b0cf4cf842c76c1135f3a5a91807cac218a7a5b0bfcb936388d0ee91", size = 7878169, upload-time = "2024-11-24T20:59:40.278Z" },
+    { url = "https://files.pythonhosted.org/packages/00/74/f1cb5c2c4b2df2eb7b4e7a8e3a8a302e9e9a5b2e5a13082620c2c1b60abe/ua_parser_rs-0.1.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a4e193a2f9dd4c96674abd9ff15dd4483a4e09262937a0e5ee9569eec4646ba4", size = 8274614, upload-time = "2024-11-24T20:59:47.449Z" },
+    { url = "https://files.pythonhosted.org/packages/61/30/4ce95582bcc5bf7cbaeba5b60e88b32d88b578a27d13c316eaf25befd37a/ua_parser_rs-0.1.2-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:862ecf7eac9ebdf266eac6c684ecef74c60cb0636d4f894f80e6c380aece02de", size = 7509317, upload-time = "2024-11-24T21:00:05.334Z" },
+    { url = "https://files.pythonhosted.org/packages/73/ee/1085f5b0d075378a329bda04c73ec345235d8e43a512f703a8f84a14d9f5/ua_parser_rs-0.1.2-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:c5e93f491f5ea909755a1ecb57e33ca766799f2bb50ef1dcfa504db1e45f1d0b", size = 7918569, upload-time = "2024-11-24T21:00:08.22Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/10/1107ba0e6c0089c9ef8b01b55279dbcef6c07923a1e4ebb2b0fdd41a8232/ua_parser_rs-0.1.2-cp39-abi3-win_amd64.whl", hash = "sha256:cd7b789070af0572f3aa7ff13cb2d1900e8cff44f4ec406063a38a0a75af11dc", size = 816964, upload-time = "2024-11-24T21:00:11.959Z" },
+]
+
+[[package]]
 name = "urllib3"
 version = "2.4.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8a/78/16493d9c386d8e60e442a35feac5e00f0913c0f4b7c217c11e8ec2ff53e0/urllib3-2.4.0.tar.gz", hash = "sha256:414bc6535b787febd7567804cc015fee39daab8ad86268f1310a9250697de466", size = 390672, upload-time = "2025-04-10T15:23:39.232Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6b/11/cc635220681e93a0183390e26485430ca2c7b5f9d33b15c74c2861cb8091/urllib3-2.4.0-py3-none-any.whl", hash = "sha256:4e16665048960a0900c702d4a66415956a584919c03361cac9f1df5c5dd7e813", size = 128680, upload-time = "2025-04-10T15:23:37.377Z" },
-]
-
-[[package]]
-name = "user-agents"
-version = "2.2.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ua-parser" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/e1/63c5bfb485a945010c8cbc7a52f85573561737648d36b30394248730a7bc/user-agents-2.2.0.tar.gz", hash = "sha256:d36d25178db65308d1458c5fa4ab39c9b2619377010130329f3955e7626ead26", size = 9525, upload-time = "2020-08-23T06:01:56.382Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/1c/20bb3d7b2bad56d881e3704131ddedbb16eb787101306887dff349064662/user_agents-2.2.0-py3-none-any.whl", hash = "sha256:a98c4dc72ecbc64812c4534108806fb0a0b3a11ec3fd1eafe807cee5b0a942e7", size = 9614, upload-time = "2020-08-23T06:01:54.047Z" },
 ]
 
 [[package]]

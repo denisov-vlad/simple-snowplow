@@ -7,7 +7,7 @@ import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import elasticapm
 import orjson
@@ -42,6 +42,19 @@ EMPTY_STRINGS = (
     "device_brand",
 )
 
+EMPTY_DATES = ("first_event_time",)
+
+EMPTY_UUIDS = (
+    "duid",
+    "sid",
+    "view_id",
+    "previous_session_id",
+    "first_event_id",
+)
+
+DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
+DEFAULT_DATE = datetime(1970, 1, 1)
+
 PayloadType = PayloadElementBaseModel | PayloadElementPostModel
 schemas = settings.common.snowplow.schemas
 
@@ -68,7 +81,7 @@ async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
 
 
 @elasticapm.async_capture_span()
-async def parse_cookies(cookies_str: str) -> dict[str, Any]:
+async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
     """
     Parse cookies string.
 
@@ -121,8 +134,12 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Processed contexts dictionary
     """
-    result = {dict_name: {} for dict_name in EMPTY_DICTS}
-    result.update({string_name: "" for string_name in EMPTY_STRINGS})
+    result = {
+        **{dict_name: {} for dict_name in EMPTY_DICTS},
+        **{string_name: "" for string_name in EMPTY_STRINGS},
+        **{date_name: DEFAULT_DATE for date_name in EMPTY_DATES},
+        **{uuid_name: DEFAULT_UUID for uuid_name in EMPTY_UUIDS},
+    }
 
     if not contexts or "data" not in contexts:
         return result
@@ -182,7 +199,11 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             result["device_model"] = data.pop("deviceModel")
             result["os_family"] = data.pop("osType")
             result["os_version_string"] = data.pop("osVersion")
-            result["device_is"] = (1, 0, 1, 0, 0)
+            result["device_is_mobile"] = 1
+            result["device_is_tablet"] = 0
+            result["device_is_touch_capable"] = 1
+            result["device_is_pc"] = 0
+            result["device_is_bot"] = 0
             result["device_extra"] = data
         elif schema == "com.snowplowanalytics.mobile/application":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application/jsonschema/1-0-0
@@ -200,8 +221,8 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             first_event_time = data.get("firstEventTimestamp")
             if first_event_time is not None:
                 result["first_event_time"] = datetime.fromisoformat(first_event_time)
-            result["previous_session_id"] = data.get("previousSessionId", "")
-            result["first_event_id"] = data.get("firstEventId", "")
+            result["previous_session_id"] = data.get("previousSessionId", DEFAULT_UUID)
+            result["first_event_id"] = data.get("firstEventId", DEFAULT_UUID)
             result["storage_mechanism"] = data.get("storageMechanism", "")
         elif schema == "com.snowplowanalytics.mobile/screen":
             # data is duplicated in event field is it's view
@@ -312,19 +333,19 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
 
     # Set timestamps
     if result.get("rtm") is None:
-        result["rtm"] = datetime.now()
+        result["rtm"] = datetime.now()  # type: ignore
     if result.get("stm") is None:
-        result["stm"] = datetime.now()
+        result["stm"] = datetime.now()  # type: ignore
 
     # Post processing
     if result["aid"] == "undefined":
-        result["aid"] = "other"
+        result["aid"] = "other"  # type: ignore
 
     # Decode URL-encoded fields
     if result.get("refr"):
-        result["refr"] = urlparse.unquote(result["refr"])
+        result["refr"] = urlparse.unquote(result["refr"])  # type: ignore
     if result.get("url"):
-        result["url"] = urlparse.unquote(result["url"])
+        result["url"] = urlparse.unquote(result["url"])  # type: ignore
 
     # Handle page pings
     if result["e"] == "pp":
@@ -339,13 +360,13 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if "uid" in result.get("amp", {}):
         result["uid"] = result["amp"].pop("userId")
     if result["e"] == "ue" and "amp_page_ping" in result.get("ue", {}):
-        result["e"] = "pp"
+        result["e"] = "pp"  # type: ignore
         result["extra"]["amp_page_ping"] = result["ue"].pop("amp_page_ping")
     if "domainUserid" in result.get("amp", {}):
         result["duid"] = result["amp"].pop("domainUserid")
 
     # Parse URL for AMP linker
-    if result.get("url"):
+    if result.get("url") and isinstance(result["url"], str):
         parsed_url = urlparse.urlparse(result["url"])
         query_string = urlparse.parse_qs(parsed_url.query)
 
@@ -375,20 +396,20 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
 
     # Generate event ID if missing
     if result.get("eid") is None:
-        result["eid"] = str(uuid4())
+        result["eid"] = str(uuid4())  # type: ignore
 
     # Handle screen_view events
     if "screen_view" in result.get("ue", {}):
-        result["e"] = "pv"
+        result["e"] = "pv"  # type: ignore
         result["view_id"] = result["ue"]["screen_view"].pop("id")
         result["url"] = result["ue"]["screen_view"].pop("name")
 
         if "previousName" in result["ue"]["screen_view"]:
             result["refr"] = result["ue"]["screen_view"].pop("previousName")
             if result["refr"] == "Unknown":
-                result["refr"] = ""
+                result["refr"] = ""  # type: ignore
         else:
-            result["refr"] = ""
+            result["refr"] = ""  # type: ignore
 
         result["screen"].update(result["ue"].pop("screen_view"))
 
@@ -397,7 +418,7 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
         result["url"] = result["screen"].pop("screen_name")
 
     # Parse structured event properties if they are JSON
-    if "se_pr" in result and result["se_pr"]:
+    if result.get("se_pr") and isinstance(result["se_pr"], str):
         try:
             result["se_pr"] = orjson.loads(result["se_pr"])
         except (orjson.JSONDecodeError, TypeError):
@@ -411,14 +432,14 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if "se_va" in result and result["se_va"]:
         if not isinstance(result["se_va"], (float, int)):
             try:
-                result["se_va"] = float(result["se_va"])
+                result["se_va"] = float(result["se_va"])  # type: ignore
             except ValueError:
                 result["se_pr"]["ex-value"] = result["se_va"]
-                result["se_va"] = 0.0
+                result["se_va"] = 0.0  # type: ignore
     else:
-        result["se_va"] = 0.0
+        result["se_va"] = 0.0  # type: ignore
 
     if result.get("vid") is None:
-        result["vid"] = 0
+        result["vid"] = 0  # type: ignore
 
     return result

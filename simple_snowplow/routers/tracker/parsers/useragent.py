@@ -5,7 +5,14 @@ User agent parsing functionality.
 from typing import Any
 
 import elasticapm
-from user_agents import parse
+from crawlerdetect import CrawlerDetect
+from ua_parser import parse
+
+crawler_detect = CrawlerDetect()
+
+
+async def remove_none_values(data: list[str | None]) -> list[str]:
+    return [item for item in data if item is not None]
 
 
 @elasticapm.async_capture_span()
@@ -19,27 +26,59 @@ async def parse_agent(string: str) -> dict[str, Any]:
     Returns:
         Dictionary of parsed user agent information
     """
-    user_agent = parse(string)
+    ua = parse(string)
+    is_bot = int(crawler_detect.isCrawler(string))
 
-    # Create a structured representation of the user agent
-    return {
+    data = {
         "user_agent": string,
-        "browser_family": user_agent.browser.family,
-        "browser_version": [str(i) for i in user_agent.browser.version],
-        "browser_version_string": user_agent.browser.version_string,
-        "browser_extra": {},  # Empty placeholder for any additional data
-        "os_family": user_agent.os.family,
-        "os_version": [str(i) for i in user_agent.os.version],
-        "os_version_string": user_agent.os.version_string,
-        "lang": "",  # Empty placeholder for language
-        "device_brand": user_agent.device.brand or "",
-        "device_model": user_agent.device.model or "",
-        "device_extra": {},  # Empty placeholder for any additional data
-        "device_is": (
-            user_agent.is_mobile,
-            user_agent.is_tablet,
-            user_agent.is_touch_capable,
-            user_agent.is_pc,
-            user_agent.is_bot,
-        ),
+        "browser_family": "",
+        "browser_version": [],
+        "browser_version_string": "",
+        "browser_extra": {},
+        "os_family": "",
+        "os_version": [],
+        "os_version_string": "",
+        "lang": "",
+        "device_brand": "",
+        "device_model": "",
+        "device_extra": {},
+        "device_is_mobile": 0,
+        "device_is_tablet": 0,
+        "device_is_touch_capable": 0,
+        "device_is_pc": 0,
+        "device_is_bot": is_bot,
     }
+
+    if ua is None:
+        return data
+
+    browser = ua.user_agent
+    if browser is not None:
+        data["browser_family"] = browser.family or ""
+        data["browser_version"] = await remove_none_values([
+            browser.major,
+            browser.minor,
+            browser.patch,
+            browser.patch_minor,
+        ])
+        data["browser_version_string"] = ".".join(data["browser_version"])
+
+    os = ua.os
+    if os is not None:
+        data["os_family"] = os.family or ""
+        data["os_version"] = await remove_none_values([
+            os.major,
+            os.minor,
+            os.patch,
+            os.patch_minor,
+        ])
+        data["os_version_string"] = ".".join(data["os_version"])
+
+    device = ua.device
+    if device is not None:
+        data["device_brand"] = device.brand or ""
+        data["device_model"] = device.model or ""
+        if device.family:
+            data["device_extra"]["family"] = device.family
+
+    return data

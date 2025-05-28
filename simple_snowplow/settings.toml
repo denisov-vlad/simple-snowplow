@@ -84,7 +84,7 @@ cluster_name = ""
 [clickhouse.configuration.tables.snowplow.local]
 name = "local"
 engine = "MergeTree()"
-partition_by = "(toYYYYMM(time), event_type)"
+partition_by = "toYYYYMM(time)"
 order_by = "app, platform, app_id, event_type, toDate(time), event.category, event.action, page, device_id, cityHash64(device_id), session_id, time"
 sample_by = "cityHash64(device_id)"
 settings = "index_granularity = 8192"

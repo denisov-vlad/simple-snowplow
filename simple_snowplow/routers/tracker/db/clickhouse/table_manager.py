@@ -60,10 +60,7 @@ class TableManager:
 
         columns = []
         for field in fields:
-            col = f"`{field['column_name']}` {field['type'].name}"
-            if field.get("default_type") is not None:
-                col += f" {field['default_type']} {field['default_expression']}"
-            columns.append(col)
+            columns.append(field.create_expression)
 
         full_table_name = await self.connector.get_full_table_name(table_data["name"])
 

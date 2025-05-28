@@ -11,6 +11,7 @@ dependencies = [
     "brotli-asgi>=1.4.0",
     "certifi>=2025.4.26",
     "clickhouse-connect>=0.8.17",
+    "crawlerdetect>=0.3.0",
     "dynaconf>=3.2.10",
     "elastic-apm>=6.23.0",
     "fastapi>=0.115.12",
@@ -23,9 +24,8 @@ dependencies = [
     "sqlalchemy>=2.0.40",
     "starlette-exporter>=0.23.0",
     "structlog>=25.3.0",
-    "ua-parser>=1.0.1",
+    "ua-parser[regex]>=1.0.1",
     "urllib3>=2.4.0",
-    "user-agents>=2.2.0",
     "uvicorn>=0.34.2",
 ]
 

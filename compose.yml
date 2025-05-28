@@ -26,7 +26,7 @@ services:
 
   clickhouse:
     container_name: simple-snowplow-ch
-    image: clickhouse/clickhouse-server:25.3.2.39-alpine
+    image: clickhouse/clickhouse-server:25.5.1.2782-alpine
     environment:
     - "CLICKHOUSE_PASSWORD=password"
     ports:
