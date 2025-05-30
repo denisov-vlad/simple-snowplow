@@ -1,13 +1,27 @@
-# Clickhouse migrations
+# Changelog
 
+All notable changes to this project will be documented in this file.
 
-## 2025-05-28
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [Unreleased]
+
+## [v2.2.0] - 2025-05-28
+
+### Changed
+- **BREAKING**: Transformed all Nullable columns to non-nullable with default values
+- Updated data migration to use `coalesce()` function for handling NULL values
+- Set default UUID value for session fields when NULL
+
+### Migration Instructions
+
+Run the following SQL to migrate from the old schema to the new non-nullable schema:
 
 ```sql
 INSERT INTO snowplow.new (app_id, platform, app_info, page, referer, event_type, event_id, view_id, session_id, visit_count, session, amp, device_id, user_id, time, time_extra, timezone, title, screen, page_data, user_data, user_ip, geolocation, user_agent, browser, os, device, device_is, resolution, event, extra, tracker) SELECT
     app_id,
     platform,
-    (app.version, app.build),
+    (app_info.version, app_info.build),
     page,
     referer,
     event_type,
@@ -52,13 +66,26 @@ INSERT INTO snowplow.new (app_id, platform, app_info, page, referer, event_type,
     (event.action, event.category, event.label, event.property, event.value, event.unstructured),
     extra,
     (tracker.version, tracker.namespace)
-FROM snowplow.old
+FROM snowplow.old;
 ```
 
+---
 
-## 2024-12-27
+## [v2.1.0] - 2024-12-27
 
-Use JSON column type instead of tuple in some cases. Check JSON columns before inserting with `isValidJSON` function.
+### Added
+- JSON column type support for flexible data structures
+- Data validation using `isValidJSON()` function before insertion
+- Improved data handling for AMP, screen, and device information
+
+### Changed
+- Replaced tuple structures with JSON columns for better flexibility
+- Enhanced data transformation logic for complex nested structures
+- Improved string escaping and data sanitization
+
+### Migration Instructions
+
+Use this SQL to migrate to the new JSON-based schema:
 
 ```sql
 INSERT INTO snowplow.new (app_id, platform, app_info, page, referer, event_type, event_id, view_id, session_id, visit_count, session, amp, device_id, user_id, time, time_extra, timezone, title, screen, page_data, user_data, user_ip, geolocation, user_agent, browser, os, device, device_is, resolution, event, extra, tracker) SELECT
@@ -146,12 +173,27 @@ INSERT INTO snowplow.new (app_id, platform, app_info, page, referer, event_type,
     (event.action, event.category, event.label, event.property, event.value, event.unstructured),
     extra,
     (tracker.version, tracker.namespace)
-FROM snowplow.old
+FROM snowplow.old;
 ```
 
-## 2024-11-15
+---
 
-The minimum supported version of ClickHouse is now `24.11`. The new version of the application uses an experimental JSON column type. Migration of existing tables is not possible. It is recommended to switch to the new table and use the statement below.
+## [v2.0.0] - 2024-11-15
+
+### Added
+- Experimental JSON column type support
+- Enhanced data validation with `isValidJSON()` function
+
+### Changed
+- **BREAKING**: Minimum ClickHouse version requirement updated to `24.11`
+- **BREAKING**: Schema changes require new table creation (migration not possible)
+- Improved data structure handling with JSON validation
+
+### Migration Instructions
+
+⚠️ **Important**: Migration of existing tables is not possible due to breaking schema changes. 
+
+Create a new table and migrate data using:
 
 ```sql
 INSERT INTO snowplow.new (app_id, platform, app, page, referer, event_type, event_id, view_id, session_id, visit_count, session, amp, device_id, user_id, time, time_extra, timezone, title, screen, page_data, user_data, user_ip, geolocation, user_agent, browser, os, device, device_is, device_extra, resolution, event, extra, tracker) SELECT
@@ -188,14 +230,34 @@ INSERT INTO snowplow.new (app_id, platform, app, page, referer, event_type, even
     (event.action, event.category, event.label, if(isValidJSON(event.property), event.property, '{}'), event.value, if(isValidJSON(event.unstructured), event.unstructured, '{}')),
     if(isValidJSON(extra), extra, '{}'),
     (tracker.version, tracker.namespace)
-FROM snowplow.old
+FROM snowplow.old;
 ```
 
-## 2024-08-30
+---
+
+## [v1.1.0] - 2024-08-30
+
+### Changed
+- Updated column definitions for improved type safety
+- Enhanced datetime precision with timezone support
+- Improved device and browser data structures
+
+### Migration Instructions
+
+Apply the following schema modifications:
 
 ```sql
-ALTER TABLE snowplow.local MODIFY COLUMN `time_extra` Tuple(user DateTime64(3, 'UTC'), sent DateTime64(3, 'UTC'))
-ALTER TABLE snowplow.local MODIFY COLUMN `browser` Tuple(family LowCardinality(String), version String, cookie Bool, charset LowCardinality(String), color_depth UInt8, unstructured String)
-ALTER TABLE snowplow.local MODIFY COLUMN `device_is` Tuple(mobile Bool, tablet Bool, touch Bool, pc Bool, bot Bool)
-ALTER TABLE snowplow.local MODIFY COLUMN `device_extra` Tuple(carrier LowCardinality(String), network_type LowCardinality(String), network_technology LowCardinality(String), open_idfa String, apple_idfa String, apple_idfv String, android_idfa String, battery_level UInt8, battery_state LowCardinality(String), low_power_mode Bool)
+ALTER TABLE snowplow.local MODIFY COLUMN `time_extra` Tuple(user DateTime64(3, 'UTC'), sent DateTime64(3, 'UTC'));
+ALTER TABLE snowplow.local MODIFY COLUMN `browser` Tuple(family LowCardinality(String), version String, cookie Bool, charset LowCardinality(String), color_depth UInt8, unstructured String);
+ALTER TABLE snowplow.local MODIFY COLUMN `device_is` Tuple(mobile Bool, tablet Bool, touch Bool, pc Bool, bot Bool);
+ALTER TABLE snowplow.local MODIFY COLUMN `device_extra` Tuple(carrier LowCardinality(String), network_type LowCardinality(String), network_technology LowCardinality(String), open_idfa String, apple_idfa String, apple_idfv String, android_idfa String, battery_level UInt8, battery_state LowCardinality(String), low_power_mode Bool);
 ```
+
+---
+
+## Notes
+
+- Always backup your data before running migration scripts
+- Test migrations in a development environment first
+- Breaking changes are marked with **BREAKING** for easy identification
+- Version numbers follow semantic versioning (MAJOR.MINOR.PATCH)
