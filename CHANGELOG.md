@@ -191,7 +191,7 @@ FROM snowplow.old;
 
 ### Migration Instructions
 
-⚠️ **Important**: Migration of existing tables is not possible due to breaking schema changes. 
+⚠️ **Important**: Migration of existing tables is not possible due to breaking schema changes.
 
 Create a new table and migrate data using:
 
