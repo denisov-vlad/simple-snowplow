@@ -212,7 +212,7 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             result["app_build"] = data["build"]
         elif schema == "com.snowplowanalytics.snowplow/client_session":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2
-            visit_count = data.pop("visitCount", 0)
+            visit_count = data.pop("sessionIndex", 0)
             if visit_count:
                 result["vid"] = visit_count
             result["sid"] = data.pop("sessionId")
