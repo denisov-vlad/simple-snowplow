@@ -89,14 +89,13 @@ def create_app() -> FastAPI:
 
     # Add Prometheus middleware if enabled
     if settings.prometheus.enabled:
-        from starlette_exporter import PrometheusMiddleware, handle_metrics
+        from prometheus_fastapi_instrumentator import Instrumentator
 
-        app.add_middleware(
-            PrometheusMiddleware,
-            filter_unhandled_paths=False,
-            group_paths=True,
+        Instrumentator().instrument(app).expose(
+            app,
+            include_in_schema=False,
+            should_gzip=True,
         )
-        app.add_route(settings.prometheus.metrics_path, handle_metrics)
 
     return app
 

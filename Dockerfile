@@ -8,7 +8,7 @@ ENV UV_LINK_MODE=copy \
 
 WORKDIR /app
 
-# Install build dependencies
+# Install build dependencies and runtime libraries
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -16,6 +16,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     apk update && \
     apk add --no-cache \
         g++ \
+        libgcc \
         curl \
         tini && \
     uv sync --frozen && \
