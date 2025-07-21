@@ -192,7 +192,7 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_web_page/jsonschema/1-0-0
             result["amp"] = dict(result["amp"], **data)
         elif schema == schemas.page_data:
-            result["page_data"] = data
+            result["page_data"] = dict(result["page_data"], **data)
         elif schema == "com.snowplowanalytics.snowplow/mobile_context":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-3
             result["device_brand"] = data.pop("deviceManufacturer")
@@ -245,7 +245,7 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
         elif schema == schemas.screen_data:
             result["screen"] = dict(result["screen"], **data)
         elif schema == schemas.user_data:
-            result["user_data"] = data
+            result["user_data"] = dict(result["user_data"], **data)
         elif schema == schemas.ad_data:
             result["extra"]["ad_data"] = data
         elif schema == "com.snowplowanalytics.mobile/screen_summary":
