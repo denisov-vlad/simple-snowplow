@@ -1,4 +1,4 @@
-FROM python:3.13-alpine3.21
+FROM python:3.13-alpine3.22
 
 COPY --from=ghcr.io/astral-sh/uv:python3.13-alpine /usr/local/bin/uv /usr/local/bin/uv
 
@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         libgcc \
         curl \
         tini && \
-    uv sync --frozen && \
+    uv sync --locked --no-install-project && \
     sh ./utils/download_scripts.sh && \
     apk del g++ && \
     rm -rf /var/cache/apk/*
