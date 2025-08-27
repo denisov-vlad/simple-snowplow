@@ -267,6 +267,7 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/deep_link/jsonschema/1-0-0
             result["ue_context"]["deep_link_received"] = data
         elif schema == "com.snowplowanalytics.mobile/message_notification":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/message_notification/jsonschema/1-0-0
             result["ue_context"]["message_notification"] = data
         else:
             await logger.warning("Schema has no parser", data=data, schema=schema)
