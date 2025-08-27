@@ -103,9 +103,9 @@ def _extract_from_record(_, __, event_dict):
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    error_data = exc.errors()
+    error_data = {"detail": exc.errors(), "body": exc.body}
     logger = structlog.stdlib.get_logger()
-    await logger.error("Validation error", error=error_data, body=exc.body)
+    await logger.error("Validation error", **error_data)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder(error_data),
