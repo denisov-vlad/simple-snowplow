@@ -97,6 +97,12 @@ def create_app() -> FastAPI:
             should_gzip=True,
         )
 
+    if settings.sentry.enabled:
+        import sentry_sdk
+        from plugins.sentry import sentry_config
+
+        sentry_sdk.init(**sentry_config)
+
     return app
 
 

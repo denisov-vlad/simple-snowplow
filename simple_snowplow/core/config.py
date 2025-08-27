@@ -177,6 +177,16 @@ class PrometheusConfig(BaseSettings):
     metrics_path: str = dynaconf_settings.get("prometheus.metrics_path", "/metrics/")
 
 
+class SentryConfig(BaseSettings):
+    """Sentry configuration."""
+
+    enabled: bool = dynaconf_settings.get("sentry.enabled", False)
+    dsn: str | None = dynaconf_settings.get("sentry.dsn")
+    traces_sample_rate: float = dynaconf_settings.get("sentry.traces_sample_rate", 0.0)
+    environment: str = dynaconf_settings.get("sentry.environment", "development")
+    send_default_pii: bool = dynaconf_settings.get("sentry.send_default_pii", True)
+
+
 class ProxyConfig(BaseSettings):
     """Proxy configuration for external domains."""
 
@@ -267,6 +277,7 @@ class Settings(BaseSettings):
     security: SecurityConfig = SecurityConfig()
     elastic_apm: ElasticAPMConfig = ElasticAPMConfig()
     prometheus: PrometheusConfig = PrometheusConfig()
+    sentry: SentryConfig = SentryConfig()
     proxy: ProxyConfig = ProxyConfig()
     performance: PerformanceConfig = PerformanceConfig()
     common: CommonConfig = CommonConfig()

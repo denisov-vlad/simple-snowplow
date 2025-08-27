@@ -35,6 +35,9 @@ enabled = false
 [prometheus]
 enabled = false
 
+[sentry]
+enabled = false
+
 # Performance tuning options
 [performance]
 # Maximum concurrent connections to handle
