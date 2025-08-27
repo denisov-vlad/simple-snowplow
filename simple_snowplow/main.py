@@ -3,51 +3,60 @@ Main application entry point for Simple Snowplow.
 """
 
 import structlog
+from asgi_correlation_id.middleware import CorrelationIdMiddleware
 from brotli_asgi import BrotliMiddleware
 from core.config import settings
 from core.healthcheck import probe
 from core.lifespan import lifespan
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware import Middleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
-from middleware.logging import LoggingMiddleware
+from fastapi_structlog.middleware import (
+    AccessLogMiddleware,
+    CurrentScopeSetMiddleware,
+    StructlogMiddleware,
+)
 from middleware.rate_limit import RateLimitMiddleware
 from middleware.security import SecurityHeadersMiddleware
-from plugins.logger import configure_logger, validation_exception_handler
+from plugins.logger import init_logging, validation_exception_handler
 from routers.demo import router as demo_router
 from routers.proxy import router as proxy_router
 from routers.tracker import router as app_router
 from starlette.middleware.cors import CORSMiddleware
 
-# Configure logging
-configure_logger(settings.logging.json_format, settings.logging.level)
-logger = structlog.stdlib.get_logger()
-
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+
+    # Configure logging using fastapi-structlog
+    init_logging(settings.logging.json_format, settings.logging.level)
+
     app = FastAPI(
         title="Simple Snowplow",
         version="0.4.0",
         lifespan=lifespan,
         docs_url=None if settings.security.disable_docs else "/docs",
         redoc_url=None if settings.security.disable_docs else "/redoc",
-    )
-
-    # Add middleware
-    app.add_middleware(LoggingMiddleware)
-    app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RateLimitMiddleware)
-    app.add_middleware(BrotliMiddleware)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origin_regex=".*",
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
+        middlewares=[
+            Middleware(CurrentScopeSetMiddleware),
+            Middleware(CorrelationIdMiddleware),
+            Middleware(StructlogMiddleware),
+            Middleware(AccessLogMiddleware),
+            Middleware(SecurityHeadersMiddleware),
+            Middleware(RateLimitMiddleware),
+            Middleware(BrotliMiddleware),
+            Middleware(
+                CORSMiddleware,
+                allow_origin_regex=".*",
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+                expose_headers=["*"],
+            ),
+        ],
     )
 
     # Add conditional middleware
@@ -62,7 +71,6 @@ def create_app() -> FastAPI:
 
     # Add exception handler
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
-
     # Include routers
     app.include_router(app_router)
     app.include_router(proxy_router)
@@ -98,10 +106,20 @@ def create_app() -> FastAPI:
         )
 
     if settings.sentry.enabled:
-        import sentry_sdk
-        from plugins.sentry import sentry_config
+        from fastapi_structlog.sentry import SentrySettings, setup_sentry
 
-        sentry_sdk.init(**sentry_config)
+        sentry_settings = SentrySettings.model_validate(
+            {
+                "dsn": settings.sentry.dsn,
+                "environment": settings.sentry.environment,
+                "traces_sample_rate": settings.sentry.traces_sample_rate,
+            },
+        )
+        setup_sentry(
+            sentry_settings,
+            app_slug=settings.common.service_name,
+            version=app.version,
+        )
 
     return app
 
