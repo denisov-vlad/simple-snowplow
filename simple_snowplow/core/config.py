@@ -183,7 +183,7 @@ class SentryConfig(BaseSettings):
     enabled: bool = dynaconf_settings.get("sentry.enabled", False)
     dsn: str | None = dynaconf_settings.get("sentry.dsn")
     traces_sample_rate: float = dynaconf_settings.get("sentry.traces_sample_rate", 0.0)
-    environment: str = dynaconf_settings.get("sentry.environment", "development")
+    environment: str = env
     send_default_pii: bool = dynaconf_settings.get("sentry.send_default_pii", True)
 
 
