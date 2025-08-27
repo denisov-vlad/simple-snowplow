@@ -1,111 +1,50 @@
-import logging
-import sys
+"""Logging integration using fastapi-structlog.
+
+This replaces the previous custom Structlog configuration with the
+`fastapi-structlog` helper utilities so we can rely on its battle-tested
+middleware, processors and optional destinations (console / JSON / file / syslog / DB).
+"""
 
 import structlog
 from fastapi import Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi_structlog import LogSettings, setup_logger
+from fastapi_structlog.settings import DBSettings, LogType, SysLogSettings
 
 
-def configure_logger(enable_json_logs: bool = False, log_level: str = "INFO"):
-    timestamper = structlog.processors.TimeStamper(fmt="iso")
+def init_logging(enable_json_logs: bool, log_level: str) -> None:
+    """Initialize logging via fastapi-structlog.
 
-    shared_processors = [
-        timestamper,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.add_logger_name,
-        structlog.contextvars.merge_contextvars,
-        structlog.processors.CallsiteParameterAdder(
-            {
-                structlog.processors.CallsiteParameter.PATHNAME,
-                structlog.processors.CallsiteParameter.FILENAME,
-                structlog.processors.CallsiteParameter.MODULE,
-                structlog.processors.CallsiteParameter.FUNC_NAME,
-                structlog.processors.CallsiteParameter.THREAD,
-                structlog.processors.CallsiteParameter.THREAD_NAME,
-                structlog.processors.CallsiteParameter.PROCESS,
-                structlog.processors.CallsiteParameter.PROCESS_NAME,
-            },
-        ),
-        structlog.stdlib.ExtraAdder(),
-    ]
+    Args:
+        enable_json_logs: Whether logs should be emitted in JSON format.
+        log_level: Base log level (string like INFO, DEBUG).
+    """
 
-    structlog.configure(
-        processors=shared_processors
-        + [structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
-        logger_factory=structlog.stdlib.LoggerFactory(),
-        # call log with await syntax in thread pool executor
-        wrapper_class=structlog.stdlib.AsyncBoundLogger,
-        cache_logger_on_first_use=True,
+    settings = LogSettings(
+        logger="simple_snowplow",
+        log_level=log_level.upper(),
+        json_logs=enable_json_logs,
+        traceback_as_str=True,
+        # Only console output for now. JSON vs pretty decided by json_logs flag.
+        types=[LogType.CONSOLE],
+        syslog=SysLogSettings(),
+        db=DBSettings(),
     )
 
-    logs_render = (
-        structlog.processors.JSONRenderer()
-        if enable_json_logs
-        else structlog.dev.ConsoleRenderer(colors=True)
-    )
+    # Configure structlog / stdlib logging.
+    setup_logger(settings)
 
-    _configure_default_logging_by_custom(shared_processors, logs_render, log_level)
-
-
-def _configure_default_logging_by_custom(shared_processors, logs_render, log_level):
-    handler = logging.StreamHandler()
-
-    # Use `ProcessorFormatter` to format all `logging` entries.
-    formatter = structlog.stdlib.ProcessorFormatter(
-        foreign_pre_chain=shared_processors,
-        processors=[
-            _extract_from_record,
-            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-            logs_render,
-        ],
-    )
-
-    handler = logging.StreamHandler()
-    # Use OUR `ProcessorFormatter` to format all `logging` entries.
-    handler.setFormatter(formatter)
-    root_logger = logging.getLogger()
-    root_logger.addHandler(handler)
-    root_logger.setLevel(log_level.upper())
-
-    for _log in ["uvicorn", "uvicorn.error"]:
-        logging.getLogger(_log).handlers.clear()
-        logging.getLogger(_log).propagate = True
-
-    logging.getLogger("uvicorn.access").handlers.clear()
-    logging.getLogger("uvicorn.access").propagate = False
-
-    def handle_exception(exc_type, exc_value, exc_traceback):
-        """
-        Log any uncaught exception instead of letting it be printed by Python
-        (but leave KeyboardInterrupt untouched to allow users to Ctrl+C to stop)
-        See https://stackoverflow.com/a/16993115/3641865
-        """
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        root_logger.error(
-            "Uncaught exception",
-            exc_info=(exc_type, exc_value, exc_traceback),
-        )
-
-        sys.excepthook = handle_exception
-
-
-def _extract_from_record(_, __, event_dict):
-    # Extract thread and process names and add them to the event dict.
-    record = event_dict["_record"]
-    event_dict["thread_name"] = record.threadName
-    event_dict["process_name"] = record.processName
-    return event_dict
+    # Bind default contextual information (can be enriched in middlewares/routes)
+    structlog.contextvars.bind_contextvars(service="simple-snowplow")
 
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Unified validation error handler using the configured structlog logger."""
     error_data = {"detail": exc.errors(), "body": exc.body}
-    logger = structlog.stdlib.get_logger()
-    await logger.error("Validation error", **error_data)
+    logger = structlog.get_logger()
+    logger.error("Validation error", **error_data)
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder(error_data),
