@@ -24,6 +24,7 @@ logger = structlog.stdlib.get_logger()
 
 # Constants for empty values
 EMPTY_DICTS = (
+    "ue_context",
     "extra",
     "user_data",
     "page_data",
@@ -246,20 +247,27 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             result["screen"] = dict(result["screen"], **data)
         elif schema == schemas.user_data:
             result["user_data"] = dict(result["user_data"], **data)
+
+        # Unstructured events contexts
         elif schema == schemas.ad_data:
-            result["extra"]["ad_data"] = data
+            result["ue_context"]["ad_data"] = data
         elif schema == "com.snowplowanalytics.mobile/screen_summary":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen_summary/jsonschema/1-0-0
-            result["extra"]["screen_summary"] = data
+            result["ue_context"]["screen_summary"] = data
         elif schema == "com.snowplowanalytics.mobile/application_lifecycle":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application_lifecycle/jsonschema/1-0-0
-            result["extra"]["app_lifecycle"] = data
+            result["ue_context"]["app_lifecycle"] = data
         elif schema == "com.android.installreferrer.api/referrer_details":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.android.installreferrer.api/referrer_details/jsonschema/1-0-0
-            result["extra"]["install_referrer"] = data
+            result["ue_context"]["install_referrer"] = data
         elif schema == "org.w3/PerformanceNavigationTiming":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceNavigationTiming/jsonschema/1-0-0
-            result["extra"]["performance_navigation_timing"] = data
+            result["ue_context"]["performance_navigation_timing"] = data
+        elif schema == "com.snowplowanalytics.mobile/deep_link_received":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/deep_link/jsonschema/1-0-0
+            result["ue_context"]["deep_link_received"] = data
+        elif schema == "com.snowplowanalytics.mobile/message_notification":
+            result["ue_context"]["message_notification"] = data
         else:
             await logger.warning("Schema has no parser", data=data, schema=schema)
 
@@ -330,6 +338,10 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
         result.update(event_data)
     else:
         result["ue"] = {}
+
+    ue_context = result.pop("ue_context", {})
+    if ue_context:
+        result["ue"] = dict(result["ue"], **ue_context)
 
     # Set timestamps
     if result.get("rtm") is None:
