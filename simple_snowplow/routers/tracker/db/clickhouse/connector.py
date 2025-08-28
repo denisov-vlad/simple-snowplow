@@ -84,7 +84,7 @@ class ClickHouseConnector:
         try:
             await self.conn.command(query)
         except (ClickHouseError, DatabaseError) as e:
-            await logger.error("Database command failed", error=str(e), query=query)
+            logger.error("Database command failed", error=str(e), query=query)
             raise
 
     async def query(
@@ -105,7 +105,7 @@ class ClickHouseConnector:
         try:
             return await self.conn.query(query, parameters=parameters)
         except (ClickHouseError, DatabaseError) as e:
-            await logger.error(
+            logger.error(
                 "Database query failed",
                 error=str(e),
                 query=query,
@@ -144,7 +144,7 @@ class ClickHouseConnector:
         from routers.tracker.db.clickhouse.schemas import get_fields_for_table_group
 
         if not rows:
-            await logger.debug("No rows to insert")
+            logger.debug("No rows to insert")
             return
 
         table_name = await self.get_table_name(table_group)
@@ -182,7 +182,7 @@ class ClickHouseConnector:
                         settings=self.async_settings,
                     )
                 except (ClickHouseError, DatabaseError) as e:
-                    await logger.error(
+                    logger.error(
                         "Insert operation failed",
                         error=str(e),
                         column_names=column_names,

@@ -99,7 +99,7 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
     try:
         cookies.load(cookies_str)
     except Exception as e:
-        await logger.warning(f"Failed to parse cookies: {e}")
+        logger.warning(f"Failed to parse cookies: {e}")
         return {}
 
     # Extract Snowplow specific cookies
@@ -152,18 +152,18 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
                 bad_contexts = True
                 continue
             if key not in context:
-                await logger.warning(f"Empty {key} for payload", context=context)
+                logger.warning(f"Empty {key} for payload", context=context)
                 continue
 
         if bad_contexts:
-            await logger.error("Bad contexts", contexts=contexts)
+            logger.error("Bad contexts", contexts=contexts)
             continue
 
         schema = "/".join(context["schema"][5:].split("/")[:2])
         data = context["data"]
 
         if not isinstance(data, dict):
-            await logger.warning("Wrong data type", context=context)
+            logger.warning("Wrong data type", context=context)
             continue
 
         # Process different context types based on schema
@@ -270,7 +270,7 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/message_notification/jsonschema/1-0-0
             result["ue_context"]["message_notification"] = data
         else:
-            await logger.warning("Schema has no parser", data=data, schema=schema)
+            logger.warning("Schema has no parser", data=data, schema=schema)
 
     return result
 
@@ -390,7 +390,7 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
                 amp_device_id = await parse_base64(amp_device_id)
                 result["amp"]["device_id"] = amp_device_id
             except Exception as e:
-                await logger.warning(f"Failed to parse AMP linker: {e}")
+                logger.warning(f"Failed to parse AMP linker: {e}")
 
     # Get cookie information if device ID is missing
     if result.get("duid") is None:
