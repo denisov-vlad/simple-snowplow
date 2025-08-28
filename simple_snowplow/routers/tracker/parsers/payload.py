@@ -209,8 +209,9 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
         elif schema == "com.snowplowanalytics.mobile/application":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application/jsonschema/1-0-0
             # TODO: support for web
-            result["app_version"] = data["version"]
-            result["app_build"] = data["build"]
+            for k in ("version", "build"):
+                if k in data and isinstance(data[k], str):
+                    result[f"app_{k}"] = data[k]
         elif schema == "com.snowplowanalytics.snowplow/client_session":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2
             visit_count = data.pop("sessionIndex", 0)
