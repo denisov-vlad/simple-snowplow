@@ -51,6 +51,8 @@ EMPTY_UUIDS = (
     "first_event_id",
 )
 
+EMPTY_INTS = ("event_index",)
+
 DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
 DEFAULT_DATE = datetime(1970, 1, 1)
 
@@ -112,7 +114,7 @@ async def parse_contexts(contexts: dict[str, Any] | None) -> dict[str, Any]:
     Returns:
         Processed contexts dictionary
     """
-    result = {dict_name: {} for dict_name in EMPTY_DICTS}
+    result: dict[str, Any] = {dict_name: {} for dict_name in EMPTY_DICTS}
 
     if not contexts or "data" not in contexts:
         return result
@@ -289,6 +291,7 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
         **{string_name: "" for string_name in EMPTY_STRINGS},
         **{date_name: DEFAULT_DATE for date_name in EMPTY_DATES},
         **{uuid_name: DEFAULT_UUID for uuid_name in EMPTY_UUIDS},
+        **{int_name: 0 for int_name in EMPTY_INTS},
     }
 
     result.update(element_dict)

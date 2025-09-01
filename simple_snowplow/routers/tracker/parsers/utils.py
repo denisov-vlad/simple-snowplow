@@ -1,7 +1,7 @@
 import base64
 
-from elasticapm.contrib.asyncio.traces import async_capture_span
 import orjson
+from elasticapm.contrib.asyncio.traces import async_capture_span
 
 
 @async_capture_span()
@@ -42,4 +42,3 @@ async def find_available(unencoded: str | None, encoded: str | None) -> dict | N
 
     if result is not None:
         return orjson.loads(result)
-    
