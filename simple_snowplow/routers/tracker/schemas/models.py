@@ -9,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from json_repair import repair_json
 from pydantic import AliasChoices, BaseModel, Field
 
+from uuid import UUID
+
 
 class Model(BaseModel):
     """Base model with enhanced JSON validation."""
@@ -128,8 +130,8 @@ class PayloadElementBaseModel(StructuredEvent):
 
     # Identifiers
     aid: str = Field(..., title="Unique identifier for website / application")
-    eid: str | None = Field(None, title="Event UUID")
-    duid: str | None = Field(
+    eid: UUID | None = Field(None, title="Event UUID")
+    duid: UUID | None = Field(
         None,
         title="Unique identifier for a user, based on a first party cookie",
     )
@@ -137,12 +139,12 @@ class PayloadElementBaseModel(StructuredEvent):
         "",
         title="Unique identifier for user, set by the business using setUserId",
     )
-    sid: str | None = Field(
+    sid: UUID | None = Field(
         None,
         title="Unique identifier (UUID) for this visit of this user_id to this domain",
     )
-    vid: int | None = Field(
-        None,
+    vid: int = Field(
+        0,
         title="Index of number of visits that this user_id has made to this domain",
     )
 

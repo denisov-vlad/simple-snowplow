@@ -223,8 +223,10 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
             visit_count = data.pop("sessionIndex", 0)
             if visit_count:
                 result["vid"] = visit_count
-            result["sid"] = data.pop("sessionId")
-            result["duid"] = data.pop("userId")
+            if data.get("sessionId"):
+                result["sid"] = UUID(data.pop("sessionId"))
+            if data.get("userId"):
+                result["duid"] = UUID(data.pop("userId"))
             result["event_index"] = data.get("eventIndex", 0)
             first_event_time = data.get("firstEventTimestamp")
             if first_event_time is not None:
@@ -383,8 +385,8 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if result["e"] == "ue" and "amp_page_ping" in result.get("ue", {}):
         result["e"] = "pp"
         result["extra"]["amp_page_ping"] = result["ue"].pop("amp_page_ping")
-    if "domainUserid" in result.get("amp", {}):
-        result["duid"] = result["amp"].pop("domainUserid")
+    if result.get("amp", {}).get("domainUserid"):
+        result["duid"] = UUID(result["amp"].pop("domainUserid"))
 
     # Parse URL for AMP linker
     if result.get("url") and isinstance(result["url"], str):
@@ -404,16 +406,7 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if result.get("duid") is None:
         sp_cookies = await parse_cookies(cookies)
         if sp_cookies and "device_id" in sp_cookies:
-            result["duid"] = sp_cookies["device_id"]
-
-    # Truncate UUIDs if they're too long
-    for uid in ("duid", "sid", "view_id"):
-        if (
-            result.get(uid) is not None
-            and isinstance(result[uid], str)
-            and len(result[uid]) > 36
-        ):
-            result[uid] = result[uid][:36]
+            result["duid"] = UUID(sp_cookies["device_id"])
 
     # Generate event ID if missing
     if result.get("eid") is None:
@@ -464,8 +457,5 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if is_mobile is not None:
         result["device_is_mobile"] = int(is_mobile)
         result["device_is_pc"] = int(not is_mobile)
-
-    if result.get("vid") is None:
-        result["vid"] = 0
 
     return result
