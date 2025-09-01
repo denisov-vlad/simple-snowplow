@@ -4,8 +4,8 @@ User agent parsing functionality.
 
 from typing import Any
 
-import elasticapm
 from crawlerdetect import CrawlerDetect
+from elasticapm.contrib.asyncio.traces import async_capture_span
 from ua_parser import parse
 
 crawler_detect = CrawlerDetect()
@@ -15,7 +15,7 @@ async def remove_none_values(data: list[str | None]) -> list[str]:
     return [item for item in data if item is not None]
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def parse_agent(string: str) -> dict[str, Any]:
     """
     Parse a user agent string into structured data.

@@ -2,7 +2,6 @@
 Main application entry point for Simple Snowplow.
 """
 
-import structlog
 from asgi_correlation_id.middleware import CorrelationIdMiddleware
 from brotli_asgi import BrotliMiddleware
 from core.config import settings

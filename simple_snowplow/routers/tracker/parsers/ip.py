@@ -2,14 +2,14 @@
 IP address parsing and handling.
 """
 
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import IPv4Address, IPv6Address, ip_address
 
-import elasticapm
-from pydantic import IPvAnyAddress
-from pydantic_core import PydanticCustomError
+from elasticapm.contrib.asyncio.traces import async_capture_span
+
+DEFAULT_IPV4 = IPv4Address("0.0.0.0")
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def convert_ip(ip: IPv4Address | IPv6Address | str | None) -> IPv4Address:
     """
     Convert an IP address to IPv4Address format.
@@ -20,21 +20,21 @@ async def convert_ip(ip: IPv4Address | IPv6Address | str | None) -> IPv4Address:
     Returns:
         The converted IPv4 address or a default address if conversion fails
     """
-    none_ip = IPv4Address("0.0.0.0")
 
     if ip is None:
-        return none_ip
-
-    if isinstance(ip, str):
+        return DEFAULT_IPV4
+    elif isinstance(ip, IPv4Address):
+        return ip
+    elif isinstance(ip, str):
         try:
-            ip = IPvAnyAddress(ip)
-        except PydanticCustomError:
-            return none_ip
+            ip = ip_address(ip)
+        except ValueError:
+            return DEFAULT_IPV4
 
     if isinstance(ip, IPv6Address):
         # Convert IPv6 to IPv4 if it's a mapped address
         if ip.ipv4_mapped:
             return ip.ipv4_mapped
-        return none_ip
+        return DEFAULT_IPV4
 
     return ip

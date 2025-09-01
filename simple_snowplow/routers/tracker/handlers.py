@@ -4,8 +4,8 @@ Core data processing handlers for Snowplow events.
 
 from typing import Any
 
-import elasticapm
 import structlog
+from elasticapm.contrib.asyncio.traces import async_capture_span
 
 from routers.tracker.parsers.ip import convert_ip
 from routers.tracker.parsers.payload import parse_payload
@@ -18,12 +18,10 @@ from routers.tracker.schemas.models import (
 
 logger = structlog.get_logger(__name__)
 
-PayloadType = PayloadElementBaseModel | PayloadElementPostModel | PayloadModel
 
-
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def process_data(
-    body: PayloadType,
+    body: PayloadElementBaseModel | PayloadElementPostModel | PayloadModel,
     user_agent: str | None,
     user_ip: Any,
     cookies: str | None,
@@ -55,10 +53,9 @@ async def process_data(
         base.update(ua_data)
 
     # Extract payload data
-    try:
+    if isinstance(body, PayloadModel):
         data = body.data
-    except AttributeError:
-        # If body is not a batch payload, treat as single element
+    else:
         data = [body]
 
     # Process each payload element

@@ -9,10 +9,10 @@ from http.cookies import SimpleCookie
 from typing import Any
 from uuid import UUID, uuid4
 
-import elasticapm
 import orjson
 import structlog
 from core.config import settings
+from elasticapm.contrib.asyncio.traces import async_capture_span
 
 from routers.tracker.schemas.models import (
     PayloadElementBaseModel,
@@ -60,7 +60,7 @@ PayloadType = PayloadElementBaseModel | PayloadElementPostModel
 schemas = settings.common.snowplow.schemas
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
     """
     Parse base64 encoded data.
@@ -72,16 +72,22 @@ async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
     Returns:
         Decoded string
     """
+
     if isinstance(data, str):
-        data = data.encode("UTF-8")
-    missing_padding = len(data) % 4
+        data_bytes: bytes = data.encode("UTF-8")
+    elif isinstance(data, (bytearray, memoryview)):
+        data_bytes = bytes(data)
+    else:
+        data_bytes = data  # already bytes
+
+    missing_padding = len(data_bytes) % 4
     if missing_padding:
-        data += b"=" * (4 - missing_padding)
+        data_bytes = data_bytes + (b"=" * (4 - missing_padding))
 
-    return base64.urlsafe_b64decode(data).decode("UTF-8")
+    return base64.b64decode(data_bytes, altchars=altchars).decode("UTF-8")
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
     """
     Parse cookies string.
@@ -124,7 +130,7 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
     return result
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
     """
     Parse Snowplow contexts.
@@ -276,7 +282,7 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def parse_event(event: dict[str, Any]) -> dict[str, Any]:
     """
     Parse Snowplow event data.
@@ -297,7 +303,7 @@ async def parse_event(event: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, Any]:
     """
     Parse a Snowplow event payload.
@@ -310,7 +316,8 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
         Processed payload dictionary
     """
     element_dict = element.model_dump()
-    result = {dict_name: {} for dict_name in EMPTY_DICTS}
+    # Explicit annotation so static type checkers allow heterogeneous values
+    result: dict[str, Any] = {dict_name: {} for dict_name in EMPTY_DICTS}
     result.update(element_dict)
 
     # Process contexts
@@ -347,19 +354,19 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
 
     # Set timestamps
     if result.get("rtm") is None:
-        result["rtm"] = datetime.now()  # type: ignore
+        result["rtm"] = datetime.now()
     if result.get("stm") is None:
-        result["stm"] = datetime.now()  # type: ignore
+        result["stm"] = datetime.now()
 
     # Post processing
     if result["aid"] == "undefined":
-        result["aid"] = "other"  # type: ignore
+        result["aid"] = "other"
 
     # Decode URL-encoded fields
     if result.get("refr"):
-        result["refr"] = urlparse.unquote(result["refr"])  # type: ignore
+        result["refr"] = urlparse.unquote(result["refr"])
     if result.get("url"):
-        result["url"] = urlparse.unquote(result["url"])  # type: ignore
+        result["url"] = urlparse.unquote(result["url"])
 
     # Handle page pings
     if result["e"] == "pp":
@@ -374,7 +381,7 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if "uid" in result.get("amp", {}):
         result["uid"] = result["amp"].pop("userId")
     if result["e"] == "ue" and "amp_page_ping" in result.get("ue", {}):
-        result["e"] = "pp"  # type: ignore
+        result["e"] = "pp"
         result["extra"]["amp_page_ping"] = result["ue"].pop("amp_page_ping")
     if "domainUserid" in result.get("amp", {}):
         result["duid"] = result["amp"].pop("domainUserid")
@@ -410,20 +417,20 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
 
     # Generate event ID if missing
     if result.get("eid") is None:
-        result["eid"] = str(uuid4())  # type: ignore
+        result["eid"] = str(uuid4())
 
     # Handle screen_view events
     if "screen_view" in result.get("ue", {}):
-        result["e"] = "pv"  # type: ignore
+        result["e"] = "pv"
         result["view_id"] = result["ue"]["screen_view"].pop("id")
         result["url"] = result["ue"]["screen_view"].pop("name")
 
         if "previousName" in result["ue"]["screen_view"]:
             result["refr"] = result["ue"]["screen_view"].pop("previousName")
             if result["refr"] == "Unknown":
-                result["refr"] = ""  # type: ignore
+                result["refr"] = ""
         else:
-            result["refr"] = ""  # type: ignore
+            result["refr"] = ""
 
         result["screen"].update(result["ue"].pop("screen_view"))
 
@@ -446,19 +453,19 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if "se_va" in result and result["se_va"]:
         if not isinstance(result["se_va"], (float, int)):
             try:
-                result["se_va"] = float(result["se_va"])  # type: ignore
+                result["se_va"] = float(result["se_va"])
             except ValueError:
                 result["se_pr"]["ex-value"] = result["se_va"]
-                result["se_va"] = 0.0  # type: ignore
+                result["se_va"] = 0.0
     else:
-        result["se_va"] = 0.0  # type: ignore
+        result["se_va"] = 0.0
 
     is_mobile = result.get("extra", {}).get("client_hints", {}).get("isMobile")
     if is_mobile is not None:
-        result["device_is_mobile"] = int(is_mobile)  # type: ignore
-        result["device_is_pc"] = int(not is_mobile)  # type: ignore
+        result["device_is_mobile"] = int(is_mobile)
+        result["device_is_pc"] = int(not is_mobile)
 
     if result.get("vid") is None:
-        result["vid"] = 0  # type: ignore
+        result["vid"] = 0
 
     return result
