@@ -4,74 +4,12 @@ Data models for Snowplow events.
 
 import urllib.parse as urlparse
 from datetime import datetime
-from typing import Any, Literal, Self
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from fastapi.exceptions import RequestValidationError
-from json_repair import repair_json
-from pydantic import AliasChoices, BaseModel, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 
-
-class Model(BaseModel):
-    """Base model with enhanced JSON validation."""
-
-    @classmethod
-    def model_validate_json(
-        cls,
-        json_data: str | bytes | bytearray | memoryview,  # added memoryview
-        *,
-        strict: bool | None = None,
-        context: Any = None,
-        by_alias: bool | None = True,
-        by_name: bool | None = False,
-    ) -> Self:
-        """
-        Validate the given JSON data against the Pydantic model with auto-repair.
-
-        Args:
-            json_data: The JSON data to validate
-            strict: Whether to enforce types strictly
-            context: Extra variables to pass to the validator
-            by_alias: Whether to use alias names for validation
-            by_name: Whether field names should be matched by name
-
-        Returns:
-            The validated Pydantic model
-
-        Raises:
-            ValidationError: If the object could not be validated after repair
-        """
-        # Hide this function from tracebacks
-        __tracebackhide__ = True
-        kwargs = {
-            "input": json_data,
-            "strict": strict,
-            "context": context,
-            "by_alias": by_alias,
-            "by_name": by_name,
-        }
-
-        try:
-            return cls.__pydantic_validator__.validate_json(**kwargs)
-        except RequestValidationError:
-            if isinstance(json_data, str):
-                json_str = json_data
-            elif isinstance(json_data, (bytes, bytearray)):
-                try:
-                    json_str = json_data.decode("utf-8")
-                except UnicodeDecodeError:
-                    json_str = json_data.decode("utf-8", errors="ignore")
-            elif isinstance(json_data, memoryview):
-                raw = json_data.tobytes()
-                try:
-                    json_str = raw.decode("utf-8")
-                except UnicodeDecodeError:
-                    json_str = raw.decode("utf-8", errors="ignore")
-            else:
-                json_str = str(json_data)
-            kwargs["input"] = repair_json(json_str)
-
-        return cls.__pydantic_validator__.validate_json(**kwargs)
+from .base import Model
 
 
 class SnowPlowModel(Model):
@@ -166,7 +104,9 @@ class PayloadElementBaseModel(StructuredEvent):
 
     # Platform and environment
     p: Literal["web", "mob", "pc", "srv", "app", "tv", "cnsl", "iot"] = Field(
-        ..., title="The platform the app runs on", description="i.e. web",
+        ...,
+        title="The platform the app runs on",
+        description="i.e. web",
     )
     tv: str = Field(..., title="Identifier for Snowplow tracker")
     tna: str = Field("", title="The tracker namespace")
@@ -221,29 +161,3 @@ class PayloadModel(SnowPlowModel):
     """Model for JSON payload in POST requests."""
 
     data: list[PayloadElementPostModel] = Field([])
-
-
-class SendgridElementBaseModel(Model):
-    """Model for Sendgrid webhook events."""
-
-    email: str = Field(..., title="Email address")
-    timestamp: datetime = Field(..., title="Event timestamp")
-    smtp_id: str = Field(..., validation_alias="smtp-id", title="SMTP ID")
-    event: str = Field(..., title="Event type")
-    category: list[str] = Field(..., title="Event categories")
-    sg_event_id: str = Field(..., title="SendGrid event ID")
-    sg_message_id: str = Field(..., title="SendGrid message ID")
-    response: str = Field("", title="Response")
-    attempt: int = Field(0, title="Attempt number")
-    useragent: str = Field("", title="User agent string")
-    ip: str = Field("", title="IP address")
-    url: str = Field("", title="URL")
-    reason: str = Field("", title="Reason")
-    status: str = Field("", title="Status")
-    asm_group_id: int = Field(0, title="ASM Group ID")
-
-
-class SendgridModel(Model):
-    """Model for batch Sendgrid events."""
-
-    data: list[SendgridElementBaseModel] = Field([])

@@ -14,7 +14,7 @@ import structlog
 from core.config import settings
 from elasticapm.contrib.asyncio.traces import async_capture_span
 
-from routers.tracker.schemas.models import (
+from routers.tracker.models.snowplow import (
     PayloadElementBaseModel,
     PayloadElementPostModel,
     StructuredEvent,

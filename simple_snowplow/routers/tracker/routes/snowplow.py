@@ -10,22 +10,14 @@ from pydantic import IPvAnyAddress
 from starlette.status import HTTP_204_NO_CONTENT
 
 from routers.tracker.handlers import process_data
-from routers.tracker.schemas.models import PayloadElementBaseModel, PayloadModel
+from routers.tracker.models.snowplow import (
+    PayloadElementBaseModel,
+    PayloadModel,
+)
 
-
-def pixel_gif() -> bytes:
-    """
-    Generate a 1x1 transparent GIF pixel.
-
-    Returns:
-        Bytes representing a 1x1 transparent GIF
-    """
-    img = b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-    return base64.b64decode(img)
-
-
-# Cached pixel for performance
-pixel = pixel_gif()
+PIXEL = base64.b64decode(
+    b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",
+)
 
 
 @elasticapm.async_capture_span()
@@ -90,4 +82,4 @@ async def tracker_get(
     data = await process_data(params, user_agent, x_forwarded_for, cookie)
     await request.app.state.connector.insert_rows(data)
 
-    return Response(content=pixel, media_type="image/gif")
+    return Response(content=PIXEL, media_type="image/gif")

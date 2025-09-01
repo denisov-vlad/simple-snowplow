@@ -7,14 +7,14 @@ from typing import Any
 import structlog
 from elasticapm.contrib.asyncio.traces import async_capture_span
 
-from routers.tracker.parsers.ip import convert_ip
-from routers.tracker.parsers.payload import parse_payload
-from routers.tracker.parsers.useragent import parse_agent
-from routers.tracker.schemas.models import (
+from routers.tracker.models.snowplow import (
     PayloadElementBaseModel,
     PayloadElementPostModel,
     PayloadModel,
 )
+from routers.tracker.parsers.ip import convert_ip
+from routers.tracker.parsers.payload import parse_payload
+from routers.tracker.parsers.useragent import parse_agent
 
 logger = structlog.get_logger(__name__)
 

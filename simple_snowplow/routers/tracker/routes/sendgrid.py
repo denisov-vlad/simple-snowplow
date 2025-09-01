@@ -6,7 +6,7 @@ from elasticapm.contrib.asyncio.traces import async_capture_span
 from fastapi import Request, Response
 from starlette.status import HTTP_204_NO_CONTENT
 
-from routers.tracker.schemas.models import SendgridElementBaseModel
+from routers.tracker.models.sendgrid import SendgridElementBaseModel
 
 
 @async_capture_span()

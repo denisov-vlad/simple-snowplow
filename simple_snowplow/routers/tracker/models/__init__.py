@@ -2,13 +2,12 @@
 Schema definitions for Snowplow events.
 """
 
-from .models import (
+from .sendgrid import SendgridElementBaseModel, SendgridModel
+from .snowplow import (
     Model,
     PayloadElementBaseModel,
     PayloadElementPostModel,
     PayloadModel,
-    SendgridElementBaseModel,
-    SendgridModel,
     SnowPlowModel,
     StructuredEvent,
 )
