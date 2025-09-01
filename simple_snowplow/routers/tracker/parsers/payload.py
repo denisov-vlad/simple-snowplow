@@ -7,7 +7,7 @@ import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import orjson
 import structlog
@@ -354,22 +354,6 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     if ue_context:
         result["ue"] = dict(result["ue"], **ue_context)
 
-    # Set timestamps
-    if result.get("rtm") is None:
-        result["rtm"] = datetime.now()
-    if result.get("stm") is None:
-        result["stm"] = datetime.now()
-
-    # Post processing
-    if result["aid"] == "undefined":
-        result["aid"] = "other"
-
-    # Decode URL-encoded fields
-    if result.get("refr"):
-        result["refr"] = urlparse.unquote(result["refr"])
-    if result.get("url"):
-        result["url"] = urlparse.unquote(result["url"])
-
     # Handle page pings
     if result["e"] == "pp":
         result["extra"]["page_ping"] = {
@@ -407,10 +391,6 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
         sp_cookies = await parse_cookies(cookies)
         if sp_cookies and "device_id" in sp_cookies:
             result["duid"] = UUID(sp_cookies["device_id"])
-
-    # Generate event ID if missing
-    if result.get("eid") is None:
-        result["eid"] = str(uuid4())
 
     # Handle screen_view events
     if "screen_view" in result.get("ue", {}):

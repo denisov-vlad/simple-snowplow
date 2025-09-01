@@ -2,14 +2,14 @@
 Data models for Snowplow events.
 """
 
+import urllib.parse as urlparse
 from datetime import datetime
 from typing import Any, Literal, Self
+from uuid import UUID, uuid4
 
 from fastapi.exceptions import RequestValidationError
 from json_repair import repair_json
-from pydantic import AliasChoices, BaseModel, Field
-
-from uuid import UUID
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 
 class Model(BaseModel):
@@ -130,7 +130,7 @@ class PayloadElementBaseModel(StructuredEvent):
 
     # Identifiers
     aid: str = Field(..., title="Unique identifier for website / application")
-    eid: UUID | None = Field(None, title="Event UUID")
+    eid: UUID = Field(default_factory=lambda: uuid4(), title="Event UUID")
     duid: UUID | None = Field(
         None,
         title="Unique identifier for a user, based on a first party cookie",
@@ -149,11 +149,11 @@ class PayloadElementBaseModel(StructuredEvent):
     )
 
     # Event type and timestamps
-    e: Literal["pv", "pp", "ue", "se", "tr", "ti"] = Field(
+    e: Literal["pv", "pp", "ue", "se", "tr", "ti", "s"] = Field(
         ...,
         title="Event type",
         description="pv = page view, pp = page ping, ue = unstructured event, "
-        "se = structured event, tr = transaction, ti = transaction item",
+        "se = structured event, tr = transaction, ti = transaction item, s = session",
     )
     dtm: datetime = Field(
         default_factory=lambda: datetime.now(),
@@ -165,14 +165,16 @@ class PayloadElementBaseModel(StructuredEvent):
     )
 
     # Platform and environment
-    p: str = Field(..., title="The platform the app runs on", description="ex. web")
+    p: Literal["web", "mob", "pc", "srv", "app", "tv", "cnsl", "iot"] = Field(
+        ..., title="The platform the app runs on", description="i.e. web",
+    )
     tv: str = Field(..., title="Identifier for Snowplow tracker")
     tna: str = Field("", title="The tracker namespace")
     tz: str | None = Field(None, title="Time zone of client device's OS")
     lang: str = Field("", title="Language the browser is set to")
 
     # Browser/viewport information
-    cs: str = Field("", title="Web page's character encoding", description="ex. UTF-8")
+    cs: str = Field("", title="Web page's character encoding", description="i.e. UTF-8")
     res: str = Field(..., title="Screen / monitor resolution")
     vp: str = Field("0x0", title="Browser viewport width and height")
     ds: str = Field("0x0", title="Web page width and height")
@@ -192,6 +194,18 @@ class PayloadElementBaseModel(StructuredEvent):
     # Unstructured event information
     ue_pr: str = Field("", title="The properties of the event")
     ue_px: str = Field("", title="The properties of the event (b64)")
+
+    @field_validator("aid", mode="before")
+    @classmethod
+    def rename_aid(cls, v):
+        if v == "undefined":
+            return "other"
+        return v
+
+    @field_validator("refr", "url", mode="before")
+    @classmethod
+    def decode_url_fields(cls, v):
+        return urlparse.unquote(v) if v else v
 
 
 class PayloadElementPostModel(PayloadElementBaseModel):
