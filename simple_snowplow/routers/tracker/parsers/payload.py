@@ -2,7 +2,6 @@
 Payload parsing functionality for Snowplow events.
 """
 
-import base64
 import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
@@ -19,6 +18,7 @@ from routers.tracker.models.snowplow import (
     PayloadElementPostModel,
     StructuredEvent,
 )
+from routers.tracker.parsers.utils import find_available, parse_base64
 
 logger = structlog.stdlib.get_logger()
 
@@ -46,8 +46,6 @@ EMPTY_STRINGS = (
 EMPTY_DATES = ("first_event_time",)
 
 EMPTY_UUIDS = (
-    "duid",
-    "sid",
     "view_id",
     "previous_session_id",
     "first_event_id",
@@ -58,33 +56,6 @@ DEFAULT_DATE = datetime(1970, 1, 1)
 
 PayloadType = PayloadElementBaseModel | PayloadElementPostModel
 schemas = settings.common.snowplow.schemas
-
-
-@async_capture_span()
-async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
-    """
-    Parse base64 encoded data.
-
-    Args:
-        data: The base64 encoded data
-        altchars: Alternative characters for base64 encoding
-
-    Returns:
-        Decoded string
-    """
-
-    if isinstance(data, str):
-        data_bytes: bytes = data.encode("UTF-8")
-    elif isinstance(data, (bytearray, memoryview)):
-        data_bytes = bytes(data)
-    else:
-        data_bytes = data  # already bytes
-
-    missing_padding = len(data_bytes) % 4
-    if missing_padding:
-        data_bytes = data_bytes + (b"=" * (4 - missing_padding))
-
-    return base64.b64decode(data_bytes, altchars=altchars).decode("UTF-8")
 
 
 @async_capture_span()
@@ -131,7 +102,7 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
 
 
 @async_capture_span()
-async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
+async def parse_contexts(contexts: dict[str, Any] | None) -> dict[str, Any]:
     """
     Parse Snowplow contexts.
 
@@ -141,12 +112,7 @@ async def parse_contexts(contexts: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Processed contexts dictionary
     """
-    result = {
-        **{dict_name: {} for dict_name in EMPTY_DICTS},
-        **{string_name: "" for string_name in EMPTY_STRINGS},
-        **{date_name: DEFAULT_DATE for date_name in EMPTY_DATES},
-        **{uuid_name: DEFAULT_UUID for uuid_name in EMPTY_UUIDS},
-    }
+    result = {dict_name: {} for dict_name in EMPTY_DICTS}
 
     if not contexts or "data" not in contexts:
         return result
@@ -319,32 +285,29 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     """
     element_dict = element.model_dump()
     # Explicit annotation so static type checkers allow heterogeneous values
-    result: dict[str, Any] = {dict_name: {} for dict_name in EMPTY_DICTS}
+    result: dict[str, Any] = {
+        **{string_name: "" for string_name in EMPTY_STRINGS},
+        **{date_name: DEFAULT_DATE for date_name in EMPTY_DATES},
+        **{uuid_name: DEFAULT_UUID for uuid_name in EMPTY_UUIDS},
+    }
+
     result.update(element_dict)
 
     # Process contexts
-    context = None
-    if element_dict.get("cx") is not None:
-        context = element_dict.pop("cx")
-        context = await parse_base64(context)
-    elif element_dict.get("co") is not None:
-        context = element_dict.pop("co")
-
-    if context is not None:
-        context = orjson.loads(context)
-        parsed_context = await parse_contexts(context)
-        result.update(parsed_context)
+    context = await find_available(
+        unencoded=element_dict.pop("co", None),
+        encoded=element_dict.pop("cx", None),
+    )
+    parsed_context = await parse_contexts(context)
+    result.update(parsed_context)
 
     # Process unstructured events
-    event_context = None
-    if element_dict.get("ue_px"):
-        event_context = element_dict.pop("ue_px")
-        event_context = await parse_base64(event_context)
-    elif element_dict.get("ue_pr"):
-        event_context = element_dict.pop("ue_pr")
+    event_context = await find_available(
+        unencoded=element_dict.pop("ue_pr", None),
+        encoded=element_dict.pop("ue_px", None),
+    )
 
     if event_context is not None:
-        event_context = orjson.loads(event_context)
         event_data = await parse_event(event_context)
         result.update(event_data)
     else:
