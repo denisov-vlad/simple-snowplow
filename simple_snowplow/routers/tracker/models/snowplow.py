@@ -214,7 +214,8 @@ class PayloadModel(SnowPlowModel):
 class InsertModel(PayloadBase):
     ue: dict[str, Any] = Field({}, title="The unstructured event")
     extra: dict[str, Any] = Field(
-        {}, title="Extra fields not part of the standard payload",
+        {},
+        title="Extra fields not part of the standard payload",
     )
     user_data: dict[str, Any] = Field({}, title="User data")
     page_data: dict[str, Any] = Field({}, title="Page data")

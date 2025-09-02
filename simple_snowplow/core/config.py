@@ -93,7 +93,8 @@ class ClickHouseConfiguration(BaseModel):
     cluster_name: str = ""
 
     # Can be overridden via environment variables such as:
-    #   SNOWPLOW_CLICKHOUSE__CONFIGURATION__TABLES__SNOWPLOW__LOCAL__ENGINE="ReplacingMergeTree()"
+    # SNOWPLOW_CLICKHOUSE__CONFIGURATION__TABLES__SNOWPLOW__LOCAL__ENGINE=
+    #   "ReplacingMergeTree()"
     tables: dict[str, Any] = {
         "snowplow": {
             "enabled": True,
@@ -101,7 +102,20 @@ class ClickHouseConfiguration(BaseModel):
                 "name": "local",
                 "engine": "MergeTree()",
                 "partition_by": "toYYYYMM(time)",
-                "order_by": "app, platform, app_id, event_type, toDate(time), event.category, event.action, page, device_id, cityHash64(device_id), session_id, time",
+                "order_by": ", ".join([
+                    "app",
+                    "platform",
+                    "app_id",
+                    "event_type",
+                    "toDate(time)",
+                    "event.category",
+                    "event.action",
+                    "page",
+                    "device_id",
+                    "cityHash64(device_id)",
+                    "session_id",
+                    "time",
+                ]),
                 "sample_by": "cityHash64(device_id)",
                 "settings": "index_granularity = 8192",
             },
@@ -134,11 +148,10 @@ class Settings(BaseSettings):
     (e.g. ``SNOWPLOW_LOGGING__LEVEL=DEBUG``).
     """
 
-    # Use case_insensitive env var matching so conventional upper-case variables work
     model_config = SettingsConfigDict(
         env_prefix="SNOWPLOW_",
-        case_sensitive=False,  # allow conventional UPPERCASE env vars to match lowercase field names
-        env_nested_delimiter="__",  # explicit for clarity
+        case_sensitive=False,
+        env_nested_delimiter="__",
     )
     logging: LoggingConfig = LoggingConfig()
     security: SecurityConfig = SecurityConfig()

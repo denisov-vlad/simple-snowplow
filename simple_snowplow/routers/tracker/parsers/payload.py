@@ -104,7 +104,8 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
 
 @async_capture_span()
 async def parse_contexts(
-    contexts: dict[str, Any] | None, model: InsertModel,
+    contexts: dict[str, Any] | None,
+    model: InsertModel,
 ) -> InsertModel:
     """
     Parse Snowplow contexts.
@@ -269,8 +270,9 @@ async def parse_event(event: dict[str, Any] | None, model: InsertModel) -> Inser
 
     event_payload: dict[str, Any] = event["data"]
     if event_payload["schema"] == schemas.u2s_data:
-        # todo
-        result = StructuredEvent.model_validate(event_payload["data"]).model_dump()
+        se = StructuredEvent.model_validate(event_payload["data"])
+        for field_name in StructuredEvent.model_fields:
+            setattr(model, field_name, getattr(se, field_name))
         model.e = "se"
     else:
         event_name = event_payload["schema"].split("/")[-3]
@@ -280,7 +282,8 @@ async def parse_event(event: dict[str, Any] | None, model: InsertModel) -> Inser
 
 @async_capture_span()
 async def parse_payload(
-    element: PayloadElementModel, cookies: str | None,
+    element: PayloadElementModel,
+    cookies: str | None,
 ) -> InsertModel:
     """
     Parse a Snowplow event payload.
@@ -294,7 +297,6 @@ async def parse_payload(
     """
 
     result = InsertModel.model_validate(element, from_attributes=True)
-    logger.info("After validate", result=result)
 
     result = await parse_contexts(element.contexts, result)
     result = await parse_event(element.ue_context, result)
