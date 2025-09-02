@@ -7,7 +7,7 @@ from routers.tracker.db.clickhouse import ClickHouseConnector, TableManager
 from core.config import settings
 
 PERFORMANCE_CONFIG = settings.performance
-CLIKCHOUSE_CONFIG = settings.clickhouse
+CLICKHOUSE_CONFIG = settings.clickhouse
 
 
 @asynccontextmanager
@@ -15,7 +15,7 @@ async def lifespan(application):
     pool_mgr = get_pool_manager(maxsize=PERFORMANCE_CONFIG.db_pool_size)
 
     application.state.ch_client = await get_async_client(
-        **CLIKCHOUSE_CONFIG.connection.model_dump(),
+        **CLICKHOUSE_CONFIG.connection.model_dump(),
         query_limit=0,  # No query size limit
         pool_mgr=pool_mgr,
     )
@@ -23,7 +23,7 @@ async def lifespan(application):
     # Initialize connector with the primary client
     application.state.connector = ClickHouseConnector(
         application.state.ch_client,
-        **CLIKCHOUSE_CONFIG.configuration.model_dump(),
+        **CLICKHOUSE_CONFIG.configuration.model_dump(),
     )
 
     table_manager = TableManager(application.state.connector)

@@ -65,14 +65,11 @@ For Kubernetes deployment, check the example manifests in the `.github/k8s` dire
 
 ## Configuration
 
-Simple Snowplow uses a combined configuration system with Dynaconf for loading settings and Pydantic for type validation. Configuration can be managed through:
+Simple Snowplow now uses a **single, explicit Pydantic Settings** configuration system (no Dynaconf). Configuration sources (highest precedence first):
 
-1. Default settings from `settings.toml`
-2. Secret settings from `.secrets.toml` (if exists)
-3. Environment variables with `SNOWPLOW_` prefix
-4. Custom settings file specified with `SNOWPLOW_SETTINGS_FILE`
+1. Explicit init arguments (rare; for programmatic embedding)
+2. Environment variables with the `SNOWPLOW_` prefix (nested keys via double underscores `__`)
 
-The configuration system prioritizes these sources in the order listed.
 
 ### Configuration Structure
 
@@ -108,7 +105,7 @@ For a complete list of configuration options, refer to the `settings.toml` file.
 
 ### Environment Variables
 
-You can override any configuration setting using environment variables with the `SNOWPLOW_` prefix and double underscores to represent nested keys:
+Override any setting using environment variables. Use double underscores to represent nesting:
 
 ```bash
 SNOWPLOW_COMMON__DEMO=true
@@ -118,32 +115,23 @@ SNOWPLOW_SECURITY__RATE_LIMITING__ENABLED=true
 
 ### Custom Configuration File
 
-To use a custom configuration file:
+Point to an alternate TOML configuration file:
 
 ```bash
-export SNOWPLOW_SETTINGS_FILE=/path/to/your/custom.toml
+export SNOWPLOW_SETTINGS_FILE=/path/to/custom-settings.toml
 ```
 
-The custom file only needs to include settings you want to override.
+Only include keys you want to override; unspecified values fall back to defaults.
 
 ### Environment-Specific Configuration
 
-Simple Snowplow supports environment-specific settings through the `SNOWPLOW_ENV` variable:
+Select environment via:
 
 ```bash
 export SNOWPLOW_ENV=production
 ```
 
-Settings for specific environments can be defined in the configuration file:
-
-```toml
-[development]
-logging.level = "DEBUG"
-
-[production]
-logging.level = "WARNING"
-security.disable_docs = true
-```
+Add a top-level table in `settings.toml` named after the environment (`[production]`, `[staging]`, etc.) to override base values. Keys are written using nested TOML table syntax or dotted assignments, both are supported.
 
 ## Usage
 
