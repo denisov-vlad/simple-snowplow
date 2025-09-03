@@ -187,7 +187,7 @@ class PayloadBase(Base, Validation, StructuredEvent):
     )
     tv: str = Field(..., title="Identifier for Snowplow tracker")
     tna: str = Field("", title="The tracker namespace")
-    tz: str | None = Field(None, title="Time zone of client device's OS")
+    tz: str = Field("", title="Time zone of client device's OS")
     lang: str = Field("", title="Language the browser is set to")
 
     # Browser/viewport information
