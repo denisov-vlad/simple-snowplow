@@ -33,10 +33,15 @@ To install Simple Snowplow for local development:
    git clone https://github.com/yourusername/simple-snowplow.git
    cd simple-snowplow
    ```
-3. Download the required JavaScript files:
+3. (One‑time) Initialize ClickHouse databases & tables:
    ```bash
-   ./simple_snowplow/utils/download_scripts.sh
+   # Ensure ClickHouse service is up first (in a separate terminal)
+   docker compose up -d clickhouse
+
+   # Create tables (idempotent – safe to re-run)
+   docker compose run app uv run python cli.py db init
    ```
+
 4. Start the application using Docker Compose:
    ```bash
    docker compose up
@@ -59,7 +64,6 @@ For a production environment:
      -v /path/to/your/config.toml:/app/settings.toml \
      -e SNOWPLOW_ENV=production \
      simple-snowplow
-   ```
 
 For Kubernetes deployment, check the example manifests in the `.github/k8s` directory.
 
@@ -134,6 +138,38 @@ export SNOWPLOW_ENV=production
 Add a top-level table in `settings.toml` named after the environment (`[production]`, `[staging]`, etc.) to override base values. Keys are written using nested TOML table syntax or dotted assignments, both are supported.
 
 ## Usage
+
+### Database Initialization
+
+Table creation has been moved out of the FastAPI startup sequence and is now handled explicitly via the CLI. This gives you predictable, repeatable migrations and avoids race conditions on multi-instance deployments.
+
+You only need to run the init command when:
+
+* First installation (fresh ClickHouse instance)
+* You changed table-related configuration (e.g. engine, partitioning, cluster_name)
+* Upgrading to a version that adds new tables / columns (future migrations)
+
+Run in Docker Compose (after the image is built):
+```bash
+docker compose up -d clickhouse
+docker compose run app uv run python cli.py db init
+docker compose up -d app
+```
+
+Idempotency: The command uses `CREATE DATABASE IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`; re-running is safe. If you change schema definitions (e.g. `order_by`, `engine`) you must manually apply migrations (dropping/recreating or performing ALTER statements) – the CLI purposefully does not perform destructive changes.
+
+Troubleshooting:
+* Connection errors: ensure the hostname matches `SNOWPLOW_CLICKHOUSE__CONNECTION__HOST` (defaults to `clickhouse` inside Docker network).
+* Cluster setup: set `SNOWPLOW_CLICKHOUSE__CONFIGURATION__CLUSTER_NAME` before running init so distributed tables are created.
+* Permissions: use a ClickHouse user with `CREATE DATABASE` and `CREATE TABLE` privileges.
+
+### Downloading Tracker Scripts via CLI
+
+Instead of the shell script you can use the built-in command:
+```bash
+uv run python simple_snowplow/cli.py scripts download
+```
+This will place `sp.js`, `sp.js.map`, plugin bundle, and `loader.js` copies in `simple_snowplow/static/` and adjust the source map `file` field for the loader copy.
 
 ### Web Tracking
 

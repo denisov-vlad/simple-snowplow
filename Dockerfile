@@ -12,7 +12,6 @@ WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    --mount=type=bind,source=utils/download_scripts.sh,target=utils/download_scripts.sh \
     apk update && \
     apk add --no-cache \
         g++ \
@@ -20,13 +19,14 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         curl \
         tini && \
     uv sync --locked --no-install-project && \
-    sh ./utils/download_scripts.sh && \
     apk del g++ && \
     rm -rf /var/cache/apk/*
 
 WORKDIR /app/simple_snowplow
 
 COPY ./simple_snowplow /app/simple_snowplow
+
+RUN uv run cli.py scripts download --version 4.6.6 --output_dir static --force
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

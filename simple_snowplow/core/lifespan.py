@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from clickhouse_connect import get_async_client
 from clickhouse_connect.driver.httputil import get_pool_manager
-from routers.tracker.db.clickhouse import ClickHouseConnector, TableManager
+from routers.tracker.db.clickhouse import ClickHouseConnector
 
 from core.config import settings
 
@@ -25,10 +25,6 @@ async def lifespan(application):
         application.state.ch_client,
         **CLICKHOUSE_CONFIG.configuration.model_dump(),
     )
-
-    table_manager = TableManager(application.state.connector)
-
-    await table_manager.create_all_tables()
 
     yield
 
