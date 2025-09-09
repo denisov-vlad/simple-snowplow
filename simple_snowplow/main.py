@@ -40,13 +40,6 @@ def create_app() -> FastAPI:
         docs_url=None if settings.security.disable_docs else "/docs",
         redoc_url=None if settings.security.disable_docs else "/redoc",
         middlewares=[
-            Middleware(CurrentScopeSetMiddleware),
-            Middleware(CorrelationIdMiddleware),
-            Middleware(StructlogMiddleware),
-            Middleware(AccessLogMiddleware),
-            Middleware(SecurityHeadersMiddleware),
-            Middleware(RateLimitMiddleware),
-            Middleware(BrotliMiddleware),
             Middleware(
                 CORSMiddleware,
                 allow_origin_regex=".*",
@@ -55,7 +48,23 @@ def create_app() -> FastAPI:
                 allow_headers=["*"],
                 expose_headers=["*"],
             ),
+            Middleware(CurrentScopeSetMiddleware),
+            Middleware(CorrelationIdMiddleware),
+            Middleware(StructlogMiddleware),
+            Middleware(AccessLogMiddleware),
+            Middleware(SecurityHeadersMiddleware),
+            Middleware(RateLimitMiddleware),
+            Middleware(BrotliMiddleware),
         ],
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=".*",
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
     )
 
     # Add conditional middleware
