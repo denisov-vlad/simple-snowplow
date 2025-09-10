@@ -194,13 +194,17 @@ async def parse_contexts(
                 model.sid = UUID(data.pop("sessionId"))
             if data.get("userId"):
                 model.duid = UUID(data.pop("userId"))
-            model.event_index = data.get("eventIndex", 0)
-            first_event_time = data.get("firstEventTimestamp")
+            model.event_index = data.pop("eventIndex", 0)
+            first_event_time = data.pop("firstEventTimestamp")
             if first_event_time is not None:
                 model.first_event_time = datetime.fromisoformat(first_event_time)
-            model.previous_session_id = data.get("previousSessionId", DEFAULT_UUID)
-            model.first_event_id = data.get("firstEventId", DEFAULT_UUID)
-            model.storage_mechanism = data.get("storageMechanism", "")
+            previous_session_id = data.pop("previousSessionId", None)
+            if previous_session_id:
+                model.previous_session_id = UUID(previous_session_id)
+            first_event_id = data.pop("firstEventId", None)
+            if first_event_id:
+                model.first_event_id = UUID(first_event_id)
+            model.storage_mechanism = data.pop("storageMechanism", "")
         elif schema == "com.snowplowanalytics.mobile/screen":
             # data is duplicated in event field is it's view
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen/jsonschema/1-0-0
