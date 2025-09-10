@@ -33,10 +33,15 @@ To install Simple Snowplow for local development:
    git clone https://github.com/yourusername/simple-snowplow.git
    cd simple-snowplow
    ```
-3. Download the required JavaScript files:
+3. (One‑time) Initialize ClickHouse databases & tables:
    ```bash
-   ./simple_snowplow/utils/download_scripts.sh
+   # Ensure ClickHouse service is up first (in a separate terminal)
+   docker compose up -d clickhouse
+
+   # Create tables (idempotent – safe to re-run)
+   docker compose run app uv run python cli.py db init
    ```
+
 4. Start the application using Docker Compose:
    ```bash
    docker compose up
@@ -59,20 +64,16 @@ For a production environment:
      -v /path/to/your/config.toml:/app/settings.toml \
      -e SNOWPLOW_ENV=production \
      simple-snowplow
-   ```
 
 For Kubernetes deployment, check the example manifests in the `.github/k8s` directory.
 
 ## Configuration
 
-Simple Snowplow uses a combined configuration system with Dynaconf for loading settings and Pydantic for type validation. Configuration can be managed through:
+Simple Snowplow now uses a **single, explicit Pydantic Settings** configuration system (no Dynaconf). Configuration sources (highest precedence first):
 
-1. Default settings from `settings.toml`
-2. Secret settings from `.secrets.toml` (if exists)
-3. Environment variables with `SNOWPLOW_` prefix
-4. Custom settings file specified with `SNOWPLOW_SETTINGS_FILE`
+1. Explicit init arguments (rare; for programmatic embedding)
+2. Environment variables with the `SNOWPLOW_` prefix (nested keys via double underscores `__`)
 
-The configuration system prioritizes these sources in the order listed.
 
 ### Configuration Structure
 
@@ -108,7 +109,7 @@ For a complete list of configuration options, refer to the `settings.toml` file.
 
 ### Environment Variables
 
-You can override any configuration setting using environment variables with the `SNOWPLOW_` prefix and double underscores to represent nested keys:
+Override any setting using environment variables. Use double underscores to represent nesting:
 
 ```bash
 SNOWPLOW_COMMON__DEMO=true
@@ -118,34 +119,57 @@ SNOWPLOW_SECURITY__RATE_LIMITING__ENABLED=true
 
 ### Custom Configuration File
 
-To use a custom configuration file:
+Point to an alternate TOML configuration file:
 
 ```bash
-export SNOWPLOW_SETTINGS_FILE=/path/to/your/custom.toml
+export SNOWPLOW_SETTINGS_FILE=/path/to/custom-settings.toml
 ```
 
-The custom file only needs to include settings you want to override.
+Only include keys you want to override; unspecified values fall back to defaults.
 
 ### Environment-Specific Configuration
 
-Simple Snowplow supports environment-specific settings through the `SNOWPLOW_ENV` variable:
+Select environment via:
 
 ```bash
 export SNOWPLOW_ENV=production
 ```
 
-Settings for specific environments can be defined in the configuration file:
-
-```toml
-[development]
-logging.level = "DEBUG"
-
-[production]
-logging.level = "WARNING"
-security.disable_docs = true
-```
+Add a top-level table in `settings.toml` named after the environment (`[production]`, `[staging]`, etc.) to override base values. Keys are written using nested TOML table syntax or dotted assignments, both are supported.
 
 ## Usage
+
+### Database Initialization
+
+Table creation has been moved out of the FastAPI startup sequence and is now handled explicitly via the CLI. This gives you predictable, repeatable migrations and avoids race conditions on multi-instance deployments.
+
+You only need to run the init command when:
+
+* First installation (fresh ClickHouse instance)
+* You changed table-related configuration (e.g. engine, partitioning, cluster_name)
+* Upgrading to a version that adds new tables / columns (future migrations)
+
+Run in Docker Compose (after the image is built):
+```bash
+docker compose up -d clickhouse
+docker compose run app uv run python cli.py db init
+docker compose up -d app
+```
+
+Idempotency: The command uses `CREATE DATABASE IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`; re-running is safe. If you change schema definitions (e.g. `order_by`, `engine`) you must manually apply migrations (dropping/recreating or performing ALTER statements) – the CLI purposefully does not perform destructive changes.
+
+Troubleshooting:
+* Connection errors: ensure the hostname matches `SNOWPLOW_CLICKHOUSE__CONNECTION__HOST` (defaults to `clickhouse` inside Docker network).
+* Cluster setup: set `SNOWPLOW_CLICKHOUSE__CONFIGURATION__CLUSTER_NAME` before running init so distributed tables are created.
+* Permissions: use a ClickHouse user with `CREATE DATABASE` and `CREATE TABLE` privileges.
+
+### Downloading Tracker Scripts via CLI
+
+Instead of the shell script you can use the built-in command:
+```bash
+uv run python simple_snowplow/cli.py scripts download
+```
+This will place `sp.js`, `sp.js.map`, plugin bundle, and `loader.js` copies in `simple_snowplow/static/` and adjust the source map `file` field for the loader copy.
 
 ### Web Tracking
 

@@ -8,8 +8,7 @@ import structlog
 from elasticapm.contrib.asyncio.traces import async_capture_span
 
 from routers.tracker.models.snowplow import (
-    PayloadElementBaseModel,
-    PayloadElementPostModel,
+    PayloadElementModel,
     PayloadModel,
 )
 from routers.tracker.parsers.ip import convert_ip
@@ -21,7 +20,7 @@ logger = structlog.get_logger(__name__)
 
 @async_capture_span()
 async def process_data(
-    body: PayloadElementBaseModel | PayloadElementPostModel | PayloadModel,
+    body: PayloadElementModel | PayloadModel,
     user_agent: str | None,
     user_ip: Any,
     cookies: str | None,
@@ -62,7 +61,8 @@ async def process_data(
     result = []
     for item in data:
         payload_data = await parse_payload(item, cookies)
-        item_data = {**base, **payload_data}
+        item_data = {**base, **payload_data.model_dump()}
+        logger.info("Processed item", item_data=payload_data)
         result.append(item_data)
 
     return result

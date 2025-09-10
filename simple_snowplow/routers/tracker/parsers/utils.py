@@ -5,7 +5,7 @@ from elasticapm.contrib.asyncio.traces import async_capture_span
 
 
 @async_capture_span()
-async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
+def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
     """
     Parse base64 encoded data.
 
@@ -31,14 +31,13 @@ async def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
     return base64.b64decode(data_bytes, altchars=altchars).decode("UTF-8")
 
 
-@async_capture_span()
-async def find_available(unencoded: str | None, encoded: str | None) -> dict | None:
+def find_available(unencoded: str | None, encoded: str | None) -> dict | None:
     result = None
 
     if unencoded:
         result = unencoded
     elif encoded:
-        result = await parse_base64(encoded)
+        result = parse_base64(encoded)
 
     if result is not None:
         return orjson.loads(result)

@@ -14,11 +14,11 @@ from core.config import settings
 from elasticapm.contrib.asyncio.traces import async_capture_span
 
 from routers.tracker.models.snowplow import (
-    PayloadElementBaseModel,
-    PayloadElementPostModel,
+    InsertModel,
+    PayloadElementModel,
     StructuredEvent,
 )
-from routers.tracker.parsers.utils import find_available, parse_base64
+from routers.tracker.parsers.utils import parse_base64
 
 logger = structlog.stdlib.get_logger()
 
@@ -56,7 +56,6 @@ EMPTY_INTS = ("event_index",)
 DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
 DEFAULT_DATE = datetime(1970, 1, 1)
 
-PayloadType = PayloadElementBaseModel | PayloadElementPostModel
 schemas = settings.common.snowplow.schemas
 
 
@@ -104,20 +103,23 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
 
 
 @async_capture_span()
-async def parse_contexts(contexts: dict[str, Any] | None) -> dict[str, Any]:
+async def parse_contexts(
+    contexts: dict[str, Any] | None,
+    model: InsertModel,
+) -> InsertModel:
     """
     Parse Snowplow contexts.
 
     Args:
         contexts: The contexts dictionary
+        model: The InsertModel to update
 
     Returns:
-        Processed contexts dictionary
+        Processed InsertModel with updated fields
     """
-    result: dict[str, Any] = {dict_name: {} for dict_name in EMPTY_DICTS}
 
     if not contexts or "data" not in contexts:
-        return result
+        return model
 
     for context in contexts["data"]:
         bad_contexts = False
@@ -143,20 +145,20 @@ async def parse_contexts(contexts: dict[str, Any] | None) -> dict[str, Any]:
         # Process different context types based on schema
         if schema == "com.acme/static_context":
             for k, v in data.items():
-                result["extra"][k] = v
+                model.extra[k] = v
         elif schema == "org.w3/PerformanceTiming":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceTiming/jsonschema/1-0-0
-            result["extra"]["performance_timing"] = data
+            model.extra["performance_timing"] = data
         elif schema == "org.ietf/http_client_hints":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/org.ietf/http_client_hints/jsonschema/1-0-0
-            result["extra"]["client_hints"] = data
+            model.extra["client_hints"] = data
         elif schema in ("com.google.analytics/cookies", "com.google.ga4/cookies"):
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.google.analytics/cookies/jsonschema/1-0-0
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.google.ga4/cookies/jsonschema/1-0-0
-            result["extra"]["ga_cookies"] = data
+            model.extra["ga_cookies"] = data
         elif schema == "com.snowplowanalytics.snowplow/web_page":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0
-            result["view_id"] = data["id"]
+            model.view_id = data["id"]
         elif schema in (
             "dev.amp.snowplow/amp_session",
             "dev.amp.snowplow/amp_id",
@@ -165,116 +167,124 @@ async def parse_contexts(contexts: dict[str, Any] | None) -> dict[str, Any]:
             # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_session/jsonschema/1-0-0
             # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_id/jsonschema/1-0-0
             # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_web_page/jsonschema/1-0-0
-            result["amp"] = dict(result["amp"], **data)
+            model.amp = dict(model.amp, **data)
         elif schema == schemas.page_data:
-            result["page_data"] = dict(result["page_data"], **data)
+            model.page_data = dict(model.page_data, **data)
         elif schema == "com.snowplowanalytics.snowplow/mobile_context":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-3
-            result["device_brand"] = data.pop("deviceManufacturer")
-            result["device_model"] = data.pop("deviceModel")
-            result["os_family"] = data.pop("osType")
-            result["os_version_string"] = data.pop("osVersion")
-            result["device_is_mobile"] = 1
-            result["device_is_tablet"] = 0
-            result["device_is_touch_capable"] = 1
-            result["device_is_pc"] = 0
-            result["device_is_bot"] = 0
-            result["device_extra"] = data
+            model.device_brand = data.pop("deviceManufacturer")
+            model.device_model = data.pop("deviceModel")
+            model.os_family = data.pop("osType")
+            model.os_version_string = data.pop("osVersion")
+            model.device_is_mobile = True
+            model.device_is_touch_capable = True
+            model.device_extra = data
         elif schema == "com.snowplowanalytics.mobile/application":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application/jsonschema/1-0-0
             # TODO: support for web
             for k in ("version", "build"):
                 if k in data and isinstance(data[k], str):
-                    result[f"app_{k}"] = data[k]
+                    setattr(model, f"app_{k}", data[k])
         elif schema == "com.snowplowanalytics.snowplow/client_session":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2
             visit_count = data.pop("sessionIndex", 0)
             if visit_count:
-                result["vid"] = visit_count
+                model.vid = visit_count
             if data.get("sessionId"):
-                result["sid"] = UUID(data.pop("sessionId"))
+                model.sid = UUID(data.pop("sessionId"))
             if data.get("userId"):
-                result["duid"] = UUID(data.pop("userId"))
-            result["event_index"] = data.get("eventIndex", 0)
+                model.duid = UUID(data.pop("userId"))
+            model.event_index = data.get("eventIndex", 0)
             first_event_time = data.get("firstEventTimestamp")
             if first_event_time is not None:
-                result["first_event_time"] = datetime.fromisoformat(first_event_time)
-            result["previous_session_id"] = data.get("previousSessionId", DEFAULT_UUID)
-            result["first_event_id"] = data.get("firstEventId", DEFAULT_UUID)
-            result["storage_mechanism"] = data.get("storageMechanism", "")
+                model.first_event_time = datetime.fromisoformat(first_event_time)
+            model.previous_session_id = data.get("previousSessionId", DEFAULT_UUID)
+            model.first_event_id = data.get("firstEventId", DEFAULT_UUID)
+            model.storage_mechanism = data.get("storageMechanism", "")
         elif schema == "com.snowplowanalytics.mobile/screen":
             # data is duplicated in event field is it's view
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen/jsonschema/1-0-0
-            result["url"] = data.pop("name")
-            result["view_id"] = data.pop("id")
-            result["screen"] = dict(result["screen"], **data)
+            model.url = data.pop("name")
+            model.view_id = data.pop("id")
+            model.screen = dict(model.screen, **data)
         elif schema == "com.snowplowanalytics.snowplow/browser_context":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0
             if "resolution" in data:
-                result["res"] = data.pop("resolution")
+                model.res = data.pop("resolution")
             if "viewport" in data:
-                result["vp"] = data.pop("viewport")
+                model.vp = data.pop("viewport")
             if "documentSize" in data:
-                result["ds"] = data.pop("documentSize")
-            result["browser_extra"] = data
+                model.ds = data.pop("documentSize")
+            if data:
+                model.browser_extra = data
         elif schema == "com.snowplowanalytics.snowplow/geolocation_context":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0
-            result["geolocation"] = data
+            model.geolocation = data
         elif schema == schemas.screen_data:
-            result["screen"] = dict(result["screen"], **data)
+            model.screen = dict(model.screen, **data)
         elif schema == schemas.user_data:
-            result["user_data"] = dict(result["user_data"], **data)
+            model.user_data = dict(model.user_data, **data)
 
         # Unstructured events contexts
         elif schema == schemas.ad_data:
-            result["ue_context"]["ad_data"] = data
+            model.ue["ad_data"] = data
         elif schema == "com.snowplowanalytics.mobile/screen_summary":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen_summary/jsonschema/1-0-0
-            result["ue_context"]["screen_summary"] = data
+            model.ue["screen_summary"] = data
         elif schema == "com.snowplowanalytics.mobile/application_lifecycle":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application_lifecycle/jsonschema/1-0-0
-            result["ue_context"]["app_lifecycle"] = data
+            model.ue["app_lifecycle"] = data
         elif schema == "com.android.installreferrer.api/referrer_details":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.android.installreferrer.api/referrer_details/jsonschema/1-0-0
-            result["ue_context"]["install_referrer"] = data
+            model.ue["install_referrer"] = data
         elif schema == "org.w3/PerformanceNavigationTiming":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceNavigationTiming/jsonschema/1-0-0
-            result["ue_context"]["performance_navigation_timing"] = data
+            model.ue["performance_navigation_timing"] = data
         elif schema == "com.snowplowanalytics.mobile/deep_link_received":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/deep_link/jsonschema/1-0-0
-            result["ue_context"]["deep_link_received"] = data
+            model.ue["deep_link_received"] = data
         elif schema == "com.snowplowanalytics.mobile/message_notification":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/message_notification/jsonschema/1-0-0
-            result["ue_context"]["message_notification"] = data
+            model.ue["message_notification"] = data
         else:
             logger.warning("Schema has no parser", data=data, schema=schema)
 
-    return result
+    return model
 
 
 @async_capture_span()
-async def parse_event(event: dict[str, Any]) -> dict[str, Any]:
+async def parse_event(event: dict[str, Any] | None, model: InsertModel) -> InsertModel:
     """
     Parse Snowplow event data.
 
     Args:
         event: The event dictionary
+        model: The InsertModel to update
 
     Returns:
-        Processed event dictionary
+        Processed InsertModel with updated fields
     """
-    event = event["data"]
-    if event["schema"] == schemas.u2s_data:
-        result = StructuredEvent.model_validate(event["data"]).model_dump()
-        result["e"] = "se"
+
+    if event is None or "data" not in event:
+        return model
+
+    event_payload: dict[str, Any] = event["data"]
+    if event_payload["schema"] == schemas.u2s_data:
+        se = StructuredEvent.model_validate(event_payload["data"])
+        for field_name in StructuredEvent.model_fields:
+            setattr(model, field_name, getattr(se, field_name))
+        model.e = "se"
     else:
-        event_name = event["schema"].split("/")[-3]
-        result = {"ue": {event_name: event["data"]}}
-    return result
+        event_name = event_payload["schema"].split("/")[-3]
+        model.ue[event_name] = event_payload["data"]
+    return model
 
 
 @async_capture_span()
-async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, Any]:
+async def parse_payload(
+    element: PayloadElementModel,
+    cookies: str | None,
+) -> InsertModel:
     """
     Parse a Snowplow event payload.
 
@@ -285,123 +295,88 @@ async def parse_payload(element: PayloadType, cookies: str | None) -> dict[str, 
     Returns:
         Processed payload dictionary
     """
-    element_dict = element.model_dump()
-    # Explicit annotation so static type checkers allow heterogeneous values
-    result: dict[str, Any] = {
-        **{string_name: "" for string_name in EMPTY_STRINGS},
-        **{date_name: DEFAULT_DATE for date_name in EMPTY_DATES},
-        **{uuid_name: DEFAULT_UUID for uuid_name in EMPTY_UUIDS},
-        **{int_name: 0 for int_name in EMPTY_INTS},
-    }
 
-    result.update(element_dict)
+    result = InsertModel.model_validate(element, from_attributes=True)
 
-    # Process contexts
-    context = await find_available(
-        unencoded=element_dict.pop("co", None),
-        encoded=element_dict.pop("cx", None),
-    )
-    parsed_context = await parse_contexts(context)
-    result.update(parsed_context)
+    result = await parse_contexts(element.contexts, result)
+    result = await parse_event(element.ue_context, result)
 
-    # Process unstructured events
-    event_context = await find_available(
-        unencoded=element_dict.pop("ue_pr", None),
-        encoded=element_dict.pop("ue_px", None),
-    )
-
-    if event_context is not None:
-        event_data = await parse_event(event_context)
-        result.update(event_data)
-    else:
-        result["ue"] = {}
-
-    ue_context = result.pop("ue_context", {})
-    if ue_context:
-        result["ue"] = dict(result["ue"], **ue_context)
-
-    # Handle page pings
-    if result["e"] == "pp":
-        result["extra"]["page_ping"] = {
-            "min_x": result.pop("pp_mix", 0),
-            "max_x": result.pop("pp_max", 0),
-            "min_y": result.pop("pp_miy", 0),
-            "max_y": result.pop("pp_may", 0),
-        }
+    if element.ping_context:
+        result.ue["page_ping"] = element.ping_context
 
     # AMP-specific processing
-    if "uid" in result.get("amp", {}):
-        result["uid"] = result["amp"].pop("userId")
-    if result["e"] == "ue" and "amp_page_ping" in result.get("ue", {}):
-        result["e"] = "pp"
-        result["extra"]["amp_page_ping"] = result["ue"].pop("amp_page_ping")
-    if result.get("amp", {}).get("domainUserid"):
-        result["duid"] = UUID(result["amp"].pop("domainUserid"))
+    if "uid" in result.amp:
+        result.uid = result.amp.pop("userId")
+    if result.e == "ue" and "amp_page_ping" in result.ue:
+        result.e = "pp"
+        result.ue["amp_page_ping"] = result.ue.pop("amp_page_ping")
+    if result.amp.get("domainUserid"):
+        result.duid = UUID(result.amp.pop("domainUserid"))
 
     # Parse URL for AMP linker
-    if result.get("url") and isinstance(result["url"], str):
-        parsed_url = urlparse.urlparse(result["url"])
+    if result.url:
+        parsed_url = urlparse.urlparse(result.url)
         query_string = urlparse.parse_qs(parsed_url.query)
 
         if query_string.get("sp_amp_linker", []):
             amp_linker = query_string["sp_amp_linker"][0]
             try:
                 unknown_1, unknown_2, unknown_3, amp_device_id = amp_linker.split("*")
-                amp_device_id = await parse_base64(amp_device_id)
-                result["amp"]["device_id"] = amp_device_id
+                amp_device_id = parse_base64(amp_device_id)
+                result.amp["device_id"] = amp_device_id
             except Exception as e:
                 logger.warning(f"Failed to parse AMP linker: {e}")
 
     # Get cookie information if device ID is missing
-    if result.get("duid") is None:
+    if result.duid is None:
         sp_cookies = await parse_cookies(cookies)
         if sp_cookies and "device_id" in sp_cookies:
-            result["duid"] = UUID(sp_cookies["device_id"])
+            result.duid = UUID(sp_cookies["device_id"])
 
     # Handle screen_view events
-    if "screen_view" in result.get("ue", {}):
-        result["e"] = "pv"
-        result["view_id"] = result["ue"]["screen_view"].pop("id")
-        result["url"] = result["ue"]["screen_view"].pop("name")
+    if "screen_view" in result.ue:
+        result.e = "pv"
+        result.view_id = result.ue["screen_view"].pop("id")
+        result.url = result.ue["screen_view"].pop("name")
 
-        if "previousName" in result["ue"]["screen_view"]:
-            result["refr"] = result["ue"]["screen_view"].pop("previousName")
-            if result["refr"] == "Unknown":
-                result["refr"] = ""
+        if "previousName" in result.ue["screen_view"]:
+            result.refr = result.ue["screen_view"].pop("previousName")
+            if result.refr == "Unknown":
+                result.refr = ""
         else:
-            result["refr"] = ""
+            result.refr = ""
 
-        result["screen"].update(result["ue"].pop("screen_view"))
+        result.screen.update(result.ue.pop("screen_view"))
 
     # Handle screen name in screen context
-    if "screen" in result and "screen_name" in result["screen"]:
-        result["url"] = result["screen"].pop("screen_name")
+    if "screen_name" in result.screen:
+        result.url = result.screen.pop("screen_name")
 
     # Parse structured event properties if they are JSON
-    if result.get("se_pr") and isinstance(result["se_pr"], str):
+    if result.se_pr and isinstance(result.se_pr, str):
         try:
-            result["se_pr"] = orjson.loads(result["se_pr"])
+            result.se_pr = orjson.loads(result.se_pr)
         except (orjson.JSONDecodeError, TypeError):
-            result["se_pr"] = {"ex-property": result["se_pr"]}
+            result.se_pr = {"ex-property": result.se_pr}
         finally:
-            if not isinstance(result["se_pr"], dict):
-                result["se_pr"] = {"ex-property": result["se_pr"]}
+            if not isinstance(result.se_pr, dict):
+                result.se_pr = {"ex-property": result.se_pr}
     else:
-        result["se_pr"] = {}
+        result.se_pr = {}
 
-    if "se_va" in result and result["se_va"]:
-        if not isinstance(result["se_va"], (float, int)):
+    if result.se_va:
+        if not isinstance(result.se_va, (float, int)):
             try:
-                result["se_va"] = float(result["se_va"])
+                result.se_va = float(result.se_va)
             except ValueError:
-                result["se_pr"]["ex-value"] = result["se_va"]
-                result["se_va"] = 0.0
+                result.se_pr["ex-value"] = result.se_va
+                result.se_va = 0.0
     else:
-        result["se_va"] = 0.0
+        result.se_va = 0.0
 
-    is_mobile = result.get("extra", {}).get("client_hints", {}).get("isMobile")
+    is_mobile = result.extra.get("client_hints", {}).get("isMobile")
     if is_mobile is not None:
-        result["device_is_mobile"] = int(is_mobile)
-        result["device_is_pc"] = int(not is_mobile)
+        result.device_is_mobile = bool(int(is_mobile))
+        result.device_is_pc = bool(int(not is_mobile))
 
     return result

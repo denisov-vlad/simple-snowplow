@@ -27,7 +27,7 @@ async def parse_agent(string: str) -> dict[str, Any]:
         Dictionary of parsed user agent information
     """
     ua = parse(string)
-    is_bot = int(crawler_detect.isCrawler(string))
+    is_bot = crawler_detect.isCrawler(string)
 
     data = {
         "user_agent": string,
@@ -42,10 +42,10 @@ async def parse_agent(string: str) -> dict[str, Any]:
         "device_brand": "",
         "device_model": "",
         "device_extra": {},
-        "device_is_mobile": 0,
-        "device_is_tablet": 0,
-        "device_is_touch_capable": 0,
-        "device_is_pc": 0,
+        "device_is_mobile": False,
+        "device_is_tablet": False,
+        "device_is_touch_capable": False,
+        "device_is_pc": False,
         "device_is_bot": is_bot,
     }
 

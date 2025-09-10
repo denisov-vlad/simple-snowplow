@@ -11,7 +11,7 @@ from starlette.status import HTTP_204_NO_CONTENT
 
 from routers.tracker.handlers import process_data
 from routers.tracker.models.snowplow import (
-    PayloadElementBaseModel,
+    PayloadElementModel,
     PayloadModel,
 )
 
@@ -61,7 +61,7 @@ async def tracker_post(
 @elasticapm.async_capture_span()
 async def tracker_get(
     request: Request,
-    params: PayloadElementBaseModel = Depends(),
+    params: PayloadElementModel = Depends(),
     user_agent: str | None = Header(None),
     x_forwarded_for: IPvAnyAddress | str | None = Header(None),
     cookie: str | None = Header(None),
