@@ -158,7 +158,7 @@ async def parse_contexts(
             model.extra["ga_cookies"] = data
         elif schema == "com.snowplowanalytics.snowplow/web_page":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0
-            model.view_id = data["id"]
+            model.view_id = UUID(data["id"])
         elif schema in (
             "dev.amp.snowplow/amp_session",
             "dev.amp.snowplow/amp_id",
@@ -205,7 +205,7 @@ async def parse_contexts(
             # data is duplicated in event field is it's view
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen/jsonschema/1-0-0
             model.url = data.pop("name")
-            model.view_id = data.pop("id")
+            model.view_id = UUID(data.pop("id"))
             model.screen = dict(model.screen, **data)
         elif schema == "com.snowplowanalytics.snowplow/browser_context":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0
@@ -323,7 +323,7 @@ async def parse_payload(
             try:
                 unknown_1, unknown_2, unknown_3, amp_device_id = amp_linker.split("*")
                 amp_device_id = parse_base64(amp_device_id)
-                result.amp["device_id"] = amp_device_id
+                result.amp["device_id"] = UUID(amp_device_id)
             except Exception as e:
                 logger.warning(f"Failed to parse AMP linker: {e}")
 
@@ -336,7 +336,7 @@ async def parse_payload(
     # Handle screen_view events
     if "screen_view" in result.ue:
         result.e = "pv"
-        result.view_id = result.ue["screen_view"].pop("id")
+        result.view_id = UUID(result.ue["screen_view"].pop("id"))
         result.url = result.ue["screen_view"].pop("name")
 
         if "previousName" in result.ue["screen_view"]:
