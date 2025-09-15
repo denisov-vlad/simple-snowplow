@@ -123,10 +123,10 @@ async def parse_contexts(
 
     for context in contexts["data"]:
         bad_contexts = False
+        if not isinstance(context, dict):
+            bad_contexts = True
+            continue
         for key in ("schema", "data"):
-            if not isinstance(context, dict):
-                bad_contexts = True
-                continue
             if key not in context:
                 logger.warning(f"Empty {key} for payload", context=context)
                 continue
@@ -195,7 +195,7 @@ async def parse_contexts(
             if data.get("userId"):
                 model.duid = UUID(data.pop("userId"))
             model.event_index = data.pop("eventIndex", 0)
-            first_event_time = data.pop("firstEventTimestamp")
+            first_event_time = data.pop("firstEventTimestamp", None)
             if first_event_time is not None:
                 model.first_event_time = datetime.fromisoformat(first_event_time)
             previous_session_id = data.pop("previousSessionId", None)

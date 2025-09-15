@@ -16,7 +16,7 @@ async def remove_none_values(data: list[str | None]) -> list[str]:
 
 
 @async_capture_span()
-async def parse_agent(string: str) -> dict[str, Any]:
+async def parse_agent(string: str | None) -> dict[str, Any]:
     """
     Parse a user agent string into structured data.
 
@@ -26,11 +26,9 @@ async def parse_agent(string: str) -> dict[str, Any]:
     Returns:
         Dictionary of parsed user agent information
     """
-    ua = parse(string)
-    is_bot = crawler_detect.isCrawler(string)
 
     data = {
-        "user_agent": string,
+        "user_agent": "",
         "browser_family": "",
         "browser_version": [],
         "browser_version_string": "",
@@ -46,8 +44,15 @@ async def parse_agent(string: str) -> dict[str, Any]:
         "device_is_tablet": False,
         "device_is_touch_capable": False,
         "device_is_pc": False,
-        "device_is_bot": is_bot,
+        "device_is_bot": False,
     }
+
+    if string is None:
+        return data
+
+    ua = parse(string)
+    data["user_agent"] = string
+    data["device_is_bot"] = crawler_detect.isCrawler(string)
 
     if ua is None:
         return data
