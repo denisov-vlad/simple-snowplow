@@ -47,9 +47,8 @@ async def process_data(
     base = {"user_ip": await convert_ip(user_ip)}
 
     # Add user agent information if available
-    if user_agent:
-        ua_data = await parse_agent(user_agent)
-        base.update(ua_data)
+    ua_data = await parse_agent(user_agent)
+    base.update(ua_data)
 
     # Extract payload data
     if isinstance(body, PayloadModel):
