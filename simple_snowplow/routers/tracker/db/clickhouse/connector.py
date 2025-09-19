@@ -6,10 +6,10 @@ This module provides a connection to ClickHouse.
 
 from typing import Any
 
-import elasticapm
 import structlog
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
+from elasticapm.contrib.asyncio.traces import async_capture_span
 
 from routers.tracker.db.clickhouse.schemas.snowplow import TupleColumnDef
 
@@ -128,7 +128,7 @@ class ClickHouseConnector:
             table_name = self.tables[table_group]["distributed"]["name"]
         return table_name
 
-    @elasticapm.async_capture_span()
+    @async_capture_span()
     async def insert_rows(
         self,
         rows: list[dict[str, Any]],
@@ -172,7 +172,7 @@ class ClickHouseConnector:
                 column_types.append(field.type)
                 values.append(value)
 
-            async with elasticapm.async_capture_span("clickhouse_query"):
+            async with async_capture_span("clickhouse_query"):
                 try:
                     await self.conn.insert(
                         full_table_name,

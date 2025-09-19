@@ -43,12 +43,8 @@ async def process_data(
     Returns:
         List of processed event records ready for storage
     """
-    # Create base record with IP address
-    base = {"user_ip": await convert_ip(user_ip)}
-
-    # Add user agent information if available
+    user_ip = await convert_ip(user_ip)
     ua_data = await parse_agent(user_agent)
-    base.update(ua_data)
 
     # Extract payload data
     if isinstance(body, PayloadModel):
@@ -59,9 +55,8 @@ async def process_data(
     # Process each payload element
     result = []
     for item in data:
-        payload_data = await parse_payload(item, cookies)
-        item_data = {**base, **payload_data.model_dump()}
-        logger.info("Processed item", item_data=payload_data)
-        result.append(item_data)
+        payload_data = await parse_payload(item, ua_data, user_ip, cookies)
 
+        item_data = payload_data.model_dump()
+        result.append(item_data)
     return result

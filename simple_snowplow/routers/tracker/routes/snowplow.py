@@ -4,7 +4,7 @@ Route handlers for Snowplow events.
 
 import base64
 
-import elasticapm
+from elasticapm.contrib.asyncio.traces import async_capture_span
 from fastapi import Depends, Header, Request, Response
 from pydantic import IPvAnyAddress
 from starlette.status import HTTP_204_NO_CONTENT
@@ -20,7 +20,7 @@ PIXEL = base64.b64decode(
 )
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def tracker_cors():
     """
     Handle CORS preflight requests.
@@ -31,7 +31,7 @@ async def tracker_cors():
     return
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def tracker_post(
     request: Request,
     body: PayloadModel,
@@ -58,7 +58,7 @@ async def tracker_post(
     return Response(status_code=HTTP_204_NO_CONTENT)
 
 
-@elasticapm.async_capture_span()
+@async_capture_span()
 async def tracker_get(
     request: Request,
     params: PayloadElementModel = Depends(),

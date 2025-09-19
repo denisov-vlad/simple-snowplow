@@ -5,6 +5,7 @@ Payload parsing functionality for Snowplow events.
 import urllib.parse as urlparse
 from datetime import datetime
 from http.cookies import SimpleCookie
+from ipaddress import IPv4Address
 from typing import Any
 from uuid import UUID
 
@@ -17,6 +18,7 @@ from routers.tracker.models.snowplow import (
     InsertModel,
     PayloadElementModel,
     StructuredEvent,
+    UserAgentModel,
 )
 from routers.tracker.parsers.utils import parse_base64
 
@@ -287,6 +289,8 @@ async def parse_event(event: dict[str, Any] | None, model: InsertModel) -> Inser
 @async_capture_span()
 async def parse_payload(
     element: PayloadElementModel,
+    user_agent: UserAgentModel,
+    ip: IPv4Address,
     cookies: str | None,
 ) -> InsertModel:
     """
@@ -294,14 +298,19 @@ async def parse_payload(
 
     Args:
         element: The payload element
+        user_agent: The parsed user agent data
+        ip: The user's IP address
         cookies: The cookies string
 
     Returns:
-        Processed payload dictionary
+        Processed InsertModel with all data combined
     """
 
-    result = InsertModel.model_validate(element, from_attributes=True)
+    data = element.model_dump()
+    ua_data = user_agent.model_dump()
+    data = {**ua_data, **data, "user_ip": ip}
 
+    result = InsertModel.model_validate(data)
     result = await parse_contexts(element.contexts, result)
     result = await parse_event(element.ue_context, result)
 

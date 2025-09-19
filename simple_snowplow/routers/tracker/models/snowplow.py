@@ -4,6 +4,7 @@ Data models for Snowplow events.
 
 import urllib.parse as urlparse
 from datetime import datetime
+from ipaddress import IPv4Address
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
@@ -211,7 +212,27 @@ class PayloadModel(SnowPlowModel):
     data: list[PayloadElementModel] = Field([])
 
 
-class InsertModel(PayloadBase):
+class UserAgentModel(Model):
+    user_agent: str = Field("", title="User agent string")
+    browser_family: str = Field("", title="Browser family")
+    browser_version: list[str] = Field([], title="Browser version")
+    browser_version_string: str = Field("", title="Browser version string")
+    browser_extra: dict[str, Any] = Field({}, title="Browser extra data")
+    os_family: str = Field("", title="Operating system family")
+    os_version: list[str] = Field([], title="Operating system version")
+    os_version_string: str = Field("", title="Operating system version string")
+    lang: str = Field("", title="Language")
+    device_brand: str = Field("", title="Device brand")
+    device_model: str = Field("", title="Device model")
+    device_extra: dict[str, Any] = Field({}, title="Device extra data")
+    device_is_mobile: bool = Field(False, title="Is device mobile?")
+    device_is_tablet: bool = Field(False, title="Is device tablet?")
+    device_is_touch_capable: bool = Field(False, title="Is device touch capable?")
+    device_is_pc: bool = Field(False, title="Is device PC?")
+    device_is_bot: bool = Field(False, title="Is device bot?")
+
+
+class InsertModel(PayloadBase, UserAgentModel):
     ue: dict[str, Any] = Field({}, title="The unstructured event")
     extra: dict[str, Any] = Field(
         {},
@@ -229,19 +250,11 @@ class InsertModel(PayloadBase):
     app_version: str = Field("", title="App version")
     app_build: str = Field("", title="App build")
     storage_mechanism: str = Field("", title="Storage mechanism")
-    device_model: str = Field("", title="Device model")
-    device_brand: str = Field("", title="Device brand")
-    os_family: str = Field("", title="Operating system family")
-    os_version_string: str = Field("", title="Operating system version")
-    device_is_mobile: bool = Field(False, title="Is device mobile?")
-    device_is_tablet: bool = Field(False, title="Is device tablet?")
-    device_is_touch_capable: bool = Field(False, title="Is device touch capable?")
-    device_is_pc: bool = Field(False, title="Is device PC?")
-    device_is_bot: bool = Field(False, title="Is device bot?")
 
     first_event_time: datetime = Field(DEFAULT_DATE, title="First event time")
     view_id: UUID = Field(DEFAULT_UUID, title="View ID")
     previous_session_id: UUID = Field(DEFAULT_UUID, title="Previous session ID")
     first_event_id: UUID = Field(DEFAULT_UUID, title="First event ID")
-
     event_index: int = Field(0, title="Event index")
+
+    user_ip: IPv4Address = Field(..., title="User IP address")
