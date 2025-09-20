@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import base64
+from typing import Final
 
-import requests
+import httpx
 from core.config import settings
+from fastapi import HTTPException
 from fastapi.responses import Response
 from fastapi.routing import APIRouter
 
@@ -12,6 +14,7 @@ from routers.proxy import models
 PROXY_CONFIG = settings.proxy
 PROXY_ENDPOINT = settings.common.snowplow.endpoints.proxy_endpoint
 HOSTNAME = settings.common.hostname
+PROXY_TIMEOUT: Final[float] = 10.0
 
 
 router = APIRouter(tags=["proxy"], prefix=PROXY_ENDPOINT)
@@ -57,11 +60,18 @@ async def proxy_hash(data: models.HashModel):
 async def proxy(schema: str, host: str, path: str = ""):
     url = f"{schema}://{decode(host)}/{decode(path)}"
 
-    r = requests.get(url)
-    content = r.content
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.get(url, timeout=PROXY_TIMEOUT)
+    except httpx.TimeoutException as exc:
+        msg = f"Proxy request to '{url}' timed out"
+        raise HTTPException(status_code=504, detail=msg) from exc
+    except httpx.RequestError as exc:  # pragma: no cover - specific network errors
+        msg = f"Proxy request to '{url}' failed"
+        raise HTTPException(status_code=502, detail=msg) from exc
 
     return Response(
-        content=content,
-        status_code=r.status_code,
-        media_type=r.headers["Content-Type"],
+        content=response.content,
+        status_code=response.status_code,
+        media_type=response.headers.get("Content-Type", "application/octet-stream"),
     )
