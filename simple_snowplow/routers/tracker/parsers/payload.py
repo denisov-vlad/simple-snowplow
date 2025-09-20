@@ -88,14 +88,17 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
         # Extract domain user ID from sp cookie
         if name.startswith("_sp_id"):
             parts = cookie.value.split(".")
-            if len(parts) > 0:
-                result["device_id"] = parts[0]
-                result["created_time"] = parts[1]
-                if parts[2] is not None:
-                    result["vid"] = parts[2]
-                result["now_time"] = parts[3]
-                result["last_visit_time"] = parts[4]
-                result["session_id"] = parts[5]
+            if len(parts) < 6:
+                logger.warning("Incomplete _sp_id cookie", cookie_value=cookie.value)
+                continue
+
+            result["device_id"] = parts[0]
+            result["created_time"] = parts[1]
+            if parts[2] is not None:
+                result["vid"] = parts[2]
+            result["now_time"] = parts[3]
+            result["last_visit_time"] = parts[4]
+            result["session_id"] = parts[5]
 
         # # Extract session ID from sp cookie
         # if name.startswith("_sp_ses"):
