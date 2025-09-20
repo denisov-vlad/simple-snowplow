@@ -58,15 +58,6 @@ def create_app() -> FastAPI:
         ],
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origin_regex=".*",
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-    )
-
     # Add conditional middleware
     if settings.security.enable_https_redirect:
         app.add_middleware(HTTPSRedirectMiddleware)
