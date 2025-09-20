@@ -8,7 +8,7 @@ PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT))
 sys.path.append(str(PROJECT_ROOT / "simple_snowplow"))
 
-from simple_snowplow.routers import proxy as proxy_module
+from simple_snowplow.routers import proxy as proxy_module  # noqa: E402
 
 
 class _DummyResponse:

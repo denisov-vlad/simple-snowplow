@@ -7,13 +7,12 @@ import base64
 from elasticapm.contrib.asyncio.traces import async_capture_span
 from fastapi import Depends, Header, Request, Response
 from pydantic import IPvAnyAddress
-from starlette.status import HTTP_204_NO_CONTENT
-
 from routers.tracker.handlers import process_data
 from routers.tracker.models.snowplow import (
     PayloadElementModel,
     PayloadModel,
 )
+from starlette.status import HTTP_204_NO_CONTENT
 
 PIXEL = base64.b64decode(
     b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",

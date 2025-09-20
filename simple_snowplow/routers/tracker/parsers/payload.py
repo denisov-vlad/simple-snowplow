@@ -13,7 +13,6 @@ import orjson
 import structlog
 from core.config import settings
 from elasticapm.contrib.asyncio.traces import async_capture_span
-
 from routers.tracker.models.snowplow import (
     InsertModel,
     PayloadElementModel,

@@ -3,7 +3,6 @@ Table management operations for ClickHouse databases.
 """
 
 import structlog
-
 from routers.tracker.db.clickhouse.connector import ClickHouseConnector
 from routers.tracker.db.clickhouse.schemas import get_fields_for_table_group
 

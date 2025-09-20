@@ -10,7 +10,6 @@ import structlog
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
 from elasticapm.contrib.asyncio.traces import async_capture_span
-
 from routers.tracker.db.clickhouse.schemas.snowplow import TupleColumnDef
 
 logger = structlog.get_logger(__name__)

@@ -2,9 +2,8 @@ from contextlib import asynccontextmanager
 
 from clickhouse_connect import get_async_client
 from clickhouse_connect.driver.httputil import get_pool_manager
-from routers.tracker.db.clickhouse import ClickHouseConnector
-
 from core.config import settings
+from routers.tracker.db.clickhouse import ClickHouseConnector
 
 PERFORMANCE_CONFIG = settings.performance
 CLICKHOUSE_CONFIG = settings.clickhouse

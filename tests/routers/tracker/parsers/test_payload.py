@@ -1,3 +1,5 @@
+import asyncio
+import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -10,7 +12,7 @@ if "core" not in sys.modules:
     core_module = ModuleType("core")
     config_module = ModuleType("core.config")
     config_module.settings = SimpleNamespace(
-        common=SimpleNamespace(snowplow=SimpleNamespace(schemas={}))
+        common=SimpleNamespace(snowplow=SimpleNamespace(schemas={})),
     )
     core_module.config = config_module
     sys.modules["core"] = core_module
@@ -109,10 +111,9 @@ if "routers" not in sys.modules:
     sys.modules["routers.tracker.models"] = models_module
     sys.modules["routers.tracker.models.snowplow"] = snowplow_module
 
-import asyncio
-import importlib.util
-
-module_path = PROJECT_ROOT / "simple_snowplow" / "routers" / "tracker" / "parsers" / "payload.py"
+module_path = (
+    PROJECT_ROOT / "simple_snowplow" / "routers" / "tracker" / "parsers" / "payload.py"
+)
 spec = importlib.util.spec_from_file_location("payload_module", module_path)
 payload_module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None

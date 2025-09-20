@@ -4,9 +4,8 @@ User agent parsing functionality.
 
 from crawlerdetect import CrawlerDetect
 from elasticapm.contrib.asyncio.traces import async_capture_span
-from ua_parser import parse
-
 from routers.tracker.models.snowplow import UserAgentModel
+from ua_parser import parse
 
 crawler_detect = CrawlerDetect()
 

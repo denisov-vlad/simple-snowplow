@@ -15,7 +15,6 @@ from pydantic import (
     computed_field,
     field_validator,
 )
-
 from routers.tracker.parsers.utils import find_available
 
 from .base import Model

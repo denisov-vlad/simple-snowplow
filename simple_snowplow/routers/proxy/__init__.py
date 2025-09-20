@@ -8,7 +8,7 @@ from core.config import settings
 from fastapi import HTTPException
 from fastapi.responses import Response
 from fastapi.routing import APIRouter
-
+from pydantic import AnyHttpUrl
 from routers.proxy import models
 
 PROXY_CONFIG = settings.proxy
@@ -29,7 +29,7 @@ def decode(s: str) -> str:
 
 
 @router.post("/hash")
-async def proxy_hash(data: models.HashModel):
+async def proxy_hash(data: models.HashModel) -> AnyHttpUrl:
     return_encoded = False
 
     domain = data.url.host
@@ -46,11 +46,20 @@ async def proxy_hash(data: models.HashModel):
         return_encoded = True
 
     if not return_encoded:
-        return data.url
+        return AnyHttpUrl(data.url)
 
-    result = (
-        f"{HOSTNAME}{PROXY_ENDPOINT}/route/{data.url.scheme}/"
-        f"{encode(data.url.host)}/{full_path}"
+    path = (
+        f"{PROXY_ENDPOINT}/route/{data.url.scheme}/{encode(data.url.host)}/{full_path}"
+    )
+
+    if path.startswith("/"):
+        path = path[1:]
+
+    result = AnyHttpUrl.build(
+        scheme=HOSTNAME.scheme,
+        host=HOSTNAME.host,
+        port=HOSTNAME.port,
+        path=path,
     )
 
     return result
