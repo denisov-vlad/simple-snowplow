@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import base64
 
 import requests
@@ -16,11 +18,11 @@ router = APIRouter(tags=["proxy"], prefix=PROXY_ENDPOINT)
 
 
 def encode(s: str) -> str:
-    return base64.b64encode(s.encode("ascii"), altchars=b"+_").decode("utf-8")
+    return base64.urlsafe_b64encode(s.encode("utf-8")).decode("utf-8")
 
 
 def decode(s: str) -> str:
-    return base64.urlsafe_b64decode(s).decode("UTF-8")
+    return base64.urlsafe_b64decode(s).decode("utf-8")
 
 
 @router.post("/hash")

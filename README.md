@@ -56,86 +56,45 @@ For a production environment:
    ```bash
    docker build -t simple-snowplow ./simple_snowplow
    ```
-3. Create a custom configuration file (see [Configuration](#configuration))
+3. Set the configuration you need using environment variables (see [Configuration](#configuration))
 4. Run the Docker container:
    ```bash
    docker run -d \
      -p 8000:80 \
-     -v /path/to/your/config.toml:/app/settings.toml \
      -e SNOWPLOW_ENV=production \
+     -e SNOWPLOW_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-host \
      simple-snowplow
 
-For Kubernetes deployment, check the example manifests in the `.github/k8s` directory.
+You can supply additional configuration through more `-e` flags.
 
 ## Configuration
 
-Simple Snowplow now uses a **single, explicit Pydantic Settings** configuration system (no Dynaconf). Configuration sources (highest precedence first):
-
-1. Explicit init arguments (rare; for programmatic embedding)
-2. Environment variables with the `SNOWPLOW_` prefix (nested keys via double underscores `__`)
-
-
-### Configuration Structure
-
-The configuration is organized into logical sections:
-
-- `common`: Basic application settings
-- `clickhouse`: Database connection and table settings
-- `logging`: Log formatting and level
-- `security`: Security settings including rate limiting
-- `proxy`: Configuration for proxy endpoints
-- `performance`: Application performance tuning
-- `elastic_apm`: APM monitoring configuration
-- `prometheus`: Metrics and monitoring settings
-
-### Main Configuration Options
-
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `common.service_name` | Application name | `simple-snowplow` |
-| `common.debug` | Enable debug mode | `false` |
-| `common.demo` | Enable demo mode | `false` |
-| `logging.level` | Log level (DEBUG, INFO, WARNING, ERROR) | `WARNING` |
-| `logging.json` | Use JSON formatting for logs | `false` |
-| `security.rate_limiting.enabled` | Enable request rate limiting | `false` |
-| `clickhouse.connection.host` | ClickHouse host | `clickhouse` |
-| `clickhouse.connection.port` | ClickHouse port | `8123` |
-| `clickhouse.configuration.database` | ClickHouse database | `snowplow` |
-| `clickhouse.configuration.cluster_name` | ClickHouse cluster name (if using) | `""` |
-| `performance.max_concurrent_connections` | Max concurrent connections | `100` |
-| `performance.db_pool_size` | Database connection pool size | `5` |
-
-For a complete list of configuration options, refer to the `settings.toml` file.
-
-### Environment Variables
-
-Override any setting using environment variables. Use double underscores to represent nesting:
+Simple Snowplow is configured via a **single Pydantic `BaseSettings` model**. The application reads values from environment variables using the `SNOWPLOW_` prefix and double underscores (`__`) for nesting. For example:
 
 ```bash
+SNOWPLOW_COMMON__SERVICE_NAME=my-snowplow
 SNOWPLOW_COMMON__DEMO=true
 SNOWPLOW_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-server
 SNOWPLOW_SECURITY__RATE_LIMITING__ENABLED=true
 ```
 
-### Custom Configuration File
+The structure mirrors the configuration sections:
 
-Point to an alternate TOML configuration file:
+- `common`: Basic application options (service name, hostname, demo mode)
+- `clickhouse`: Connection details and table definitions
+- `logging`: Format and level for application logs
+- `security`: Docs availability, HTTPS enforcement, and rate limiting
+- `proxy`: Allowed domains and paths for the analytics proxy
+- `performance`: Connection pool and concurrency settings
+- `elastic_apm`, `prometheus`, `sentry`: Optional observability integrations
 
-```bash
-export SNOWPLOW_SETTINGS_FILE=/path/to/custom-settings.toml
-```
-
-Only include keys you want to override; unspecified values fall back to defaults.
-
-### Environment-Specific Configuration
-
-Select environment via:
+You can inspect the full configuration (with defaults) via the CLI from the repository root:
 
 ```bash
-export SNOWPLOW_ENV=production
+uv run python simple_snowplow/cli.py settings
 ```
 
-Add a top-level table in `settings.toml` named after the environment (`[production]`, `[staging]`, etc.) to override base values. Keys are written using nested TOML table syntax or dotted assignments, both are supported.
+Set `SNOWPLOW_ENV` to label the running environment (e.g. `production`) — the value is propagated to logging integrations such as Sentry but does not change how configuration is loaded.
 
 ## Usage
 
@@ -165,11 +124,11 @@ Troubleshooting:
 
 ### Downloading Tracker Scripts via CLI
 
-Instead of the shell script you can use the built-in command:
+Instead of the shell script you can use the built-in command (run from the repository root):
 ```bash
 uv run python simple_snowplow/cli.py scripts download
 ```
-This will place `sp.js`, `sp.js.map`, plugin bundle, and `loader.js` copies in `simple_snowplow/static/` and adjust the source map `file` field for the loader copy.
+This will place `sp.js`, `sp.js.map`, plugin bundle, and `loader.js` copies in the repository-level `static/` directory and adjust the source map `file` field for the loader copy.
 
 ### Web Tracking
 
