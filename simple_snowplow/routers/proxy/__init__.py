@@ -61,7 +61,7 @@ async def proxy(schema: str, host: str, path: str = ""):
     url = f"{schema}://{decode(host)}/{decode(path)}"
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             response = await client.get(url, timeout=PROXY_TIMEOUT)
     except httpx.TimeoutException as exc:
         msg = f"Proxy request to '{url}' timed out"

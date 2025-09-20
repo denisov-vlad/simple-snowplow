@@ -39,6 +39,7 @@ async def test_proxy_awaits_async_request(monkeypatch, anyio_backend):
     event = asyncio.Event()
 
     def _factory(*args, **kwargs):
+        assert kwargs.get("follow_redirects") is True
         return _DummyAsyncClient(event)
 
     monkeypatch.setattr(proxy_module.httpx, "AsyncClient", _factory)
