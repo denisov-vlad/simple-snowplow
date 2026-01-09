@@ -248,6 +248,9 @@ async def parse_contexts(
         elif schema == "org.w3/PerformanceNavigationTiming":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceNavigationTiming/jsonschema/1-0-0
             model.ue["performance_navigation_timing"] = data
+        elif schema == "com.snowplowanalytics.mobile/deep_link":
+            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/deep_link/jsonschema/1-0-0
+            model.ue["deep_link"] = data
         elif schema == "com.snowplowanalytics.mobile/deep_link_received":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/deep_link/jsonschema/1-0-0
             model.ue["deep_link_received"] = data
