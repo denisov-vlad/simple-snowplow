@@ -2,31 +2,35 @@
 Main application entry point for Simple Snowplow.
 """
 
+from asgi_correlation_id.middleware import CorrelationIdMiddleware
 from brotli_asgi import BrotliMiddleware
+from core.config import settings
+from core.healthcheck import probe
+from core.lifespan import lifespan
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware import Middleware
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi_structlog.middleware import (
+    AccessLogMiddleware,
+    CurrentScopeSetMiddleware,
+    StructlogMiddleware,
+)
+from middleware.rate_limit import RateLimitMiddleware
+from middleware.security import SecurityHeadersMiddleware
+from plugins.logger import init_logging, validation_exception_handler
+from routers.demo import router as demo_router
+from routers.proxy import router as proxy_router
+from routers.tracker import router as app_router
 from starlette.middleware.cors import CORSMiddleware
-
-from simple_snowplow.core.config import settings
-from simple_snowplow.core.healthcheck import probe
-from simple_snowplow.core.lifespan import lifespan
-from simple_snowplow.middleware.logging import RequestLoggingMiddleware
-from simple_snowplow.middleware.rate_limit import RateLimitMiddleware
-from simple_snowplow.middleware.security import SecurityHeadersMiddleware
-from simple_snowplow.plugins.logger import init_logging, validation_exception_handler
-from simple_snowplow.routers.demo import router as demo_router
-from simple_snowplow.routers.proxy import router as proxy_router
-from simple_snowplow.routers.tracker import router as app_router
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
 
-    # Configure logging
+    # Configure logging using fastapi-structlog
     init_logging(settings.logging.json_format, settings.logging.level)
 
     app = FastAPI(
@@ -44,7 +48,10 @@ def create_app() -> FastAPI:
                 allow_headers=["*"],
                 expose_headers=["*"],
             ),
-            Middleware(RequestLoggingMiddleware),
+            Middleware(CurrentScopeSetMiddleware),
+            Middleware(CorrelationIdMiddleware),
+            Middleware(StructlogMiddleware),
+            Middleware(AccessLogMiddleware),
             Middleware(SecurityHeadersMiddleware),
             Middleware(RateLimitMiddleware),
             Middleware(BrotliMiddleware),
@@ -83,7 +90,7 @@ def create_app() -> FastAPI:
     # Add APM middleware if enabled
     if settings.elastic_apm.enabled:
         from elasticapm.contrib.starlette import ElasticAPM
-        from simple_snowplow.plugins.elastic_apm import elastic_apm_client
+        from plugins.elastic_apm import elastic_apm_client
 
         app.add_middleware(ElasticAPM, client=elastic_apm_client)
 
@@ -98,14 +105,19 @@ def create_app() -> FastAPI:
         )
 
     if settings.sentry.enabled:
-        import sentry_sdk
-        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from fastapi_structlog.sentry import SentrySettings, setup_sentry
 
-        sentry_sdk.init(
-            dsn=settings.sentry.dsn,
-            environment=settings.sentry.environment,
-            traces_sample_rate=settings.sentry.traces_sample_rate,
-            integrations=[FastApiIntegration()],
+        sentry_settings = SentrySettings.model_validate(
+            {
+                "dsn": settings.sentry.dsn,
+                "environment": settings.sentry.environment,
+                "traces_sample_rate": settings.sentry.traces_sample_rate,
+            },
+        )
+        setup_sentry(
+            sentry_settings,
+            app_slug=settings.common.service_name,
+            version=app.version,
         )
 
     return app
