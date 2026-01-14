@@ -1,10 +1,10 @@
-FROM python:3.13-alpine3.22
+FROM python:3.14.2-alpine3.23
 
 COPY --from=ghcr.io/astral-sh/uv:python3.13-alpine /usr/local/bin/uv /usr/local/bin/uv
 
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
-    UV_PYTHON=python3.13
+    UV_PYTHON=python3.14
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ WORKDIR /app/simple_snowplow
 
 COPY ./simple_snowplow /app/simple_snowplow
 
-RUN uv run cli.py scripts download --version 4.6.6 --output_dir static --force
+RUN uv run cli.py scripts download --version 4.6.8 --output_dir static --force
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

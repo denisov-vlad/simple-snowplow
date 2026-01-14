@@ -14,7 +14,7 @@ dependencies = [
     "crawlerdetect>=0.3.0",
     "elastic-apm>=6.23.0",
     "fastapi>=0.127.1",
-    "fastapi-structlog>=0.7.0",
+    "fastapi-structlog>=0.7.1",
     "fire>=0.7.0",
     "httpx>=0.28.1",
     "inflection>=0.5.1",
@@ -37,7 +37,7 @@ dependencies = [
 [tool.ruff]
 # Same as Black.
 line-length = 88
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 # Enable flake8-bugbear (`B`) rules.
