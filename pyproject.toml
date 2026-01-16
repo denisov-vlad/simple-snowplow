@@ -16,6 +16,7 @@ dependencies = [
     "fastapi>=0.127.1",
     "fastapi-structlog>=0.7.1",
     "fire>=0.7.0",
+    "httptools>=0.7.1",
     "httpx>=0.28.1",
     "inflection>=0.5.1",
     "json-repair>=0.44.0",
