@@ -40,9 +40,46 @@ def init_logging(enable_json_logs: bool, log_level: str) -> None:
     structlog.contextvars.bind_contextvars(service="simple-snowplow")
 
 
+def _parse_content_length(value: str | None) -> int | None:
+    """Parse and validate Content-Length header value."""
+    if not value:
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _get_body_length(body: object) -> int | None:
+    """Get request body length in bytes for logging."""
+    if body is None:
+        return None
+    if isinstance(body, str):
+        return len(body.encode("utf-8"))
+    if isinstance(body, (bytes, bytearray)):
+        return len(body)
+    if isinstance(body, memoryview):
+        return len(body.tobytes())
+    return len(str(body).encode("utf-8", errors="ignore"))
+
+
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Unified validation error handler using the configured structlog logger."""
-    error_data = {"detail": exc.errors(), "body": exc.body}
+    content_length = _parse_content_length(request.headers.get("content-length"))
+    body_length = _get_body_length(exc.body)
+
+    error_data = {
+        "detail": exc.errors(),
+        "body": exc.body,
+        "content_length": content_length,
+        "body_length": body_length,
+        "body_length_matches_content_length": (
+            content_length == body_length
+            if content_length is not None and body_length is not None
+            else None
+        ),
+    }
     logger = structlog.get_logger()
     logger.error("Validation error", **error_data)
     return JSONResponse(
