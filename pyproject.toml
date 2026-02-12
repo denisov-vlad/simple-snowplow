@@ -102,6 +102,12 @@ skip-magic-trailing-comma = false
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
 
+[tool.ty.environment]
+# Support both import styles used in this repo:
+# - absolute package imports: from simple_snowplow...
+# - app-root imports (when running from ./simple_snowplow): from core..., from routers...
+root = [".", "./simple_snowplow"]
+
 [dependency-groups]
 dev = [
     "pre-commit>=4.2.0",
