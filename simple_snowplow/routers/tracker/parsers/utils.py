@@ -1,10 +1,10 @@
 import base64
 
 import orjson
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from elasticapm.contrib.asyncio.traces import capture_span
 
 
-@async_capture_span()
+@capture_span()
 def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
     """
     Parse base64 encoded data.
