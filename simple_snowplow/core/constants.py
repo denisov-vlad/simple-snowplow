@@ -13,9 +13,6 @@ APP_NAME: Final[str] = "Simple Snowplow"
 APP_SLUG: Final[str] = "simple-snowplow"
 APP_VERSION: Final[str] = "0.5.0"
 
-# HTTP Status descriptions
-HTTP_429_DESCRIPTION: Final[str] = "Too many requests"
-
 # Tracking pixel (1x1 transparent GIF)
 TRACKING_PIXEL: Final[bytes] = base64.b64decode(
     b"R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",
@@ -29,11 +26,6 @@ CONTENT_TYPE_OCTET_STREAM: Final[str] = "application/octet-stream"
 # Timeouts (in seconds)
 DEFAULT_PROXY_TIMEOUT: Final[float] = 10.0
 DEFAULT_DB_CONNECT_TIMEOUT: Final[int] = 10
-
-# Rate limiting
-DEFAULT_MAX_REQUESTS: Final[int] = 100
-DEFAULT_WINDOW_SECONDS: Final[int] = 60
-CLEANUP_PROBABILITY: Final[float] = 0.01
 
 # Database defaults
 DEFAULT_DATABASE_NAME: Final[str] = "snowplow"

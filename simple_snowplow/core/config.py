@@ -22,12 +22,10 @@ from .constants import (
     DEFAULT_DATABASE_NAME,
     DEFAULT_DB_CONNECT_TIMEOUT,
     DEFAULT_GET_ENDPOINT,
-    DEFAULT_MAX_REQUESTS,
     DEFAULT_METRICS_PATH,
     DEFAULT_POST_ENDPOINT,
     DEFAULT_PROXY_ENDPOINT,
     DEFAULT_SENDGRID_ENDPOINT,
-    DEFAULT_WINDOW_SECONDS,
     ENV_DEVELOPMENT,
     ENV_PRODUCTION,
     LOG_LEVEL_WARNING,
@@ -79,24 +77,6 @@ class LoggingConfig(BaseModel):
         return upper_v
 
 
-class RateLimitingConfig(BaseModel):
-    """Rate limiting configuration."""
-
-    enabled: bool = False
-    max_requests: int = DEFAULT_MAX_REQUESTS
-    window_seconds: int = DEFAULT_WINDOW_SECONDS
-    ip_whitelist: list[str] = []
-    path_whitelist: list[str] = ["/health"]
-
-    @field_validator("max_requests", "window_seconds")
-    @classmethod
-    def validate_positive(cls, v: int) -> int:
-        """Ensure values are positive."""
-        if v <= 0:
-            raise ValueError("Value must be positive")
-        return v
-
-
 class SecurityConfig(BaseModel):
     """Security-related configuration."""
 
@@ -104,7 +84,6 @@ class SecurityConfig(BaseModel):
     trusted_hosts: list[str] = ["*"]
     enable_https_redirect: bool = False
     trust_proxy_headers: bool = True
-    rate_limiting: RateLimitingConfig = RateLimitingConfig()
 
 
 class ElasticAPMConfig(BaseModel):

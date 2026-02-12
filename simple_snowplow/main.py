@@ -22,7 +22,6 @@ from fastapi_structlog.middleware import (
     CurrentScopeSetMiddleware,
     StructlogMiddleware,
 )
-from middleware.rate_limit import RateLimitMiddleware
 from middleware.security import SecurityHeadersMiddleware
 from plugins.logger import init_logging, validation_exception_handler
 from routers.demo import router as demo_router
@@ -47,7 +46,6 @@ def _get_base_middleware() -> list[Middleware]:
         Middleware(StructlogMiddleware),
         Middleware(AccessLogMiddleware),
         Middleware(SecurityHeadersMiddleware),
-        Middleware(RateLimitMiddleware),
         Middleware(BrotliMiddleware),
     ]
 

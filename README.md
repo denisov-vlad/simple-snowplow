@@ -75,7 +75,6 @@ Simple Snowplow is configured via a **single Pydantic `BaseSettings` model**. Th
 SNOWPLOW_COMMON__SERVICE_NAME=my-snowplow
 SNOWPLOW_COMMON__DEMO=true
 SNOWPLOW_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-server
-SNOWPLOW_SECURITY__RATE_LIMITING__ENABLED=true
 ```
 
 The structure mirrors the configuration sections:
@@ -83,7 +82,7 @@ The structure mirrors the configuration sections:
 - `common`: Basic application options (service name, hostname, demo mode)
 - `clickhouse`: Connection details and table definitions
 - `logging`: Format and level for application logs
-- `security`: Docs availability, HTTPS enforcement, and rate limiting
+- `security`: Docs availability and HTTPS enforcement
 - `proxy`: Allowed domains and paths for the analytics proxy
 - `performance`: Connection pool and concurrency settings
 - `elastic_apm`, `prometheus`, `sentry`: Optional observability integrations

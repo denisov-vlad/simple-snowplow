@@ -111,19 +111,6 @@ class ProxyRequestError(ProxyError):
     pass
 
 
-# Rate Limiting Exceptions
-class RateLimitExceededError(SimpleSnowplowError):
-    """Raised when rate limit is exceeded."""
-
-    def __init__(self, retry_after: int, client_ip: str):
-        self.retry_after = retry_after
-        self.client_ip = client_ip
-        super().__init__(
-            f"Rate limit exceeded for {client_ip}",
-            {"retry_after": retry_after, "client_ip": client_ip},
-        )
-
-
 # Validation Exceptions
 class ValidationError(SimpleSnowplowError):
     """Base exception for validation errors."""
