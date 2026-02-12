@@ -5,13 +5,12 @@ from elasticapm.contrib.asyncio.traces import capture_span
 
 
 @capture_span()
-def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
+def parse_base64(data: str | bytes) -> str:
     """
-    Parse base64 encoded data.
+    Parse base64 encoded data (supports both standard and URL-safe base64).
 
     Args:
         data: The base64 encoded data
-        altchars: Alternative characters for base64 encoding
 
     Returns:
         Decoded string
@@ -28,7 +27,7 @@ def parse_base64(data: str | bytes, altchars: bytes = b"+/") -> str:
     if missing_padding:
         data_bytes = data_bytes + (b"=" * (4 - missing_padding))
 
-    return base64.b64decode(data_bytes, altchars=altchars).decode("UTF-8")
+    return base64.urlsafe_b64decode(data_bytes).decode("UTF-8")
 
 
 def find_available(unencoded: str | None, encoded: str | None) -> dict | None:
