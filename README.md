@@ -75,7 +75,12 @@ Simple Snowplow is configured via a **single Pydantic `BaseSettings` model**. Th
 SNOWPLOW_COMMON__SERVICE_NAME=my-snowplow
 SNOWPLOW_COMMON__DEMO=true
 SNOWPLOW_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-server
+SNOWPLOW_COMMON__SNOWPLOW__USER_IP_HEADER=CF-Connecting-IP
 ```
+
+`SNOWPLOW_COMMON__SNOWPLOW__USER_IP_HEADER` controls which request header is
+used to resolve the client IP (default: `X-Forwarded-For`). If the header
+contains multiple comma-separated addresses, the first valid IP is used.
 
 The structure mirrors the configuration sections:
 

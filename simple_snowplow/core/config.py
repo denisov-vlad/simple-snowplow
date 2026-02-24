@@ -58,6 +58,16 @@ class Snowplow(BaseModel):
 
     schemas: SnowplowSchemas = SnowplowSchemas()
     endpoints: SnowplowEndpoints = SnowplowEndpoints()
+    user_ip_header: str = "X-Forwarded-For"
+
+    @field_validator("user_ip_header")
+    @classmethod
+    def validate_user_ip_header(cls, value: str) -> str:
+        """Ensure the user IP header name is not empty."""
+        header_name = value.strip()
+        if not header_name:
+            raise ValueError("user_ip_header must not be empty")
+        return header_name
 
 
 class LoggingConfig(BaseModel):

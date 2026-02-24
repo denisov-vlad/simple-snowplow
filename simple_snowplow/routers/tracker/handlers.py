@@ -2,6 +2,7 @@
 Core data processing handlers for Snowplow events.
 """
 
+from ipaddress import IPv4Address, IPv6Address
 from typing import Any
 
 import structlog
@@ -21,7 +22,7 @@ logger = structlog.get_logger(__name__)
 async def process_data(
     body: PayloadElementModel | PayloadModel,
     user_agent: str | None,
-    user_ip: Any,
+    user_ip: IPv4Address | IPv6Address | str | None,
     cookies: str | None,
 ) -> list[dict[str, Any]]:
     """
