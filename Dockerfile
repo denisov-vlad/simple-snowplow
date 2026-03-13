@@ -1,6 +1,6 @@
 FROM python:3.14.3-alpine3.23
 
-COPY --from=ghcr.io/astral-sh/uv:0.10.7-python3.14-alpine3.23 /usr/local/bin/uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.10.10-python3.14-alpine3.23 /usr/local/bin/uv /usr/local/bin/uv
 
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
