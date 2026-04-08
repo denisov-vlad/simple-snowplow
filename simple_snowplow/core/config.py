@@ -231,7 +231,7 @@ class DirectInsertConfig(BaseModel):
     """Direct ClickHouse insert settings."""
 
     async_insert: bool = True
-    wait_for_async_insert: bool = True
+    wait_for_async_insert: bool = False
 
 
 class RabbitMQConfig(BaseModel):

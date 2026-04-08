@@ -47,10 +47,11 @@ def _build_clickhouse_insert_settings(*, require_wait: bool = False) -> dict[str
     if not direct_config.async_insert:
         return {}
 
-    wait_for_async_insert = direct_config.wait_for_async_insert or require_wait
     return {
         "async_insert": 1,
-        "wait_for_async_insert": int(wait_for_async_insert),
+        "wait_for_async_insert": int(
+            direct_config.wait_for_async_insert or require_wait,
+        ),
     }
 
 

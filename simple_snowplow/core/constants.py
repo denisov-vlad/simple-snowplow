@@ -69,7 +69,7 @@ DEFAULT_RABBITMQ_STARTUP_RETRY_INTERVAL_MS: Final[int] = 1000
 # Async insert settings for ClickHouse
 CLICKHOUSE_ASYNC_SETTINGS: Final[dict[str, int]] = {
     "async_insert": 1,
-    "wait_for_async_insert": 1,
+    "wait_for_async_insert": 0,
 }
 
 # Log levels
