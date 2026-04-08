@@ -41,6 +41,7 @@ class DatabaseConnector(RowSink, Protocol):
         """Execute a database query and return results."""
         ...
 
+
 class PayloadParser(Protocol):
     """Protocol for payload parsers."""
 

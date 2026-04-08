@@ -17,11 +17,10 @@ from aio_pika.abc import (
     AbstractRobustConnection,
 )
 from aio_pika.exceptions import AuthenticationError, ProbableAuthenticationError
-from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, Field
-
 from core.config import RabbitMQConfig
 from core.protocols import RowSink
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
 T = TypeVar("T")
@@ -81,7 +80,7 @@ async def retry_rabbitmq_startup(
         attempt += 1
         try:
             return await callback()
-        except (AuthenticationError, ProbableAuthenticationError):
+        except AuthenticationError, ProbableAuthenticationError:
             raise
         except Exception as exc:
             remaining_seconds = deadline - loop.time()

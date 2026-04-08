@@ -9,7 +9,10 @@ sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
 
 from routers.tracker.db.clickhouse.connector import ClickHouseConnector  # noqa: E402
 from routers.tracker.db.clickhouse.schemas import register_fields  # noqa: E402
-from routers.tracker.db.clickhouse.schemas.snowplow import ColumnDef, STRING  # noqa: E402
+from routers.tracker.db.clickhouse.schemas.snowplow import (  # noqa: E402
+    STRING,
+    ColumnDef,
+)
 
 
 class _FakeClient:

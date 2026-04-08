@@ -30,7 +30,9 @@ if "elasticapm" not in sys.modules:
     sys.modules["elasticapm.contrib.asyncio"] = asyncio_module
     sys.modules["elasticapm.contrib.asyncio.traces"] = traces_module
 
-module_path = PROJECT_ROOT / "simple_snowplow" / "routers" / "tracker" / "parsers" / "ip.py"
+module_path = (
+    PROJECT_ROOT / "simple_snowplow" / "routers" / "tracker" / "parsers" / "ip.py"
+)
 spec = importlib.util.spec_from_file_location("ip_module", module_path)
 ip_module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
