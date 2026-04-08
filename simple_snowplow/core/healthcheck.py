@@ -1,8 +1,7 @@
 """
 Health check endpoint for Simple Snowplow.
 
-Provides a health probe that checks database connectivity
-and returns the current application status.
+Provides health probes for the active ingest backend.
 """
 
 import structlog
@@ -14,11 +13,31 @@ from starlette.status import HTTP_200_OK, HTTP_502_BAD_GATEWAY
 logger = structlog.get_logger(__name__)
 
 
+class ClickHouseHealthChecker:
+    """Health checker for direct ClickHouse ingest."""
+
+    def __init__(self, client) -> None:
+        self.client = client
+
+    async def check(self) -> dict[str, bool]:
+        """Check ClickHouse connectivity."""
+
+        healthy = True
+        try:
+            query = await self.client.query("SELECT 1")
+            healthy = query.first_row[0] == 1
+        except Exception as exc:
+            logger.warning("ClickHouse health check failed", error=str(exc))
+            healthy = False
+
+        return {"clickhouse": healthy}
+
+
 async def probe(request: Request) -> JSONResponse:
     """
     Health check probe endpoint.
 
-    Checks ClickHouse connectivity and returns status information.
+    Checks the active ingest backend and returns status information.
 
     Args:
         request: The incoming request
@@ -26,14 +45,8 @@ async def probe(request: Request) -> JSONResponse:
     Returns:
         JSON response with health status and table information
     """
-    try:
-        query = await request.app.state.ch_client.query("SELECT 1")
-        ch_healthy = query.first_row[0] == 1
-    except Exception as e:
-        logger.warning("ClickHouse health check failed", error=str(e))
-        ch_healthy = False
-
-    status = {"clickhouse": ch_healthy}
+    health_checker = request.app.state.health_checker
+    status = await health_checker.check()
 
     # Determine overall health
     is_healthy = all(status.values())
@@ -43,13 +56,14 @@ async def probe(request: Request) -> JSONResponse:
     response_data = {
         "status": jsonable_encoder(status),
         "healthy": is_healthy,
+        "ingest_mode": request.app.state.ingest_mode,
     }
 
     # Add table info if healthy
-    if ch_healthy:
+    if is_healthy:
         try:
             response_data["table"] = await request.app.state.connector.get_table_name()
-        except Exception as e:
-            logger.warning("Failed to get table name", error=str(e))
+        except Exception as exc:
+            logger.warning("Failed to get table name", error=str(exc))
 
     return JSONResponse(content=response_data, status_code=status_code)

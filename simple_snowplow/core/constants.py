@@ -54,11 +54,19 @@ DEFAULT_CLICKHOUSE_PORT: Final[int] = 8123
 DEFAULT_CLICKHOUSE_INTERFACE: Final[str] = "http"
 DEFAULT_CLICKHOUSE_USERNAME: Final[str] = "default"
 DEFAULT_CLICKHOUSE_DATABASE: Final[str] = "default"
+DEFAULT_INGEST_MODE: Final[str] = "direct"
+DEFAULT_RABBITMQ_HOST: Final[str] = "rabbitmq"
+DEFAULT_RABBITMQ_PORT: Final[int] = 5672
+DEFAULT_RABBITMQ_QUEUE_NAME: Final[str] = "snowplow.ingest"
+DEFAULT_RABBITMQ_PREFETCH_COUNT: Final[int] = 200
+DEFAULT_RABBITMQ_BATCH_SIZE: Final[int] = 500
+DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS: Final[int] = 1000
+DEFAULT_RABBITMQ_RETRY_DELAY_MS: Final[int] = 1000
 
 # Async insert settings for ClickHouse
 CLICKHOUSE_ASYNC_SETTINGS: Final[dict[str, int]] = {
     "async_insert": 1,
-    "wait_for_async_insert": 0,
+    "wait_for_async_insert": 1,
 }
 
 # Log levels

@@ -7,6 +7,7 @@ Simple Snowplow is a lightweight, self-hosted analytics collector compatible wit
 - Compatible with Snowplow JavaScript tracker
 - Collects web analytics data including page views, events, and user information
 - Stores data in ClickHouse for high-performance analytics queries
+- Optional RabbitMQ-backed ingest mode with batch worker
 - Optional SendGrid event tracking integration
 - Configurable data retention and storage settings
 - Horizontal scaling capabilities with ClickHouse cluster support
@@ -17,9 +18,10 @@ Simple Snowplow is a lightweight, self-hosted analytics collector compatible wit
 
 Simple Snowplow consists of the following components:
 
-1. **FastAPI Backend**: Handles incoming tracking events and forwards them to ClickHouse
+1. **FastAPI Backend**: Handles incoming tracking events
 2. **ClickHouse Database**: Stores and processes analytics data
-3. **JavaScript Tracking Libraries**: Compatible with standard Snowplow js trackers
+3. **RabbitMQ + Worker**: Optional durable buffer and batch writer for fault-tolerant ingest
+4. **JavaScript Tracking Libraries**: Compatible with standard Snowplow js trackers
 
 ## Installation
 
@@ -76,6 +78,8 @@ SNOWPLOW_COMMON__SERVICE_NAME=my-snowplow
 SNOWPLOW_COMMON__DEMO=true
 SNOWPLOW_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-server
 SNOWPLOW_COMMON__SNOWPLOW__USER_IP_HEADER=CF-Connecting-IP
+SNOWPLOW_INGEST__MODE=rabbitmq
+SNOWPLOW_INGEST__RABBITMQ__HOST=my-rabbitmq
 ```
 
 `SNOWPLOW_COMMON__SNOWPLOW__USER_IP_HEADER` controls which request header is
@@ -86,6 +90,7 @@ The structure mirrors the configuration sections:
 
 - `common`: Basic application options (service name, hostname, demo mode)
 - `clickhouse`: Connection details and table definitions
+- `ingest`: Delivery mode (`direct` or `rabbitmq`) and RabbitMQ/worker tuning
 - `logging`: Format and level for application logs
 - `security`: Docs availability and HTTPS enforcement
 - `proxy`: Allowed domains and paths for the analytics proxy
@@ -99,6 +104,17 @@ uv run python simple_snowplow/cli.py settings
 ```
 
 Set `SNOWPLOW_ENV` to label the running environment (e.g. `production`) — the value is propagated to logging integrations such as Sentry but does not change how configuration is loaded.
+
+### Ingest Modes
+
+`ingest.mode=direct`:
+- API writes directly to ClickHouse on every request.
+- No additional infrastructure is required.
+
+`ingest.mode=rabbitmq`:
+- API publishes events to RabbitMQ.
+- A separate worker consumes the queue, batches rows by `table_group`, and writes them to ClickHouse.
+- This is the mode to use when you want a durable buffer between request handling and ClickHouse availability.
 
 ## Usage
 
@@ -118,6 +134,23 @@ docker compose up -d clickhouse
 docker compose run app uv run python cli.py db init
 docker compose up -d app
 ```
+
+### Queue-Backed Ingest
+
+To enable queue-backed ingest, switch the API to RabbitMQ mode and run the worker:
+
+```bash
+SNOWPLOW_INGEST__MODE=rabbitmq docker compose --profile rabbitmq up -d rabbitmq worker app
+```
+
+Or locally from the repository root:
+
+```bash
+export SNOWPLOW_INGEST__MODE=rabbitmq
+uv run python simple_snowplow/cli.py queue worker
+```
+
+In this mode the HTTP app only enqueues messages. Batch inserts into ClickHouse are performed exclusively by the worker.
 
 Idempotency: The command uses `CREATE DATABASE IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`; re-running is safe. If you change schema definitions (e.g. `order_by`, `engine`) you must manually apply migrations (dropping/recreating or performing ALTER statements) – the CLI purposefully does not perform destructive changes.
 

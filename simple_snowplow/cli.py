@@ -10,6 +10,8 @@ uv run simple_snowplow/cli.py settings --raw
 uv run simple_snowplow/cli.py settings hostname
 # Create ClickHouse databases & tables
 uv run simple_snowplow/cli.py db init
+# Start RabbitMQ ingest worker
+uv run simple_snowplow/cli.py queue worker
 # Download tracker scripts (sp.js + plugins)
 uv run simple_snowplow/cli.py scripts download
 
@@ -33,8 +35,23 @@ from clickhouse_connect import get_async_client
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
 from clickhouse_connect.driver.httputil import get_pool_manager
 from core.config import settings
+from ingest import RabbitMQBatchWorker
 from plugins.logger import init_logging
 from routers.tracker.db.clickhouse import ClickHouseConnector, TableManager
+
+
+def _build_clickhouse_insert_settings(*, require_wait: bool = False) -> dict[str, int]:
+    """Build ClickHouse insert settings for direct and worker writes."""
+
+    direct_config = settings.ingest.direct
+    if not direct_config.async_insert:
+        return {}
+
+    wait_for_async_insert = direct_config.wait_for_async_insert or require_wait
+    return {
+        "async_insert": 1,
+        "wait_for_async_insert": int(wait_for_async_insert),
+    }
 
 
 class SettingsCommands:
@@ -114,6 +131,7 @@ class DBCommands:
             try:
                 connector = ClickHouseConnector(
                     client,
+                    insert_settings=_build_clickhouse_insert_settings(),
                     **ch_conf.configuration.model_dump(),
                 )
                 table_manager = TableManager(connector)
@@ -135,6 +153,7 @@ class CLI:
     def __init__(self) -> None:  # pragma: no cover - trivial wiring
         self.settings = SettingsCommands()
         self.db = DBCommands()
+        self.queue = QueueCommands()
         self.scripts = ScriptsCommands()
 
 
@@ -215,6 +234,44 @@ class ScriptsCommands:
         marker_file.touch(exist_ok=True)
 
         return f"Downloaded tracker scripts version {version} to {out_path}"
+
+
+class QueueCommands:
+    """RabbitMQ queue commands."""
+
+    logger = structlog.get_logger("cli.queue")
+
+    def worker(self) -> str:
+        """Start the RabbitMQ batch worker."""
+
+        async def _run():
+            init_logging(settings.logging.json_format, settings.logging.level)
+            perf_conf = settings.performance
+            ch_conf = settings.clickhouse
+            queue_conf = settings.ingest.rabbitmq
+
+            pool_mgr = get_pool_manager(maxsize=perf_conf.db_pool_size)
+            client = await get_async_client(
+                **ch_conf.connection.model_dump(),
+                query_limit=0,
+                pool_mgr=pool_mgr,
+            )
+
+            connector = ClickHouseConnector(
+                client,
+                insert_settings=_build_clickhouse_insert_settings(require_wait=True),
+                **ch_conf.configuration.model_dump(),
+            )
+            worker = await RabbitMQBatchWorker.create(connector, queue_conf)
+
+            try:
+                await worker.run()
+            finally:
+                await worker.close()
+                await client.close()
+
+        asyncio.run(_run())
+        return "RabbitMQ worker stopped"
 
 
 def main() -> None:  # pragma: no cover - Fire dispatch

@@ -9,6 +9,7 @@ from typing import Any
 import structlog
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
+from core.constants import CLICKHOUSE_ASYNC_SETTINGS
 from elasticapm.contrib.asyncio.traces import async_capture_span
 from routers.tracker.db.clickhouse.schemas.snowplow import TupleColumnDef
 
@@ -25,6 +26,7 @@ class ClickHouseConnector:
         conn: AsyncClient,
         cluster_name: str | None = None,
         database: str = "snowplow",
+        insert_settings: dict[str, int] | None = None,
         **params,
     ):
         """
@@ -42,7 +44,7 @@ class ClickHouseConnector:
         self.database = database
         self.params = params
         self.tables = self.params["tables"]
-        self.async_settings = {"async_insert": 1, "wait_for_async_insert": 0}
+        self.insert_settings = insert_settings or CLICKHOUSE_ASYNC_SETTINGS.copy()
 
     @staticmethod
     def _make_on_cluster(cluster_name: str | None = None) -> str:
@@ -140,6 +142,20 @@ class ClickHouseConnector:
             rows: List of rows to insert
             table_group: The table group
         """
+        if not rows:
+            logger.debug("No rows to insert")
+            return
+
+        for row in rows:
+            await self.insert_batch([row], table_group=table_group)
+
+    async def insert_batch(
+        self,
+        rows: list[dict[str, Any]],
+        table_group: str = "snowplow",
+    ) -> None:
+        """Insert a batch of rows in a single ClickHouse request."""
+
         from routers.tracker.db.clickhouse.schemas import get_fields_for_table_group
 
         if not rows:
@@ -148,44 +164,45 @@ class ClickHouseConnector:
 
         table_name = await self.get_table_name(table_group)
         full_table_name = await self.get_full_table_name(table_name)
-        fields = get_fields_for_table_group(table_group)
+        fields = [
+            field
+            for field in get_fields_for_table_group(table_group)
+            if isinstance(field, TupleColumnDef) or field.payload_name is not None
+        ]
+
+        column_names = [field.name for field in fields]
+        column_types = [field.type for field in fields]
+        data = []
 
         for row in rows:
-            column_names = []
-            column_types = []
             values = []
-
             for field in fields:
                 if isinstance(field, TupleColumnDef):
-                    value = tuple([
+                    value = tuple(
                         row.get(v.payload_name)
                         for v in field.elements
                         if v.payload_name is not None
-                    ])
+                    )
                 else:
-                    if field.payload_name is None:
-                        continue
                     value = row.get(field.payload_name)
-
-                column_names.append(field.name)
-                column_types.append(field.type)
                 values.append(value)
+            data.append(values)
 
-            async with async_capture_span("clickhouse_query"):
-                try:
-                    await self.conn.insert(
-                        full_table_name,
-                        data=[values],
-                        column_names=column_names,
-                        column_types=column_types,
-                        settings=self.async_settings,
-                    )
-                except (ClickHouseError, DatabaseError) as e:
-                    logger.error(
-                        "Insert operation failed",
-                        error=str(e),
-                        column_names=column_names,
-                        column_types=column_types,
-                        values=values,
-                    )
-                    raise
+        async with async_capture_span("clickhouse_query"):
+            try:
+                await self.conn.insert(
+                    full_table_name,
+                    data=data,
+                    column_names=column_names,
+                    column_types=column_types,
+                    settings=self.insert_settings,
+                )
+            except (ClickHouseError, DatabaseError) as e:
+                logger.error(
+                    "Insert operation failed",
+                    error=str(e),
+                    table_name=full_table_name,
+                    rows_count=len(rows),
+                    column_names=column_names,
+                )
+                raise

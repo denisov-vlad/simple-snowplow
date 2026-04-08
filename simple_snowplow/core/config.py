@@ -7,7 +7,7 @@ Settings can be configured via environment variables with the SNOWPLOW_ prefix.
 
 import os
 from functools import lru_cache
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AnyHttpUrl, BaseModel, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -22,9 +22,17 @@ from .constants import (
     DEFAULT_DATABASE_NAME,
     DEFAULT_DB_CONNECT_TIMEOUT,
     DEFAULT_GET_ENDPOINT,
+    DEFAULT_INGEST_MODE,
     DEFAULT_METRICS_PATH,
     DEFAULT_POST_ENDPOINT,
     DEFAULT_PROXY_ENDPOINT,
+    DEFAULT_RABBITMQ_BATCH_SIZE,
+    DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS,
+    DEFAULT_RABBITMQ_HOST,
+    DEFAULT_RABBITMQ_PORT,
+    DEFAULT_RABBITMQ_PREFETCH_COUNT,
+    DEFAULT_RABBITMQ_QUEUE_NAME,
+    DEFAULT_RABBITMQ_RETRY_DELAY_MS,
     DEFAULT_SENDGRID_ENDPOINT,
     ENV_DEVELOPMENT,
     ENV_PRODUCTION,
@@ -216,6 +224,50 @@ class ClickHouseConfig(BaseModel):
     tables: dict[str, Any] = {}
 
 
+class DirectInsertConfig(BaseModel):
+    """Direct ClickHouse insert settings."""
+
+    async_insert: bool = True
+    wait_for_async_insert: bool = True
+
+
+class RabbitMQConfig(BaseModel):
+    """RabbitMQ-backed ingest settings."""
+
+    host: str = DEFAULT_RABBITMQ_HOST
+    port: int = DEFAULT_RABBITMQ_PORT
+    username: str = "guest"
+    password: str = "guest"
+    virtualhost: str = "/"
+    queue_name: str = DEFAULT_RABBITMQ_QUEUE_NAME
+    prefetch_count: int = DEFAULT_RABBITMQ_PREFETCH_COUNT
+    batch_size: int = DEFAULT_RABBITMQ_BATCH_SIZE
+    batch_timeout_ms: int = DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS
+    retry_delay_ms: int = DEFAULT_RABBITMQ_RETRY_DELAY_MS
+
+    @field_validator(
+        "port",
+        "prefetch_count",
+        "batch_size",
+        "batch_timeout_ms",
+        "retry_delay_ms",
+    )
+    @classmethod
+    def validate_positive(cls, value: int) -> int:
+        """Ensure queue settings are positive integers."""
+        if value <= 0:
+            raise ValueError("Value must be positive")
+        return value
+
+
+class IngestConfig(BaseModel):
+    """Ingest pipeline settings."""
+
+    mode: Literal["direct", "rabbitmq"] = DEFAULT_INGEST_MODE
+    direct: DirectInsertConfig = DirectInsertConfig()
+    rabbitmq: RabbitMQConfig = RabbitMQConfig()
+
+
 class CommonConfig(BaseModel):
     """Common application configuration."""
 
@@ -253,6 +305,7 @@ class Settings(BaseSettings):
     performance: PerformanceConfig = PerformanceConfig()
     common: CommonConfig = CommonConfig()
     clickhouse: ClickHouseConfig = ClickHouseConfig()
+    ingest: IngestConfig = IngestConfig()
 
     @property
     def is_production(self) -> bool:
