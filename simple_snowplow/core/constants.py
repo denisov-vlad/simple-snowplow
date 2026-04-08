@@ -11,7 +11,7 @@ from typing import Final
 # Application metadata
 APP_NAME: Final[str] = "Simple Snowplow"
 APP_SLUG: Final[str] = "simple-snowplow"
-APP_VERSION: Final[str] = "0.5.0"
+APP_VERSION: Final[str] = "0.6.0"
 
 # Tracking pixel (1x1 transparent GIF)
 TRACKING_PIXEL: Final[bytes] = base64.b64decode(
