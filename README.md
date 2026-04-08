@@ -115,6 +115,7 @@ Set `SNOWPLOW_ENV` to label the running environment (e.g. `production`) — the 
 - API publishes events to RabbitMQ.
 - A separate worker consumes the queue, batches rows by `table_group`, and writes them to ClickHouse.
 - This is the mode to use when you want a durable buffer between request handling and ClickHouse availability.
+- Startup wait is configurable with `SNOWPLOW_INGEST__RABBITMQ__STARTUP_TIMEOUT_SECONDS` and `SNOWPLOW_INGEST__RABBITMQ__STARTUP_RETRY_INTERVAL_MS`.
 
 ## Usage
 

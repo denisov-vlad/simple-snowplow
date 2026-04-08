@@ -28,11 +28,14 @@ from .constants import (
     DEFAULT_PROXY_ENDPOINT,
     DEFAULT_RABBITMQ_BATCH_SIZE,
     DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS,
+    DEFAULT_RABBITMQ_CONNECT_TIMEOUT_SECONDS,
     DEFAULT_RABBITMQ_HOST,
     DEFAULT_RABBITMQ_PORT,
     DEFAULT_RABBITMQ_PREFETCH_COUNT,
     DEFAULT_RABBITMQ_QUEUE_NAME,
     DEFAULT_RABBITMQ_RETRY_DELAY_MS,
+    DEFAULT_RABBITMQ_STARTUP_RETRY_INTERVAL_MS,
+    DEFAULT_RABBITMQ_STARTUP_TIMEOUT_SECONDS,
     DEFAULT_SENDGRID_ENDPOINT,
     ENV_DEVELOPMENT,
     ENV_PRODUCTION,
@@ -244,6 +247,9 @@ class RabbitMQConfig(BaseModel):
     batch_size: int = DEFAULT_RABBITMQ_BATCH_SIZE
     batch_timeout_ms: int = DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS
     retry_delay_ms: int = DEFAULT_RABBITMQ_RETRY_DELAY_MS
+    connect_timeout_seconds: int = DEFAULT_RABBITMQ_CONNECT_TIMEOUT_SECONDS
+    startup_timeout_seconds: int = DEFAULT_RABBITMQ_STARTUP_TIMEOUT_SECONDS
+    startup_retry_interval_ms: int = DEFAULT_RABBITMQ_STARTUP_RETRY_INTERVAL_MS
 
     @field_validator(
         "port",
@@ -251,6 +257,9 @@ class RabbitMQConfig(BaseModel):
         "batch_size",
         "batch_timeout_ms",
         "retry_delay_ms",
+        "connect_timeout_seconds",
+        "startup_timeout_seconds",
+        "startup_retry_interval_ms",
     )
     @classmethod
     def validate_positive(cls, value: int) -> int:

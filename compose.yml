@@ -35,8 +35,10 @@ services:
     restart: on-failure
     command: ["uv", "run", "python", "cli.py", "queue", "worker"]
     depends_on:
-    - clickhouse
-    - rabbitmq
+      clickhouse:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     profiles:
     - rabbitmq
 
@@ -56,5 +58,10 @@ services:
     ports:
     - "5672:5672"
     - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
     profiles:
     - rabbitmq

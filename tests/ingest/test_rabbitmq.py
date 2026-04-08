@@ -8,6 +8,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
 
 from core.config import RabbitMQConfig  # noqa: E402
+from ingest import rabbitmq as rabbitmq_module  # noqa: E402
 from ingest.rabbitmq import QueuedInsertPayload, RabbitMQBatchWorker  # noqa: E402
 
 
@@ -97,3 +98,46 @@ async def test_worker_requeues_messages_when_batch_insert_fails(anyio_backend):
     assert sink.batch_calls == []
     assert all(message.nacked for message in messages)
     assert not any(message.acked for message in messages)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
+async def test_retry_rabbitmq_startup_waits_until_connection_is_ready(
+    monkeypatch,
+    anyio_backend,
+):
+    attempts = 0
+    sleep_calls = []
+
+    async def _fake_connect(**kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise OSError("rabbitmq is starting")
+        return "connected"
+
+    async def _fake_sleep(delay):
+        sleep_calls.append(delay)
+
+    monkeypatch.setattr(rabbitmq_module, "connect_robust", _fake_connect)
+    monkeypatch.setattr(rabbitmq_module.asyncio, "sleep", _fake_sleep)
+
+    connection = await rabbitmq_module.retry_rabbitmq_startup(
+        RabbitMQConfig(
+            connect_timeout_seconds=1,
+            startup_timeout_seconds=10,
+            startup_retry_interval_ms=250,
+        ),
+        "connect",
+        lambda: rabbitmq_module.connect_rabbitmq(
+            RabbitMQConfig(
+                connect_timeout_seconds=1,
+                startup_timeout_seconds=10,
+                startup_retry_interval_ms=250,
+            ),
+        ),
+    )
+
+    assert connection == "connected"
+    assert attempts == 3
+    assert sleep_calls == [0.25, 0.25]

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Awaitable, Callable, TypeVar
 
 import structlog
 from aio_pika import DeliveryMode, Message, connect_robust
@@ -15,6 +16,7 @@ from aio_pika.abc import (
     AbstractQueue,
     AbstractRobustConnection,
 )
+from aio_pika.exceptions import AuthenticationError, ProbableAuthenticationError
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 
@@ -22,6 +24,7 @@ from core.config import RabbitMQConfig
 from core.protocols import RowSink
 
 logger = structlog.get_logger(__name__)
+T = TypeVar("T")
 
 
 def _resolve_table_name(
@@ -51,7 +54,7 @@ class PendingMessage:
 
 
 async def connect_rabbitmq(config: RabbitMQConfig) -> AbstractRobustConnection:
-    """Create a robust RabbitMQ connection."""
+    """Create a single robust RabbitMQ connection attempt."""
 
     return await connect_robust(
         host=config.host,
@@ -59,7 +62,56 @@ async def connect_rabbitmq(config: RabbitMQConfig) -> AbstractRobustConnection:
         login=config.username,
         password=config.password,
         virtualhost=config.virtualhost,
+        timeout=config.connect_timeout_seconds,
     )
+
+
+async def retry_rabbitmq_startup(
+    config: RabbitMQConfig,
+    operation: str,
+    callback: Callable[[], Awaitable[T]],
+) -> T:
+    """Retry RabbitMQ startup operations until the configured wait expires."""
+
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + config.startup_timeout_seconds
+    attempt = 0
+
+    while True:
+        attempt += 1
+        try:
+            return await callback()
+        except (AuthenticationError, ProbableAuthenticationError):
+            raise
+        except Exception as exc:
+            remaining_seconds = deadline - loop.time()
+            if remaining_seconds <= 0:
+                logger.error(
+                    "RabbitMQ startup wait expired",
+                    operation=operation,
+                    attempt=attempt,
+                    host=config.host,
+                    port=config.port,
+                    startup_timeout_seconds=config.startup_timeout_seconds,
+                    error=str(exc),
+                )
+                raise
+
+            retry_in_seconds = min(
+                config.startup_retry_interval_ms / 1000,
+                remaining_seconds,
+            )
+            logger.warning(
+                "RabbitMQ is not ready yet, retrying",
+                operation=operation,
+                attempt=attempt,
+                host=config.host,
+                port=config.port,
+                retry_in_seconds=retry_in_seconds,
+                remaining_seconds=remaining_seconds,
+                error=str(exc),
+            )
+            await asyncio.sleep(retry_in_seconds)
 
 
 class RabbitMQPublisher:
@@ -91,10 +143,18 @@ class RabbitMQPublisher:
     ) -> RabbitMQPublisher:
         """Create a publisher and ensure the queue exists."""
 
-        connection = await connect_rabbitmq(config)
-        channel = await connection.channel(publisher_confirms=True)
-        await channel.declare_queue(config.queue_name, durable=True)
-        return cls(connection, channel, config, tables, database, cluster_name)
+        async def _create() -> RabbitMQPublisher:
+            connection = await connect_rabbitmq(config)
+            try:
+                channel = await connection.channel(publisher_confirms=True)
+                await channel.declare_queue(config.queue_name, durable=True)
+            except Exception:
+                await connection.close()
+                raise
+
+            return cls(connection, channel, config, tables, database, cluster_name)
+
+        return await retry_rabbitmq_startup(config, "publisher_create", _create)
 
     async def insert_rows(
         self,
@@ -199,11 +259,19 @@ class RabbitMQBatchWorker:
     ) -> RabbitMQBatchWorker:
         """Create a worker bound to the configured queue."""
 
-        connection = await connect_rabbitmq(config)
-        channel = await connection.channel()
-        await channel.set_qos(prefetch_count=config.prefetch_count)
-        queue = await channel.declare_queue(config.queue_name, durable=True)
-        return cls(connection, channel, queue, sink, config)
+        async def _create() -> RabbitMQBatchWorker:
+            connection = await connect_rabbitmq(config)
+            try:
+                channel = await connection.channel()
+                await channel.set_qos(prefetch_count=config.prefetch_count)
+                queue = await channel.declare_queue(config.queue_name, durable=True)
+            except Exception:
+                await connection.close()
+                raise
+
+            return cls(connection, channel, queue, sink, config)
+
+        return await retry_rabbitmq_startup(config, "worker_create", _create)
 
     async def run(self) -> None:
         """Start consuming and flushing batches."""
@@ -216,12 +284,15 @@ class RabbitMQBatchWorker:
         )
 
         iterator = self.queue.iterator()
+        next_message_task: asyncio.Task[AbstractIncomingMessage] | None = None
         try:
             async with iterator:
                 while True:
+                    if next_message_task is None:
+                        next_message_task = asyncio.create_task(iterator.__anext__())
                     try:
                         message = await asyncio.wait_for(
-                            iterator.__anext__(),
+                            asyncio.shield(next_message_task),
                             timeout=self.flush_interval,
                         )
                     except asyncio.TimeoutError:
@@ -230,8 +301,13 @@ class RabbitMQBatchWorker:
                     except StopAsyncIteration:
                         break
 
+                    next_message_task = None
                     await self.add_message(message)
         finally:
+            if next_message_task is not None and not next_message_task.done():
+                next_message_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await next_message_task
             await self.flush_all()
 
     async def add_message(self, message: AbstractIncomingMessage) -> None:
