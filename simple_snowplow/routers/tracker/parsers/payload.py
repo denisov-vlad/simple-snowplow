@@ -311,7 +311,9 @@ async def parse_payload(
         Processed InsertModel with all data combined
     """
 
-    data = element.model_dump()
+    data = element.model_dump(
+        exclude={"contexts", "ue_context", "ping_context"},
+    )
     ua_data = user_agent.model_dump()
     data = {**ua_data, **data, "user_ip": ip}
 
@@ -374,7 +376,7 @@ async def parse_payload(
     if result.se_pr and isinstance(result.se_pr, str):
         try:
             result.se_pr = orjson.loads(result.se_pr)
-        except orjson.JSONDecodeError, TypeError:
+        except (orjson.JSONDecodeError, TypeError):
             result.se_pr = {"ex-property": result.se_pr}
         finally:
             if not isinstance(result.se_pr, dict):

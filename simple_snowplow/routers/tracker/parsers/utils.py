@@ -1,7 +1,10 @@
 import base64
 
 import orjson
+import structlog
 from elasticapm.contrib.asyncio.traces import capture_span
+
+logger = structlog.get_logger(__name__)
 
 
 @capture_span()
@@ -30,7 +33,10 @@ def parse_base64(data: str | bytes) -> str:
     return base64.urlsafe_b64decode(data_bytes).decode("UTF-8")
 
 
-def find_available(unencoded: str | None, encoded: str | None) -> dict | None:
+def find_available(
+    unencoded: str | dict | None,
+    encoded: str | dict | None,
+) -> dict | None:
     result = None
 
     if unencoded:
@@ -38,5 +44,27 @@ def find_available(unencoded: str | None, encoded: str | None) -> dict | None:
     elif encoded:
         result = parse_base64(encoded)
 
-    if result is not None:
-        return orjson.loads(result)
+    if result is None:
+        return None
+
+    if isinstance(result, dict):
+        return result
+
+    try:
+        parsed = orjson.loads(result)
+    except (orjson.JSONDecodeError, TypeError) as exc:
+        logger.warning(
+            "Failed to decode Snowplow JSON payload",
+            error=str(exc),
+            value_type=type(result).__name__,
+        )
+        return None
+
+    if isinstance(parsed, dict):
+        return parsed
+
+    logger.warning(
+        "Snowplow JSON payload has unexpected type",
+        decoded_type=type(parsed).__name__,
+    )
+    return None
