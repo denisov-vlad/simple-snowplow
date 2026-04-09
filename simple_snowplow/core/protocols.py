@@ -9,7 +9,24 @@ from typing import Any, Protocol, runtime_checkable
 
 
 @runtime_checkable
-class DatabaseConnector(Protocol):
+class RowSink(Protocol):
+    """Protocol for event sinks used by request handlers."""
+
+    async def insert_rows(
+        self,
+        rows: list[dict[str, Any]],
+        table_group: str = "snowplow",
+    ) -> None:
+        """Insert rows into the sink."""
+        ...
+
+    async def get_table_name(self, table_group: str = "snowplow") -> str:
+        """Get the target table name for a specific group."""
+        ...
+
+
+@runtime_checkable
+class DatabaseConnector(RowSink, Protocol):
     """Protocol for database connectors."""
 
     async def command(self, query: str) -> None:
@@ -24,20 +41,7 @@ class DatabaseConnector(Protocol):
         """Execute a database query and return results."""
         ...
 
-    async def insert_rows(
-        self,
-        rows: list[dict[str, Any]],
-        table_group: str = "snowplow",
-    ) -> None:
-        """Insert rows into the database."""
-        ...
 
-    async def get_table_name(self, table_group: str = "snowplow") -> str:
-        """Get the table name for a specific group."""
-        ...
-
-
-@runtime_checkable
 class PayloadParser(Protocol):
     """Protocol for payload parsers."""
 

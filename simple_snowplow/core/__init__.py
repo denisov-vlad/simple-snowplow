@@ -16,7 +16,7 @@ from .exceptions import (
     SimpleSnowplowError,
     ValidationError,
 )
-from .protocols import DatabaseConnector, EventHandler, PayloadParser
+from .protocols import DatabaseConnector, EventHandler, PayloadParser, RowSink
 
 __all__ = [
     # Configuration
@@ -41,6 +41,7 @@ __all__ = [
     "ValidationError",
     # Protocols
     "DatabaseConnector",
+    "RowSink",
     "PayloadParser",
     "EventHandler",
 ]

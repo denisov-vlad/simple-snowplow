@@ -10,10 +10,10 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from .config import Settings, get_settings
-from .protocols import DatabaseConnector
+from .protocols import RowSink
 
 
-def get_db_connector(request: Request) -> DatabaseConnector:
+def get_db_connector(request: Request) -> RowSink:
     """
     Get the database connector from the application state.
 
@@ -40,7 +40,7 @@ def get_db_client(request: Request):
 
 
 # Type aliases for dependency injection
-DbConnector = Annotated[DatabaseConnector, Depends(get_db_connector)]
+DbConnector = Annotated[RowSink, Depends(get_db_connector)]
 DbClient = Annotated[object, Depends(get_db_client)]
 AppSettings = Annotated[Settings, Depends(get_settings)]
 

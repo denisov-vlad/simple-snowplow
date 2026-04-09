@@ -11,7 +11,7 @@ from typing import Final
 # Application metadata
 APP_NAME: Final[str] = "Simple Snowplow"
 APP_SLUG: Final[str] = "simple-snowplow"
-APP_VERSION: Final[str] = "0.5.0"
+APP_VERSION: Final[str] = "0.6.0"
 
 # Tracking pixel (1x1 transparent GIF)
 TRACKING_PIXEL: Final[bytes] = base64.b64decode(
@@ -54,6 +54,17 @@ DEFAULT_CLICKHOUSE_PORT: Final[int] = 8123
 DEFAULT_CLICKHOUSE_INTERFACE: Final[str] = "http"
 DEFAULT_CLICKHOUSE_USERNAME: Final[str] = "default"
 DEFAULT_CLICKHOUSE_DATABASE: Final[str] = "default"
+DEFAULT_INGEST_MODE: Final[str] = "direct"
+DEFAULT_RABBITMQ_HOST: Final[str] = "rabbitmq"
+DEFAULT_RABBITMQ_PORT: Final[int] = 5672
+DEFAULT_RABBITMQ_QUEUE_NAME: Final[str] = "snowplow.ingest"
+DEFAULT_RABBITMQ_PREFETCH_COUNT: Final[int] = 200
+DEFAULT_RABBITMQ_BATCH_SIZE: Final[int] = 500
+DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS: Final[int] = 1000
+DEFAULT_RABBITMQ_RETRY_DELAY_MS: Final[int] = 1000
+DEFAULT_RABBITMQ_CONNECT_TIMEOUT_SECONDS: Final[int] = 5
+DEFAULT_RABBITMQ_STARTUP_TIMEOUT_SECONDS: Final[int] = 60
+DEFAULT_RABBITMQ_STARTUP_RETRY_INTERVAL_MS: Final[int] = 1000
 
 # Async insert settings for ClickHouse
 CLICKHOUSE_ASYNC_SETTINGS: Final[dict[str, int]] = {

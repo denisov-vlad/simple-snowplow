@@ -311,7 +311,9 @@ async def parse_payload(
         Processed InsertModel with all data combined
     """
 
-    data = element.model_dump()
+    data = element.model_dump(
+        exclude={"contexts", "ue_context", "ping_context"},
+    )
     ua_data = user_agent.model_dump()
     data = {**ua_data, **data, "user_ip": ip}
 
