@@ -28,10 +28,6 @@ COPY ./simple_snowplow /app/simple_snowplow
 
 RUN uv run cli.py scripts download --version 4.6.9 --output_dir static --force
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:80/ || exit 1
-
 # Use tini as init to properly handle signals
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]

@@ -36,6 +36,7 @@ from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
 from clickhouse_connect.driver.httputil import get_pool_manager
 from core.config import settings
 from ingest import RabbitMQBatchWorker
+from ingest.rabbitmq import connect_rabbitmq
 from plugins.logger import init_logging
 from routers.tracker.db.clickhouse import ClickHouseConnector, TableManager
 
@@ -53,6 +54,64 @@ def _build_clickhouse_insert_settings(*, require_wait: bool = False) -> dict[str
             direct_config.wait_for_async_insert or require_wait,
         ),
     }
+
+
+async def _check_queue_worker_dependencies() -> dict[str, bool]:
+    """Check the RabbitMQ worker dependencies."""
+
+    queue_logger = structlog.get_logger("cli.queue.healthcheck")
+    perf_conf = settings.performance
+    ch_conf = settings.clickhouse
+    queue_conf = settings.ingest.rabbitmq
+
+    status = {
+        "clickhouse": False,
+        "rabbitmq": False,
+    }
+    pool_mgr = get_pool_manager(maxsize=perf_conf.db_pool_size)
+    client = None
+    connection = None
+    channel = None
+
+    try:
+        try:
+            client = await get_async_client(
+                **ch_conf.connection.model_dump(),
+                query_limit=0,
+                pool_mgr=pool_mgr,
+            )
+            query = await client.query("SELECT 1")
+            status["clickhouse"] = query.first_row[0] == 1
+        except Exception as exc:
+            queue_logger.warning(
+                "Worker ClickHouse health check failed",
+                error=str(exc),
+            )
+
+        try:
+            connection = await connect_rabbitmq(queue_conf)
+            channel = await connection.channel()
+            await channel.declare_queue(
+                queue_conf.queue_name,
+                durable=True,
+                passive=True,
+            )
+            status["rabbitmq"] = True
+        except Exception as exc:
+            queue_logger.warning(
+                "Worker RabbitMQ health check failed",
+                error=str(exc),
+                queue_name=queue_conf.queue_name,
+            )
+    finally:
+        if channel is not None:
+            await channel.close()
+        if connection is not None:
+            await connection.close()
+        if client is not None:
+            await client.close()
+
+    return status
 
 
 class SettingsCommands:
@@ -273,6 +332,17 @@ class QueueCommands:
 
         asyncio.run(_run())
         return "RabbitMQ worker stopped"
+
+    def healthcheck(self) -> str:
+        """Check whether the RabbitMQ worker dependencies are healthy."""
+
+        init_logging(settings.logging.json_format, settings.logging.level)
+        status = asyncio.run(_check_queue_worker_dependencies())
+        if not all(status.values()):
+            self.logger.error("RabbitMQ worker health check failed", status=status)
+            raise SystemExit(1)
+
+        return "ok"
 
 
 def main() -> None:  # pragma: no cover - Fire dispatch

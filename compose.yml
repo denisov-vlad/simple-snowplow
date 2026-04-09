@@ -12,6 +12,12 @@ services:
     - "SNOWPLOW_LOGGING__LEVEL=DEBUG"
     restart: on-failure
     command: ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
     depends_on:
     - clickhouse
     develop:
@@ -34,6 +40,12 @@ services:
     - "SNOWPLOW_LOGGING__LEVEL=DEBUG"
     restart: on-failure
     command: ["uv", "run", "python", "cli.py", "queue", "worker"]
+    healthcheck:
+      test: ["CMD", "uv", "run", "python", "cli.py", "queue", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
     depends_on:
       clickhouse:
         condition: service_started

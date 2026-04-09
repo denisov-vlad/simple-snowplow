@@ -44,12 +44,13 @@ class _BatchSink:
 
 
 def _worker(sink, **overrides):
-    config = RabbitMQConfig(
-        batch_size=3,
-        batch_timeout_ms=1000,
-        retry_delay_ms=1,
-        **overrides,
-    )
+    config_data = {
+        "batch_size": 3,
+        "batch_timeout_ms": 1000,
+        "retry_delay_ms": 1,
+    }
+    config_data.update(overrides)
+    config = RabbitMQConfig(**config_data)
     return RabbitMQBatchWorker(
         connection=object(),
         channel=object(),
