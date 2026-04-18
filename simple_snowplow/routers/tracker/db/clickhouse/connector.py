@@ -149,6 +149,16 @@ class ClickHouseConnector:
         for row in rows:
             await self.insert_batch([row], table_group=table_group)
 
+    @staticmethod
+    def _sanitize_clickhouse_value(type_name: str, value: Any) -> Any:
+        """Coerce `None` into a safe default for non-nullable string columns."""
+
+        if value is not None:
+            return value
+        if type_name == "String" or type_name.startswith("LowCardinality(String"):
+            return ""
+        return value
+
     async def insert_batch(
         self,
         rows: list[dict[str, Any]],
@@ -179,12 +189,18 @@ class ClickHouseConnector:
             for field in fields:
                 if isinstance(field, TupleColumnDef):
                     value = tuple(
-                        row.get(v.payload_name)
+                        self._sanitize_clickhouse_value(
+                            v.type_name,
+                            row.get(v.payload_name),
+                        )
                         for v in field.elements
                         if v.payload_name is not None
                     )
                 else:
-                    value = row.get(field.payload_name)
+                    value = self._sanitize_clickhouse_value(
+                        field.type_name,
+                        row.get(field.payload_name),
+                    )
                 values.append(value)
             data.append(values)
 

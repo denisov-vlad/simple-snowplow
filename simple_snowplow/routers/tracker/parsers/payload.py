@@ -60,6 +60,14 @@ DEFAULT_DATE = datetime(1970, 1, 1)
 schemas = settings.common.snowplow.schemas
 
 
+def _coalesce_dimension_value(value: Any, fallback: str) -> str:
+    """Keep an existing dimension when a context tries to overwrite it with null."""
+
+    if isinstance(value, str) and value.strip():
+        return value
+    return fallback
+
+
 @async_capture_span()
 async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
     """
@@ -218,11 +226,20 @@ async def parse_contexts(
         elif schema == "com.snowplowanalytics.snowplow/browser_context":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0
             if "resolution" in data:
-                model.res = data.pop("resolution")
+                model.res = _coalesce_dimension_value(
+                    data.pop("resolution"),
+                    model.res,
+                )
             if "viewport" in data:
-                model.vp = data.pop("viewport")
+                model.vp = _coalesce_dimension_value(
+                    data.pop("viewport"),
+                    model.vp,
+                )
             if "documentSize" in data:
-                model.ds = data.pop("documentSize")
+                model.ds = _coalesce_dimension_value(
+                    data.pop("documentSize"),
+                    model.ds,
+                )
             if data:
                 model.browser_extra = data
         elif schema == "com.snowplowanalytics.snowplow/geolocation_context":

@@ -17,6 +17,7 @@ from aio_pika.abc import (
     AbstractRobustConnection,
 )
 from aio_pika.exceptions import AuthenticationError, ProbableAuthenticationError
+from clickhouse_connect.driver.exceptions import DataError
 from core.config import RabbitMQConfig
 from core.protocols import RowSink
 from fastapi.encoders import jsonable_encoder
@@ -337,21 +338,52 @@ class RabbitMQBatchWorker:
         for table_group in list(self.pending_batches):
             await self.flush_table_group(table_group)
 
-    async def flush_table_group(self, table_group: str) -> None:
-        """Flush a single table group and ack or requeue source messages."""
+    async def _insert_rows(
+        self,
+        rows: list[dict[str, Any]],
+        table_group: str,
+    ) -> None:
+        insert_batch = getattr(self.sink, "insert_batch", None)
+        if callable(insert_batch):
+            await insert_batch(rows, table_group=table_group)
+            return
+        await self.sink.insert_rows(rows, table_group=table_group)
 
-        pending = self.pending_batches.pop(table_group, [])
-        rows_count = self.pending_row_counts.pop(table_group, 0)
+    async def _flush_pending_messages(
+        self,
+        table_group: str,
+        pending: list[PendingMessage],
+    ) -> None:
         if not pending:
             return
 
         rows = [row for item in pending for row in item.payload.rows]
+        rows_count = len(rows)
         try:
-            insert_batch = getattr(self.sink, "insert_batch", None)
-            if callable(insert_batch):
-                await insert_batch(rows, table_group=table_group)
-            else:
-                await self.sink.insert_rows(rows, table_group=table_group)
+            await self._insert_rows(rows, table_group)
+        except DataError as exc:
+            if len(pending) == 1:
+                logger.error(
+                    "Dropping poison queue message after ClickHouse data error",
+                    error=str(exc),
+                    table_group=table_group,
+                    rows_count=rows_count,
+                    messages_count=1,
+                )
+                await pending[0].message.reject(requeue=False)
+                return
+
+            midpoint = max(1, len(pending) // 2)
+            logger.warning(
+                "Batch insert failed with ClickHouse data error, splitting batch",
+                error=str(exc),
+                table_group=table_group,
+                rows_count=rows_count,
+                messages_count=len(pending),
+            )
+            await self._flush_pending_messages(table_group, pending[:midpoint])
+            await self._flush_pending_messages(table_group, pending[midpoint:])
+            return
         except Exception as exc:
             logger.error(
                 "Batch insert failed, requeueing messages",
@@ -374,6 +406,15 @@ class RabbitMQBatchWorker:
             rows_count=rows_count,
             messages_count=len(pending),
         )
+
+    async def flush_table_group(self, table_group: str) -> None:
+        """Flush a single table group and ack or requeue source messages."""
+
+        pending = self.pending_batches.pop(table_group, [])
+        self.pending_row_counts.pop(table_group, 0)
+        if not pending:
+            return
+        await self._flush_pending_messages(table_group, pending)
 
     async def close(self) -> None:
         """Close RabbitMQ resources."""
