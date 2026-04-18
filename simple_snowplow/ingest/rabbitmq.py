@@ -364,13 +364,14 @@ class RabbitMQBatchWorker:
         except DataError as exc:
             if len(pending) == 1:
                 logger.error(
-                    "Dropping poison queue message after ClickHouse data error",
+                    "Isolated queue message failed ClickHouse validation, requeueing",
                     error=str(exc),
                     table_group=table_group,
                     rows_count=rows_count,
                     messages_count=1,
                 )
-                await pending[0].message.reject(requeue=False)
+                await pending[0].message.nack(requeue=True)
+                await asyncio.sleep(self.retry_delay)
                 return
 
             midpoint = max(1, len(pending) // 2)
