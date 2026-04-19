@@ -27,6 +27,16 @@ logger = structlog.get_logger(__name__)
 T = TypeVar("T")
 
 
+async def _declare_ingest_queues(
+    channel: AbstractChannel,
+    config: RabbitMQConfig,
+) -> None:
+    """Ensure the main and failed queues both exist."""
+
+    await channel.declare_queue(config.queue_name, durable=True)
+    await channel.declare_queue(config.resolved_failed_queue_name, durable=True)
+
+
 def _resolve_table_name(
     tables: dict[str, Any],
     cluster_name: str | None,
@@ -147,7 +157,7 @@ class RabbitMQPublisher:
             connection = await connect_rabbitmq(config)
             try:
                 channel = await connection.channel(publisher_confirms=True)
-                await channel.declare_queue(config.queue_name, durable=True)
+                await _declare_ingest_queues(channel, config)
             except Exception:
                 await connection.close()
                 raise
@@ -205,25 +215,26 @@ class RabbitMQPublisher:
 class RabbitMQHealthChecker:
     """Health checker for RabbitMQ-backed ingest."""
 
-    def __init__(self, channel: AbstractChannel, queue_name: str) -> None:
+    def __init__(self, channel: AbstractChannel, *queue_names: str) -> None:
         self.channel = channel
-        self.queue_name = queue_name
+        self.queue_names = queue_names
 
     async def check(self) -> dict[str, bool]:
         """Check that the queue is reachable."""
 
         healthy = True
         try:
-            await self.channel.declare_queue(
-                self.queue_name,
-                durable=True,
-                passive=True,
-            )
+            for queue_name in self.queue_names:
+                await self.channel.declare_queue(
+                    queue_name,
+                    durable=True,
+                    passive=True,
+                )
         except Exception as exc:
             logger.warning(
                 "RabbitMQ health check failed",
                 error=str(exc),
-                queue_name=self.queue_name,
+                queue_names=self.queue_names,
             )
             healthy = False
 
@@ -246,6 +257,7 @@ class RabbitMQBatchWorker:
         self.queue = queue
         self.sink = sink
         self.config = config
+        self.failed_queue_name = config.resolved_failed_queue_name
         self.flush_interval = config.batch_timeout_ms / 1000
         self.retry_delay = config.retry_delay_ms / 1000
         self.pending_batches: dict[str, list[PendingMessage]] = defaultdict(list)
@@ -264,6 +276,7 @@ class RabbitMQBatchWorker:
             try:
                 channel = await connection.channel()
                 await channel.set_qos(prefetch_count=config.prefetch_count)
+                await _declare_ingest_queues(channel, config)
                 queue = await channel.declare_queue(config.queue_name, durable=True)
             except Exception:
                 await connection.close()
@@ -349,6 +362,33 @@ class RabbitMQBatchWorker:
             return
         await self.sink.insert_rows(rows, table_group=table_group)
 
+    async def _publish_failed_message(
+        self,
+        item: PendingMessage,
+        table_group: str,
+        error: Exception,
+    ) -> None:
+        """Move an isolated invalid message out of the main ingest queue."""
+
+        headers = dict(getattr(item.message, "headers", {}) or {})
+        headers["x-simple-snowplow-source-queue"] = self.config.queue_name
+        headers["x-simple-snowplow-error"] = str(error)
+        headers["x-simple-snowplow-table-group"] = table_group
+
+        await self.channel.default_exchange.publish(
+            Message(
+                body=item.message.body,
+                headers=headers,
+                content_type=getattr(item.message, "content_type", None)
+                or "application/json",
+                delivery_mode=DeliveryMode.PERSISTENT,
+                type=getattr(item.message, "type", None)
+                or "simple_snowplow.insert.failed",
+            ),
+            routing_key=self.failed_queue_name,
+            mandatory=True,
+        )
+
     async def _flush_pending_messages(
         self,
         table_group: str,
@@ -363,15 +403,29 @@ class RabbitMQBatchWorker:
             await self._insert_rows(rows, table_group)
         except DataError as exc:
             if len(pending) == 1:
-                logger.error(
-                    "Isolated queue message failed ClickHouse validation, requeueing",
+                logger.warning(
+                    "Isolated queue message failed ClickHouse validation, moving to failed queue",
                     error=str(exc),
                     table_group=table_group,
                     rows_count=rows_count,
                     messages_count=1,
+                    failed_queue_name=self.failed_queue_name,
                 )
-                await pending[0].message.nack(requeue=True)
-                await asyncio.sleep(self.retry_delay)
+                try:
+                    await self._publish_failed_message(pending[0], table_group, exc)
+                except Exception as publish_exc:
+                    logger.error(
+                        "Failed to move invalid queue message to failed queue, requeueing",
+                        error=str(publish_exc),
+                        table_group=table_group,
+                        rows_count=rows_count,
+                        messages_count=1,
+                        failed_queue_name=self.failed_queue_name,
+                    )
+                    await pending[0].message.nack(requeue=True)
+                    await asyncio.sleep(self.retry_delay)
+                    return
+                await pending[0].message.ack()
                 return
 
             midpoint = max(1, len(pending) // 2)

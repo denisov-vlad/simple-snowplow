@@ -91,17 +91,22 @@ async def _check_queue_worker_dependencies() -> dict[str, bool]:
         try:
             connection = await connect_rabbitmq(queue_conf)
             channel = await connection.channel()
-            await channel.declare_queue(
+            for queue_name in (
                 queue_conf.queue_name,
-                durable=True,
-                passive=True,
-            )
+                queue_conf.resolved_failed_queue_name,
+            ):
+                await channel.declare_queue(
+                    queue_name,
+                    durable=True,
+                    passive=True,
+                )
             status["rabbitmq"] = True
         except Exception as exc:
             queue_logger.warning(
                 "Worker RabbitMQ health check failed",
                 error=str(exc),
                 queue_name=queue_conf.queue_name,
+                failed_queue_name=queue_conf.resolved_failed_queue_name,
             )
     finally:
         if channel is not None:

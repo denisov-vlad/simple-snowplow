@@ -82,6 +82,7 @@ async def _configure_rabbitmq_ingest(application: FastAPI) -> None:
     application.state.health_checker = RabbitMQHealthChecker(
         application.state.connector.channel,
         rabbitmq_config.queue_name,
+        rabbitmq_config.resolved_failed_queue_name,
     )
     application.state._closeables.append(application.state.connector)
 

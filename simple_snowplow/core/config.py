@@ -9,7 +9,7 @@ import os
 from functools import lru_cache
 from typing import Any, Literal
 
-from pydantic import AnyHttpUrl, BaseModel, field_validator
+from pydantic import AnyHttpUrl, BaseModel, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .constants import (
@@ -243,6 +243,7 @@ class RabbitMQConfig(BaseModel):
     password: str = "guest"
     virtualhost: str = "/"
     queue_name: str = DEFAULT_RABBITMQ_QUEUE_NAME
+    failed_queue_name: str | None = None
     prefetch_count: int = DEFAULT_RABBITMQ_PREFETCH_COUNT
     batch_size: int = DEFAULT_RABBITMQ_BATCH_SIZE
     batch_timeout_ms: int = DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS
@@ -267,6 +268,20 @@ class RabbitMQConfig(BaseModel):
         if value <= 0:
             raise ValueError("Value must be positive")
         return value
+
+    @model_validator(mode="after")
+    def validate_failed_queue_name(self) -> "RabbitMQConfig":
+        """Ensure the failed queue is distinct from the main queue."""
+
+        if self.failed_queue_name and self.failed_queue_name == self.queue_name:
+            raise ValueError("failed_queue_name must differ from queue_name")
+        return self
+
+    @property
+    def resolved_failed_queue_name(self) -> str:
+        """Return the configured failed queue or a derived default."""
+
+        return self.failed_queue_name or f"{self.queue_name}.failed"
 
 
 class IngestConfig(BaseModel):
