@@ -83,7 +83,18 @@ async def test_check_queue_worker_dependencies_returns_healthy_status(
         "clickhouse": True,
         "rabbitmq": True,
     }
-    assert channel.declare_calls
+    assert channel.declare_calls == [
+        {
+            "name": "snowplow.ingest",
+            "durable": True,
+            "passive": True,
+        },
+        {
+            "name": "snowplow.ingest.failed",
+            "durable": True,
+            "passive": True,
+        },
+    ]
     assert channel.closed is True
     assert connection.closed is True
     assert client.closed is True

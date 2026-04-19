@@ -404,7 +404,8 @@ class RabbitMQBatchWorker:
         except DataError as exc:
             if len(pending) == 1:
                 logger.warning(
-                    "Isolated queue message failed ClickHouse validation, moving to failed queue",
+                    "Isolated queue message failed ClickHouse validation, "
+                    "moving to failed queue",
                     error=str(exc),
                     table_group=table_group,
                     rows_count=rows_count,
@@ -415,7 +416,8 @@ class RabbitMQBatchWorker:
                     await self._publish_failed_message(pending[0], table_group, exc)
                 except Exception as publish_exc:
                     logger.error(
-                        "Failed to move invalid queue message to failed queue, requeueing",
+                        "Failed to move invalid queue message to failed queue,"
+                        " requeueing",
                         error=str(publish_exc),
                         table_group=table_group,
                         rows_count=rows_count,

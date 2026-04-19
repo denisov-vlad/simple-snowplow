@@ -120,6 +120,7 @@ assert spec.loader is not None
 spec.loader.exec_module(payload_module)
 
 parse_cookies = payload_module.parse_cookies
+parse_contexts = payload_module.parse_contexts
 
 
 def test_parse_cookies_truncated_sp_id_cookie_returns_empty_dict():
@@ -128,3 +129,30 @@ def test_parse_cookies_truncated_sp_id_cookie_returns_empty_dict():
     result = asyncio.run(parse_cookies(cookies_str))
 
     assert result == {}
+
+
+def test_parse_contexts_keeps_existing_resolution_when_browser_context_has_nulls():
+    model = SimpleNamespace(
+        res="1920x1080",
+        vp="1280x720",
+        ds="1280x720",
+        browser_extra={},
+    )
+    contexts = {
+        "data": [
+            {
+                "schema": "iglu:com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0",
+                "data": {
+                    "resolution": None,
+                    "viewport": None,
+                    "documentSize": "",
+                },
+            },
+        ],
+    }
+
+    result = asyncio.run(parse_contexts(contexts, model))
+
+    assert result.res == "1920x1080"
+    assert result.vp == "1280x720"
+    assert result.ds == "1280x720"

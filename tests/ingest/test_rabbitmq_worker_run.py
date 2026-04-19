@@ -12,6 +12,16 @@ from core.config import RabbitMQConfig  # noqa: E402
 from ingest.rabbitmq import QueuedInsertPayload, RabbitMQBatchWorker  # noqa: E402
 
 
+class _FakeExchange:
+    async def publish(self, message, routing_key, mandatory=True):
+        return None
+
+
+class _FakeChannel:
+    def __init__(self):
+        self.default_exchange = _FakeExchange()
+
+
 class _FakeMessage:
     def __init__(self, payload: QueuedInsertPayload):
         self.body = payload.model_dump_json().encode("utf-8")
@@ -84,7 +94,7 @@ async def test_run_does_not_cancel_queue_iterator_on_flush_timeout(anyio_backend
     sink = _Sink()
     worker = RabbitMQBatchWorker(
         connection=object(),
-        channel=object(),
+        channel=_FakeChannel(),
         queue=_Queue(iterator),
         sink=sink,
         config=RabbitMQConfig(

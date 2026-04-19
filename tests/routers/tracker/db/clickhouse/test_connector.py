@@ -12,6 +12,7 @@ from routers.tracker.db.clickhouse.schemas import register_fields  # noqa: E402
 from routers.tracker.db.clickhouse.schemas.snowplow import (  # noqa: E402
     STRING,
     ColumnDef,
+    TupleColumnDef,
 )
 
 
@@ -94,3 +95,45 @@ async def test_insert_batch_sends_single_clickhouse_insert(anyio_backend):
     assert len(client.calls) == 1
     assert client.calls[0]["table_name"] == "snowplow.events_local"
     assert client.calls[0]["data"] == [["a", "1"], ["b", "2"]]
+
+
+register_fields(
+    "test_tuple_events",
+    [
+        ColumnDef(payload_name="foo", name="foo", type=STRING),
+        TupleColumnDef(
+            name="resolution",
+            elements=(
+                ColumnDef(payload_name="res", name="browser", type=STRING),
+                ColumnDef(payload_name="vp", name="viewport", type=STRING),
+                ColumnDef(payload_name="ds", name="page", type=STRING),
+            ),
+        ),
+    ],
+)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
+async def test_insert_batch_sanitizes_none_for_string_columns(anyio_backend):
+    client = _FakeClient()
+    connector = ClickHouseConnector(
+        client,
+        database="snowplow",
+        tables={
+            "test_tuple_events": {
+                "local": {"name": "tuple_events_local"},
+                "distributed": {"name": "tuple_events_distributed"},
+            },
+        },
+    )
+
+    await connector.insert_batch(
+        [{"foo": None, "res": None, "vp": "1280x720", "ds": None}],
+        table_group="test_tuple_events",
+    )
+
+    assert len(client.calls) == 1
+    assert client.calls[0]["table_name"] == "snowplow.tuple_events_local"
+    assert client.calls[0]["column_names"] == ["foo", "resolution"]
+    assert client.calls[0]["data"] == [["", ("", "1280x720", "")]]
