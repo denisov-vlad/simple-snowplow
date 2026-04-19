@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-    - "8000:80"
+    - "8001:80"
     environment:
     - "SNOWPLOW_COMMON__DEMO=true"
     - "SNOWPLOW_INGEST__MODE=${SNOWPLOW_INGEST__MODE:-direct}"
@@ -19,7 +19,8 @@ services:
       start_period: 5s
       retries: 3
     depends_on:
-    - clickhouse
+      clickhouse:
+        condition: service_healthy
     develop:
       watch:
       - action: sync
@@ -48,7 +49,7 @@ services:
       retries: 3
     depends_on:
       clickhouse:
-        condition: service_started
+        condition: service_healthy
       rabbitmq:
         condition: service_healthy
     profiles:
@@ -63,6 +64,12 @@ services:
     - "8123:8123"
     - "9000:9000"
     - "9009:9009"
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--host", "localhost", "--port", "9000", "--user", "default", "--password", "password", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      start_period: 10s
+      retries: 12
 
   rabbitmq:
     container_name: simple-snowplow-rabbitmq

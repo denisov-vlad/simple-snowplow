@@ -19,6 +19,7 @@ from routers.tracker.models.snowplow import (
     StructuredEvent,
     UserAgentModel,
 )
+from routers.tracker.parsers.iglu import ValidationResult, validate_iglu_payload
 from routers.tracker.parsers.utils import parse_base64
 
 logger = structlog.stdlib.get_logger()
@@ -66,6 +67,35 @@ def _coalesce_dimension_value(value: Any, fallback: str) -> str:
     if isinstance(value, str) and value.strip():
         return value
     return fallback
+
+
+def _log_validation_result(
+    validation: ValidationResult,
+    schema_uri: str,
+    validation_stage: str,
+) -> None:
+    """Log Iglu validation outcomes without changing ingest behavior."""
+
+    schema_path = str(validation.schema_path) if validation.schema_path else None
+
+    if validation.status == "ok":
+        logger.debug(
+            "Iglu validation passed",
+            validation_stage=validation_stage,
+            schema=schema_uri,
+            schema_path=schema_path,
+        )
+        return
+    if validation.status != "warning":
+        return
+
+    logger.warning(
+        "Iglu validation warning",
+        validation_stage=validation_stage,
+        schema=schema_uri,
+        schema_path=schema_path,
+        error=validation.error,
+    )
 
 
 @async_capture_span()
@@ -140,6 +170,7 @@ async def parse_contexts(
             continue
         for key in ("schema", "data"):
             if key not in context:
+                bad_contexts = True
                 logger.warning(f"Empty {key} for payload", context=context)
                 continue
 
@@ -147,8 +178,21 @@ async def parse_contexts(
             logger.error("Bad contexts", contexts=contexts)
             continue
 
-        schema = "/".join(context["schema"][5:].split("/")[:2])
+        schema_uri = context["schema"]
         data = context["data"]
+
+        validation = validate_iglu_payload(schema_uri, data)
+        _log_validation_result(
+            validation,
+            schema_uri=schema_uri,
+            validation_stage="contexts",
+        )
+
+        if not isinstance(schema_uri, str):
+            logger.warning("Wrong schema type", context=context)
+            continue
+
+        schema = "/".join(schema_uri[5:].split("/")[:2])
 
         if not isinstance(data, dict):
             logger.warning("Wrong data type", context=context)
@@ -226,20 +270,11 @@ async def parse_contexts(
         elif schema == "com.snowplowanalytics.snowplow/browser_context":
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0
             if "resolution" in data:
-                model.res = _coalesce_dimension_value(
-                    data.pop("resolution"),
-                    model.res,
-                )
+                model.res = _coalesce_dimension_value(data.pop("resolution"), model.res)
             if "viewport" in data:
-                model.vp = _coalesce_dimension_value(
-                    data.pop("viewport"),
-                    model.vp,
-                )
+                model.vp = _coalesce_dimension_value(data.pop("viewport"), model.vp)
             if "documentSize" in data:
-                model.ds = _coalesce_dimension_value(
-                    data.pop("documentSize"),
-                    model.ds,
-                )
+                model.ds = _coalesce_dimension_value(data.pop("documentSize"), model.ds)
             if data:
                 model.browser_extra = data
         elif schema == "com.snowplowanalytics.snowplow/geolocation_context":
@@ -297,6 +332,14 @@ async def parse_event(event: dict[str, Any] | None, model: InsertModel) -> Inser
         return model
 
     event_payload: dict[str, Any] = event["data"]
+    schema_uri = event_payload.get("schema", "")
+    validation = validate_iglu_payload(schema_uri, event_payload.get("data"))
+    _log_validation_result(
+        validation,
+        schema_uri=schema_uri,
+        validation_stage="event",
+    )
+
     if event_payload["schema"] == schemas.u2s_data:
         se = StructuredEvent.model_validate(event_payload["data"])
         for field_name in StructuredEvent.model_fields:

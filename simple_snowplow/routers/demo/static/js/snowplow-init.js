@@ -2,11 +2,14 @@
  * Snowplow Tracker Initialization
  */
 
+const collectorOrigin = window.location.origin;
+const trackerScriptUrl = new URL('/static/sp.js', collectorOrigin).toString();
+
 // Initialize Snowplow tracker
-;(function(p,l,o,w,i,n,g){if(!p[i]){p.GlobalSnowplowNamespace=p.GlobalSnowplowNamespace||[]; p.GlobalSnowplowNamespace.push(i);p[i]=function(){(p[i].q=p[i].q||[]).push(arguments) };p[i].q=p[i].q||[];n=l.createElement(o);g=l.getElementsByTagName(o)[0];n.async=1; n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,"script","http://127.0.0.1:8000/static/sp.js","snowplow"));
+;(function(p,l,o,w,i,n,g){if(!p[i]){p.GlobalSnowplowNamespace=p.GlobalSnowplowNamespace||[]; p.GlobalSnowplowNamespace.push(i);p[i]=function(){(p[i].q=p[i].q||[]).push(arguments) };p[i].q=p[i].q||[];n=l.createElement(o);g=l.getElementsByTagName(o)[0];n.async=1; n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,"script",trackerScriptUrl,"snowplow"));
 
 // Configure the tracker
-window.snowplow('newTracker', 'sp1', 'http://127.0.0.1:8000', {
+window.snowplow('newTracker', 'sp1', collectorOrigin, {
     appId: 'example',
     postPath: '/tracker',
     encodeBase64: false,
