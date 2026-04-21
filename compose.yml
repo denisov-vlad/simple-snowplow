@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-    - "8001:80"
+    - "8000:80"
     environment:
     - "SNOWPLOW_COMMON__DEMO=true"
     - "SNOWPLOW_INGEST__MODE=${SNOWPLOW_INGEST__MODE:-direct}"
