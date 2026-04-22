@@ -1,0 +1,3 @@
+[submodule "simple_snowplow/vendor/iglu-central"]
+	path = simple_snowplow/vendor/iglu-central
+	url = https://github.com/snowplow/iglu-central.git

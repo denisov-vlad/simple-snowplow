@@ -18,6 +18,8 @@ from .constants import (
     DEFAULT_CLICKHOUSE_HOST,
     DEFAULT_CLICKHOUSE_INTERFACE,
     DEFAULT_CLICKHOUSE_PORT,
+    DEFAULT_CLICKHOUSE_STARTUP_RETRY_INTERVAL_MS,
+    DEFAULT_CLICKHOUSE_STARTUP_TIMEOUT_SECONDS,
     DEFAULT_CLICKHOUSE_USERNAME,
     DEFAULT_DATABASE_NAME,
     DEFAULT_DB_CONNECT_TIMEOUT,
@@ -225,6 +227,17 @@ class ClickHouseConfig(BaseModel):
     connection: ClickHouseConnection = ClickHouseConnection()
     configuration: ClickHouseConfiguration = ClickHouseConfiguration()
     tables: dict[str, Any] = {}
+    startup_timeout_seconds: int = DEFAULT_CLICKHOUSE_STARTUP_TIMEOUT_SECONDS
+    startup_retry_interval_ms: int = DEFAULT_CLICKHOUSE_STARTUP_RETRY_INTERVAL_MS
+
+    @field_validator("startup_timeout_seconds", "startup_retry_interval_ms")
+    @classmethod
+    def validate_positive(cls, value: int) -> int:
+        """Ensure ClickHouse startup timings are positive integers."""
+
+        if value <= 0:
+            raise ValueError("Value must be positive")
+        return value
 
 
 class DirectInsertConfig(BaseModel):
@@ -270,7 +283,7 @@ class RabbitMQConfig(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def validate_failed_queue_name(self) -> "RabbitMQConfig":
+    def validate_failed_queue_name(self) -> RabbitMQConfig:
         """Ensure the failed queue is distinct from the main queue."""
 
         if self.failed_queue_name and self.failed_queue_name == self.queue_name:
