@@ -310,7 +310,12 @@ async def parse_contexts(
             # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/message_notification/jsonschema/1-0-0
             model.ue["message_notification"] = data
         else:
-            logger.warning("Schema has no parser", data=data, schema=schema)
+            logger.warning(
+                "Schema has no parser",
+                data=data,
+                schema=schema,
+                schema_uri=schema_uri,
+            )
 
     return model
 
