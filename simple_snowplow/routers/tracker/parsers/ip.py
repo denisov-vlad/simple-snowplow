@@ -4,7 +4,7 @@ IP address parsing and handling.
 
 from ipaddress import IPv4Address, IPv6Address, ip_address
 
-from elasticapm.contrib.asyncio.traces import capture_span
+from core.tracing import capture_span
 
 DEFAULT_IPV4 = IPv4Address("0.0.0.0")
 

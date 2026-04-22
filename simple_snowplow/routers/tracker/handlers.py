@@ -6,7 +6,7 @@ from ipaddress import IPv4Address, IPv6Address
 from typing import Any
 
 import structlog
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from core.tracing import async_capture_span
 from routers.tracker.models.snowplow import (
     PayloadElementModel,
     PayloadModel,

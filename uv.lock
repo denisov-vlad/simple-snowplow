@@ -872,7 +872,6 @@ dependencies = [
     { name = "brotli-asgi" },
     { name = "clickhouse-connect" },
     { name = "crawlerdetect" },
-    { name = "elastic-apm" },
     { name = "fastapi" },
     { name = "fastapi-structlog" },
     { name = "fire" },
@@ -888,6 +887,11 @@ dependencies = [
     { name = "uvicorn" },
 ]
 
+[package.optional-dependencies]
+apm = [
+    { name = "elastic-apm" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "pre-commit" },
@@ -900,7 +904,7 @@ requires-dist = [
     { name = "brotli-asgi", specifier = ">=1.4.0" },
     { name = "clickhouse-connect", specifier = ">=0.8.17" },
     { name = "crawlerdetect", specifier = ">=0.3.0" },
-    { name = "elastic-apm", specifier = ">=6.23.0" },
+    { name = "elastic-apm", marker = "extra == 'apm'", specifier = ">=6.23.0" },
     { name = "fastapi", specifier = ">=0.127.1" },
     { name = "fastapi-structlog", specifier = ">=0.7.1" },
     { name = "fire", specifier = ">=0.7.0" },
@@ -915,6 +919,7 @@ requires-dist = [
     { name = "ua-parser", extras = ["regex"], specifier = ">=1.0.1" },
     { name = "uvicorn", specifier = ">=0.34.2" },
 ]
+provides-extras = ["apm"]
 
 [package.metadata.requires-dev]
 dev = [

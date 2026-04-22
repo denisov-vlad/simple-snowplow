@@ -9,7 +9,6 @@ dependencies = [
     "brotli-asgi>=1.4.0",
     "clickhouse-connect>=0.8.17",
     "crawlerdetect>=0.3.0",
-    "elastic-apm>=6.23.0",
     "fastapi>=0.127.1",
     "fastapi-structlog>=0.7.1",
     "fire>=0.7.0",
@@ -24,6 +23,12 @@ dependencies = [
     "ua-parser[regex]>=1.0.1",
     "uvicorn>=0.34.2",
 ]
+
+[project.optional-dependencies]
+# Install with `uv sync --extra apm` or `pip install simple-snowplow[apm]`.
+# Required when SNOWPLOW_ELASTIC_APM__ENABLED=true; without the extra, the
+# `core.tracing` module falls back to no-op decorators.
+apm = ["elastic-apm>=6.23.0"]
 
 
 [tool.ruff]

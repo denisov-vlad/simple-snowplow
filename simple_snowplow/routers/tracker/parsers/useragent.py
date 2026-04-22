@@ -2,8 +2,8 @@
 User agent parsing functionality.
 """
 
+from core.tracing import capture_span
 from crawlerdetect import CrawlerDetect
-from elasticapm.contrib.asyncio.traces import capture_span
 from routers.tracker.models.snowplow import UserAgentModel
 from ua_parser import parse
 

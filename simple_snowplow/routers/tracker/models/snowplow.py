@@ -3,7 +3,8 @@ Data models for Snowplow events.
 """
 
 import urllib.parse as urlparse
-from datetime import datetime
+from datetime import UTC, datetime
+from functools import partial
 from ipaddress import IPv4Address
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -23,7 +24,9 @@ schemas = settings.common.snowplow.schemas
 
 
 DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
-DEFAULT_DATE = datetime(1970, 1, 1)
+DEFAULT_DATE = datetime(1970, 1, 1, tzinfo=UTC)
+
+_utcnow = partial(datetime.now, UTC)
 
 
 class SnowPlowModel(Model):
@@ -167,15 +170,15 @@ class PayloadBase(Base, Validation, StructuredEvent):
 
     # Event timestamps
     dtm: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=_utcnow,
         title="Timestamp when event occurred, as recorded by client device",
     )
     stm: datetime | None = Field(
-        default_factory=datetime.now,
+        default_factory=_utcnow,
         title="Timestamp when event was sent by client device to collector",
     )
     rtm: datetime = Field(
-        default_factory=datetime.now,
+        default_factory=_utcnow,
         title="Timestamp when event was received by collector",
     )
 

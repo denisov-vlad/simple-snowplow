@@ -2,7 +2,7 @@ import base64
 
 import orjson
 import structlog
-from elasticapm.contrib.asyncio.traces import capture_span
+from core.tracing import capture_span
 
 logger = structlog.get_logger(__name__)
 

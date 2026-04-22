@@ -25,7 +25,7 @@ logger = structlog.get_logger(__name__)
 PROXY_CONFIG = settings.proxy
 PROXY_ENDPOINT = settings.common.snowplow.endpoints.proxy_endpoint
 HOSTNAME = settings.common.hostname
-PROXY_TIMEOUT: Final[float] = DEFAULT_PROXY_TIMEOUT
+ALLOWED_PROXY_SCHEMES: Final[frozenset[str]] = frozenset({"http", "https"})
 
 
 router = APIRouter(tags=["proxy"], prefix=PROXY_ENDPOINT)
@@ -98,9 +98,6 @@ async def proxy_hash(data: models.HashModel) -> AnyHttpUrl:
     return result
 
 
-ALLOWED_PROXY_SCHEMES: Final[frozenset[str]] = frozenset({"http", "https"})
-
-
 @router.get("/route/{schema}/{host}/{path}")
 async def proxy(schema: str, host: str, path: str = "") -> Response:
     """
@@ -137,7 +134,7 @@ async def proxy(schema: str, host: str, path: str = "") -> Response:
 
     try:
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.get(url, timeout=PROXY_TIMEOUT)
+            response = await client.get(url, timeout=DEFAULT_PROXY_TIMEOUT)
     except httpx.TimeoutException as exc:
         logger.warning("Proxy request timed out", url=url)
         raise HTTPException(

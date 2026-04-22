@@ -4,7 +4,7 @@ Payload parsing functionality for Snowplow events.
 
 import urllib.parse as urlparse
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from http.cookies import SimpleCookie
 from ipaddress import IPv4Address
 from typing import Any
@@ -13,7 +13,7 @@ from uuid import UUID
 import orjson
 import structlog
 from core.config import settings
-from elasticapm.contrib.asyncio.traces import async_capture_span, capture_span
+from core.tracing import async_capture_span, capture_span
 from routers.tracker.models.snowplow import (
     InsertModel,
     PayloadElementModel,
@@ -57,7 +57,7 @@ EMPTY_UUIDS = (
 EMPTY_INTS = ("event_index",)
 
 DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
-DEFAULT_DATE = datetime(1970, 1, 1)
+DEFAULT_DATE = datetime(1970, 1, 1, tzinfo=UTC)
 
 # _sp_id cookie value is a 6-part dot-separated string:
 # device_id.created_time.vid.now_time.last_visit_time.session_id

@@ -24,7 +24,6 @@ from fastapi_structlog.middleware import (
 )
 from middleware.security import SecurityHeadersMiddleware
 from plugins.logger import init_logging, validation_exception_handler
-from routers.demo import router as demo_router
 from routers.proxy import router as proxy_router
 from routers.tracker import router as app_router
 from starlette.middleware.cors import CORSMiddleware
@@ -68,9 +67,8 @@ def _configure_routers(app: FastAPI) -> None:
     app.include_router(proxy_router)
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
-    # Add demo router if enabled
+    # Mount demo static assets if enabled (there are no dynamic demo routes).
     if settings.common.demo:
-        app.include_router(demo_router)
         app.mount(
             "/demo",
             StaticFiles(directory="routers/demo/static", html=True),
@@ -82,8 +80,14 @@ def _configure_integrations(app: FastAPI) -> None:
     """Configure optional integrations (APM, metrics, error tracking)."""
     # Add APM middleware if enabled
     if settings.elastic_apm.enabled:
-        from elasticapm.contrib.starlette import ElasticAPM
-        from plugins.elastic_apm import elastic_apm_client
+        try:
+            from elasticapm.contrib.starlette import ElasticAPM
+            from plugins.elastic_apm import elastic_apm_client
+        except ImportError as exc:
+            raise RuntimeError(
+                "Elastic APM is enabled but `elastic-apm` is not installed. "
+                "Install the optional extra: `uv sync --extra apm`.",
+            ) from exc
 
         app.add_middleware(ElasticAPM, client=elastic_apm_client)
 

@@ -10,7 +10,7 @@ from ipaddress import IPv4Address, IPv6Address
 from core.config import settings
 from core.constants import CONTENT_TYPE_GIF, TRACKING_PIXEL
 from core.dependencies import DbConnector
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from core.tracing import async_capture_span
 from fastapi import Depends, Header, Request, Response
 from routers.tracker.handlers import process_data
 from routers.tracker.models.snowplow import (
