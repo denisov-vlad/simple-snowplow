@@ -58,6 +58,8 @@ EMPTY_INTS = ("event_index",)
 DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
 DEFAULT_DATE = datetime(1970, 1, 1)
 
+_SE_PR_JSON_ERRORS = (orjson.JSONDecodeError, TypeError)
+
 schemas = settings.common.snowplow.schemas
 
 
@@ -441,7 +443,7 @@ async def parse_payload(
     if result.se_pr and isinstance(result.se_pr, str):
         try:
             result.se_pr = orjson.loads(result.se_pr)
-        except orjson.JSONDecodeError, TypeError:
+        except _SE_PR_JSON_ERRORS:
             result.se_pr = {"ex-property": result.se_pr}
         finally:
             if not isinstance(result.se_pr, dict):

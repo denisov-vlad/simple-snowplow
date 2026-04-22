@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from routers.tracker.parsers.iglu import warm_iglu_schema_cache
 
 from .config import ClickHouseConfig, settings
-from .exceptions import ConnectionError
+from .exceptions import DatabaseConnectionError
 from .healthcheck import ClickHouseHealthChecker
 
 logger = structlog.get_logger(__name__)
@@ -198,7 +198,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
         None during application runtime
 
     Raises:
-        ConnectionError: If database connection fails
+        DatabaseConnectionError: If database connection fails
     """
     backend_host = (
         INGEST_CONFIG.rabbitmq.host
@@ -226,7 +226,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
 
     except Exception as e:
         logger.error("Failed to initialize ingest backend", error=str(e))
-        raise ConnectionError(
+        raise DatabaseConnectionError(
             "Failed to initialize ingest backend",
             {
                 "mode": INGEST_CONFIG.mode,

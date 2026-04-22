@@ -26,6 +26,10 @@ from pydantic import BaseModel, Field
 logger = structlog.get_logger(__name__)
 T = TypeVar("T")
 
+# Assigned to a name so ruff-format (PEP 758 preview) does not rewrite the
+# `except (A, B):` literal into the bare `except A, B:` form.
+_AUTH_ERRORS = (AuthenticationError, ProbableAuthenticationError)
+
 
 async def _declare_ingest_queues(
     channel: AbstractChannel,
@@ -91,7 +95,7 @@ async def retry_rabbitmq_startup(
         attempt += 1
         try:
             return await callback()
-        except AuthenticationError, ProbableAuthenticationError:
+        except _AUTH_ERRORS:
             raise
         except Exception as exc:
             remaining_seconds = deadline - loop.time()
