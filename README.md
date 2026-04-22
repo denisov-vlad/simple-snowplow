@@ -98,9 +98,27 @@ The structure mirrors the configuration sections:
   `http` and `https` schemes are accepted.
 - `performance`: Connection pool and concurrency settings
 - `elastic_apm`, `prometheus`, `sentry`: Optional observability integrations.
-  Elastic APM requires the `apm` extra (`uv sync --extra apm`); without it,
-  tracing decorators silently no-op and enabling `elastic_apm.enabled` fails
-  at startup with a clear error.
+  - Elastic APM requires the `apm` extra (`uv sync --extra apm`); without it,
+    tracing decorators silently no-op and enabling `elastic_apm.enabled`
+    fails at startup with a clear error.
+  - Sentry requires the `sentry` extra (`uv sync --extra sentry`); enabling
+    `sentry.enabled` without it fails at startup with a clear error.
+
+#### Building the Docker image with optional extras
+
+The Dockerfile accepts a space-separated `EXTRAS` build arg mapped to
+`[project.optional-dependencies]` groups. Examples:
+
+```bash
+# Lean image (default)
+docker build -t simple-snowplow .
+
+# With Elastic APM + Sentry bundled
+docker build --build-arg EXTRAS="apm sentry" -t simple-snowplow .
+
+# With Compose: export once, then build normally
+SNOWPLOW_BUILD_EXTRAS="apm sentry" docker compose build app
+```
 
 You can inspect the full configuration (with defaults) via the CLI from the repository root:
 

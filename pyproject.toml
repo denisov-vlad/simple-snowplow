@@ -18,7 +18,6 @@ dependencies = [
     "orjson>=3.10.16",
     "prometheus-fastapi-instrumentator>=7.1.0",
     "pydantic-settings>=2.9.1",
-    "sentry-sdk[fastapi]>=2.35.1",
     "structlog>=25.3.0",
     "ua-parser[regex]>=1.0.1",
     "uvicorn>=0.34.2",
@@ -29,6 +28,10 @@ dependencies = [
 # Required when SNOWPLOW_ELASTIC_APM__ENABLED=true; without the extra, the
 # `core.tracing` module falls back to no-op decorators.
 apm = ["elastic-apm>=6.23.0"]
+# Install with `uv sync --extra sentry`. Required when
+# SNOWPLOW_SENTRY__ENABLED=true; without it, enabling Sentry at startup
+# fails with a clear error.
+sentry = ["sentry-sdk[fastapi]>=2.35.1"]
 
 
 [tool.ruff]
@@ -114,6 +117,15 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # clickhouse_connect's Cython buffer module (driverc/buffer.pyx) uses
+    # `array.array('u', ...)`, deprecated in Python 3.12+ and due for removal
+    # in 3.16. Emitted during module import via frozen importlib, so we cannot
+    # pin the filter to the module name. Third-party issue, not ours.
+    "ignore:The 'u' type code is deprecated:DeprecationWarning",
+]
 
 [tool.ty.environment]
 # Support both import styles used in this repo:

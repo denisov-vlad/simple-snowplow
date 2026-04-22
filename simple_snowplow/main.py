@@ -103,7 +103,13 @@ def _configure_integrations(app: FastAPI) -> None:
 
     # Configure Sentry if enabled
     if settings.sentry.enabled:
-        from fastapi_structlog.sentry import SentrySettings, setup_sentry
+        try:
+            from fastapi_structlog.sentry import SentrySettings, setup_sentry
+        except ImportError as exc:
+            raise RuntimeError(
+                "Sentry is enabled but `sentry-sdk` is not installed. "
+                "Install the optional extra: `uv sync --extra sentry`.",
+            ) from exc
 
         sentry_settings = SentrySettings.model_validate(
             {

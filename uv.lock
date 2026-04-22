@@ -881,7 +881,6 @@ dependencies = [
     { name = "orjson" },
     { name = "prometheus-fastapi-instrumentator" },
     { name = "pydantic-settings" },
-    { name = "sentry-sdk", extra = ["fastapi"] },
     { name = "structlog" },
     { name = "ua-parser", extra = ["regex"] },
     { name = "uvicorn" },
@@ -890,6 +889,9 @@ dependencies = [
 [package.optional-dependencies]
 apm = [
     { name = "elastic-apm" },
+]
+sentry = [
+    { name = "sentry-sdk", extra = ["fastapi"] },
 ]
 
 [package.dev-dependencies]
@@ -914,12 +916,12 @@ requires-dist = [
     { name = "orjson", specifier = ">=3.10.16" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.1.0" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
-    { name = "sentry-sdk", extras = ["fastapi"], specifier = ">=2.35.1" },
+    { name = "sentry-sdk", extras = ["fastapi"], marker = "extra == 'sentry'", specifier = ">=2.35.1" },
     { name = "structlog", specifier = ">=25.3.0" },
     { name = "ua-parser", extras = ["regex"], specifier = ">=1.0.1" },
     { name = "uvicorn", specifier = ">=0.34.2" },
 ]
-provides-extras = ["apm"]
+provides-extras = ["apm", "sentry"]
 
 [package.metadata.requires-dev]
 dev = [
