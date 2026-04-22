@@ -136,18 +136,13 @@ class ClickHouseConnector:
         table_group: str = "snowplow",
     ) -> None:
         """
-        Insert rows into the specified table group.
+        Insert rows into the specified table group in a single batch request.
 
         Args:
             rows: List of rows to insert
             table_group: The table group
         """
-        if not rows:
-            logger.debug("No rows to insert")
-            return
-
-        for row in rows:
-            await self.insert_batch([row], table_group=table_group)
+        await self.insert_batch(rows, table_group=table_group)
 
     @staticmethod
     def _sanitize_clickhouse_value(type_name: str, value: Any) -> Any:

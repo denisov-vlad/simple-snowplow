@@ -3,28 +3,20 @@ User agent parsing functionality.
 """
 
 from crawlerdetect import CrawlerDetect
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from elasticapm.contrib.asyncio.traces import capture_span
 from routers.tracker.models.snowplow import UserAgentModel
 from ua_parser import parse
 
 crawler_detect = CrawlerDetect()
 
 
-async def remove_none_values(data: list[str | None]) -> list[str]:
-    return [item for item in data if item is not None]
+def _join_version(parts: list[str | None]) -> list[str]:
+    return [p for p in parts if p is not None]
 
 
-@async_capture_span()
-async def parse_agent(string: str | None) -> UserAgentModel:
-    """
-    Parse a user agent string into structured data.
-
-    Args:
-        string: The user agent string to parse
-
-    Returns:
-        Dictionary of parsed user agent information
-    """
+@capture_span()
+def parse_agent(string: str | None) -> UserAgentModel:
+    """Parse a user agent string into structured data."""
 
     data = UserAgentModel(user_agent=string)
 
@@ -41,7 +33,7 @@ async def parse_agent(string: str | None) -> UserAgentModel:
     browser = ua.user_agent
     if browser is not None:
         data.browser_family = browser.family or ""
-        data.browser_version = await remove_none_values([
+        data.browser_version = _join_version([
             browser.major,
             browser.minor,
             browser.patch,
@@ -52,7 +44,7 @@ async def parse_agent(string: str | None) -> UserAgentModel:
     os = ua.os
     if os is not None:
         data.os_family = os.family or ""
-        data.os_version = await remove_none_values([
+        data.os_version = _join_version([
             os.major,
             os.minor,
             os.patch,

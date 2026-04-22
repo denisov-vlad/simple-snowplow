@@ -32,7 +32,7 @@ async def get_user_ip_from_configured_header(
     """
     header_name = settings.common.snowplow.user_ip_header
     for header_value in request.headers.getlist(header_name):
-        parsed_ip = await extract_ip_from_header(header_value)
+        parsed_ip = extract_ip_from_header(header_value)
         if parsed_ip is not None:
             return parsed_ip
     return None

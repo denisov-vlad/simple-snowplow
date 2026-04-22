@@ -4,13 +4,13 @@ IP address parsing and handling.
 
 from ipaddress import IPv4Address, IPv6Address, ip_address
 
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from elasticapm.contrib.asyncio.traces import capture_span
 
 DEFAULT_IPV4 = IPv4Address("0.0.0.0")
 
 
-@async_capture_span()
-async def extract_ip_from_header(
+@capture_span()
+def extract_ip_from_header(
     header_value: str | None,
 ) -> IPv4Address | IPv6Address | None:
     """
@@ -18,12 +18,6 @@ async def extract_ip_from_header(
 
     For comma-separated headers (for example, ``X-Forwarded-For``), the first
     valid value is treated as the original client IP.
-
-    Args:
-        header_value: Raw HTTP header value
-
-    Returns:
-        First parsed IP address or None
     """
     if not header_value:
         return None
@@ -40,29 +34,20 @@ async def extract_ip_from_header(
     return None
 
 
-@async_capture_span()
-async def convert_ip(ip: IPv4Address | IPv6Address | str | None) -> IPv4Address:
-    """
-    Convert an IP address to IPv4Address format.
-
-    Args:
-        ip: The IP address to convert
-
-    Returns:
-        The converted IPv4 address or a default address if conversion fails
-    """
+@capture_span()
+def convert_ip(ip: IPv4Address | IPv6Address | str | None) -> IPv4Address:
+    """Convert an IP address to IPv4Address format."""
 
     if ip is None:
         return DEFAULT_IPV4
-    elif isinstance(ip, IPv4Address):
+    if isinstance(ip, IPv4Address):
         return ip
-    elif isinstance(ip, str):
-        ip = await extract_ip_from_header(ip)
+    if isinstance(ip, str):
+        ip = extract_ip_from_header(ip)
         if ip is None:
             return DEFAULT_IPV4
 
     if isinstance(ip, IPv6Address):
-        # Convert IPv6 to IPv4 if it's a mapped address
         if ip.ipv4_mapped:
             return ip.ipv4_mapped
         return DEFAULT_IPV4

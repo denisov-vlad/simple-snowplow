@@ -43,8 +43,8 @@ async def process_data(
     Returns:
         List of processed event records ready for storage
     """
-    user_ip = await convert_ip(user_ip)
-    ua_data = await parse_agent(user_agent)
+    user_ip = convert_ip(user_ip)
+    ua_data = parse_agent(user_agent)
 
     # Extract payload data
     if isinstance(body, PayloadModel):

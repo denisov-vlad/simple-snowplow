@@ -28,8 +28,8 @@ from typing import Any
 from zipfile import ZipFile
 
 import fire
+import httpx
 import orjson
-import requests
 import structlog
 from clickhouse_connect import get_async_client
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
@@ -260,7 +260,7 @@ class ScriptsCommands:
         for filename in files:
             url = f"{base_url}/{filename}"
             self.logger.info("Downloading", url=url)
-            resp = requests.get(url, timeout=60)
+            resp = httpx.get(url, timeout=60, follow_redirects=True)
             if resp.status_code != 200:
                 raise RuntimeError(
                     f"Failed to download {filename}: HTTP {resp.status_code}",

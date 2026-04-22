@@ -35,7 +35,8 @@ class _RecordingLogger:
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
 async def test_process_data_logs_iglu_warning_but_returns_row(
-    monkeypatch, anyio_backend,
+    monkeypatch,
+    anyio_backend,
 ):
     logger = _RecordingLogger()
     runtime_payload_module = importlib.import_module("routers.tracker.parsers.payload")

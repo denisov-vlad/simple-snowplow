@@ -59,7 +59,7 @@ register_fields(
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
-async def test_insert_rows_keeps_direct_mode_row_by_row(anyio_backend):
+async def test_insert_rows_issues_single_batch_request(anyio_backend):
     client = _FakeClient()
     connector = ClickHouseConnector(
         client,
@@ -72,9 +72,23 @@ async def test_insert_rows_keeps_direct_mode_row_by_row(anyio_backend):
         table_group="test_events",
     )
 
-    assert len(client.calls) == 2
-    assert client.calls[0]["data"] == [["a", "1"]]
-    assert client.calls[1]["data"] == [["b", "2"]]
+    assert len(client.calls) == 1
+    assert client.calls[0]["data"] == [["a", "1"], ["b", "2"]]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
+async def test_insert_rows_noop_for_empty_batch(anyio_backend):
+    client = _FakeClient()
+    connector = ClickHouseConnector(
+        client,
+        database="snowplow",
+        tables=_tables(),
+    )
+
+    await connector.insert_rows([], table_group="test_events")
+
+    assert client.calls == []
 
 
 @pytest.mark.anyio
