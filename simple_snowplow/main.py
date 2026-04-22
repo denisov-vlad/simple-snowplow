@@ -36,7 +36,7 @@ def _get_base_middleware() -> list[Middleware]:
         Middleware(
             CORSMiddleware,
             allow_origin_regex=".*",
-            allow_credentials=True,
+            allow_credentials=False,
             allow_methods=["*"],
             allow_headers=["*"],
             expose_headers=["*"],

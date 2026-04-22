@@ -98,6 +98,9 @@ async def proxy_hash(data: models.HashModel) -> AnyHttpUrl:
     return result
 
 
+ALLOWED_PROXY_SCHEMES: Final[frozenset[str]] = frozenset({"http", "https"})
+
+
 @router.get("/route/{schema}/{host}/{path}")
 async def proxy(schema: str, host: str, path: str = "") -> Response:
     """
@@ -114,8 +117,22 @@ async def proxy(schema: str, host: str, path: str = "") -> Response:
     Raises:
         HTTPException: If the proxy request fails
     """
-    decoded_host = _decode_url_part(host)
-    decoded_path = _decode_url_part(path)
+    if schema not in ALLOWED_PROXY_SCHEMES:
+        raise HTTPException(status_code=400, detail="Unsupported proxy scheme")
+
+    try:
+        decoded_host = _decode_url_part(host)
+        decoded_path = _decode_url_part(path)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid proxy target") from exc
+
+    # Only allow hosts that were explicitly opted-in via configuration.
+    # Without this check the endpoint is a generic SSRF gadget
+    # (cloud metadata, internal services, localhost, ...).
+    host_only = decoded_host.split(":", 1)[0].lower()
+    if host_only not in {d.lower() for d in PROXY_CONFIG.domains}:
+        raise HTTPException(status_code=403, detail="Proxy target not allowed")
+
     url = f"{schema}://{decoded_host}/{decoded_path}"
 
     try:
