@@ -310,6 +310,11 @@ async def parse_contexts(
         if not isinstance(context, dict):
             logger.warning("Context is not a dict", context=context)
             continue
+        for key in ("schema", "data"):
+            if key not in context:
+                bad_contexts = True
+                logger.warning(f"Empty {key} for payload", context=context)
+                continue
 
         missing_keys = [k for k in ("schema", "data") if k not in context]
         if missing_keys:
