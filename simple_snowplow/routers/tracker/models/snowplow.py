@@ -147,7 +147,7 @@ class PayloadBase(Base, Validation, StructuredEvent):
     page: str = Field("", title="Page title")
 
     # Identifiers
-    eid: UUID = Field(default_factory=lambda: uuid4(), title="Event UUID")
+    eid: UUID = Field(default_factory=uuid4, title="Event UUID")
     duid: UUID | None = Field(
         None,
         title="Unique identifier for a user, based on a first party cookie",
@@ -167,15 +167,15 @@ class PayloadBase(Base, Validation, StructuredEvent):
 
     # Event timestamps
     dtm: datetime = Field(
-        default_factory=lambda: datetime.now(),
+        default_factory=datetime.now,
         title="Timestamp when event occurred, as recorded by client device",
     )
     stm: datetime | None = Field(
-        default_factory=lambda: datetime.now(),
+        default_factory=datetime.now,
         title="Timestamp when event was sent by client device to collector",
     )
     rtm: datetime = Field(
-        default_factory=lambda: datetime.now(),
+        default_factory=datetime.now,
         title="Timestamp when event was received by collector",
     )
 

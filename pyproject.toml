@@ -46,7 +46,6 @@ ignore = [
     # whitespace before ':' - formatter handles this
     "E203",
 ]
-
 # Exclude a variety of commonly ignored directories.
 exclude = [
     ".bzr",
@@ -71,9 +70,27 @@ exclude = [
     "node_modules",
     "venv",
 ]
-
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+# Optional integrations (APM / Prometheus / Sentry) are imported lazily
+# so the app can boot without those packages installed.
+"simple_snowplow/main.py" = ["PLC0415"]
+# Schema registry lookup is imported inside `insert_batch` to avoid a
+# circular import with the schemas module that itself imports the connector.
+"simple_snowplow/routers/tracker/db/clickhouse/connector.py" = ["PLC0415"]
+# FastAPI endpoints idiomatically use `Depends(...)` in parameter defaults.
+"simple_snowplow/routers/tracker/routes/*.py" = ["B008"]
+# RabbitMQPublisher.__init__ takes six plain fields; splitting into a DTO
+# hurts more than the 5-arg limit helps.
+"simple_snowplow/ingest/rabbitmq.py" = ["PLR0913"]
+# parse_payload orchestrates many event shapes; a meaningful split is its
+# own refactor, not a lint cleanup.
+"simple_snowplow/routers/tracker/parsers/payload.py" = ["PLR0912", "PLR0915"]
+# Tests embed long Iglu URIs in fixtures and use long descriptive names;
+# magic values in assertions are fine.
+"tests/**/*.py" = ["E501", "PLR2004"]
 
 [tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.

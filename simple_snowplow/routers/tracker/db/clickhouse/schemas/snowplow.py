@@ -8,10 +8,10 @@ from clickhouse_connect.cc_sqlalchemy.datatypes.base import ChSqlaType
 from clickhouse_connect.cc_sqlalchemy.datatypes.sqltypes import LowCardinality
 from clickhouse_connect.datatypes.base import ClickHouseType, TypeDef
 from clickhouse_connect.datatypes.container import Tuple
-from clickhouse_connect.datatypes.dynamic import JSON as JSONType
+from clickhouse_connect.datatypes.dynamic import JSON as JSONType  # noqa: N811
 from clickhouse_connect.datatypes.network import IPv4
 from clickhouse_connect.datatypes.numeric import Bool, Enum8, Float32, UInt64
-from clickhouse_connect.datatypes.special import UUID as UUIDType
+from clickhouse_connect.datatypes.special import UUID as UUIDType  # noqa: N811
 from clickhouse_connect.datatypes.string import String
 from clickhouse_connect.datatypes.temporal import DateTime64
 from clickhouse_connect.driver.binding import quote_identifier

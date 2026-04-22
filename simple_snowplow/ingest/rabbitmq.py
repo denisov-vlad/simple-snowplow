@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from collections.abc import Awaitable, Callable
 from contextlib import suppress
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any
 
 import structlog
 from aio_pika import DeliveryMode, Message, connect_robust
@@ -24,7 +25,6 @@ from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 
 logger = structlog.get_logger(__name__)
-T = TypeVar("T")
 
 # Assigned to a name so ruff-format (PEP 758 preview) does not rewrite the
 # `except (A, B):` literal into the bare `except A, B:` form.
@@ -80,7 +80,7 @@ async def connect_rabbitmq(config: RabbitMQConfig) -> AbstractRobustConnection:
     )
 
 
-async def retry_rabbitmq_startup(
+async def retry_rabbitmq_startup[T](
     config: RabbitMQConfig,
     operation: str,
     callback: Callable[[], Awaitable[T]],
@@ -312,7 +312,7 @@ class RabbitMQBatchWorker:
                             asyncio.shield(next_message_task),
                             timeout=self.flush_interval,
                         )
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         await self.flush_all()
                         continue
                     except StopAsyncIteration:

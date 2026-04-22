@@ -59,6 +59,10 @@ EMPTY_INTS = ("event_index",)
 DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
 DEFAULT_DATE = datetime(1970, 1, 1)
 
+# _sp_id cookie value is a 6-part dot-separated string:
+# device_id.created_time.vid.now_time.last_visit_time.session_id
+SP_ID_COOKIE_PARTS = 6
+
 _SE_PR_JSON_ERRORS = (orjson.JSONDecodeError, TypeError)
 
 schemas = settings.common.snowplow.schemas
@@ -128,7 +132,7 @@ def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
         # Extract domain user ID from sp cookie
         if name.startswith("_sp_id"):
             parts = cookie.value.split(".")
-            if len(parts) < 6:
+            if len(parts) < SP_ID_COOKIE_PARTS:
                 logger.warning("Incomplete _sp_id cookie", cookie_value=cookie.value)
                 continue
 

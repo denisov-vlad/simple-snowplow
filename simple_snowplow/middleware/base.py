@@ -5,7 +5,7 @@ This module provides base classes for middleware implementations with
 common functionality like request/response processing hooks and error handling.
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 import structlog
 from fastapi import Request, Response
