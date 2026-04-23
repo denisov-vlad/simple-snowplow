@@ -6,7 +6,6 @@ Settings can be configured via environment variables with the SNOWPLOW_ prefix.
 """
 
 import os
-from functools import lru_cache
 from typing import Any, Literal
 
 from pydantic import AnyHttpUrl, BaseModel, field_validator, model_validator
@@ -322,7 +321,7 @@ class Settings(BaseSettings):
     (e.g. ``SNOWPLOW_LOGGING__LEVEL=DEBUG``).
 
     Example:
-        >>> settings = get_settings()
+        >>> from core.config import settings
         >>> settings.logging.level
         'WARNING'
     """
@@ -355,11 +354,4 @@ class Settings(BaseSettings):
         return self.common.debug
 
 
-@lru_cache(maxsize=1)
-def get_settings() -> Settings:
-    """Get the application settings (cached)."""
-    return Settings()
-
-
-# Eagerly instantiate for backwards compatibility with previous import style
-settings = get_settings()
+settings = Settings()

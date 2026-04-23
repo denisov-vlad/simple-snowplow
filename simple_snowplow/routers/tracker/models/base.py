@@ -1,8 +1,7 @@
 from typing import Any, Self
 
-from fastapi.exceptions import RequestValidationError
 from json_repair import repair_json
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 
 class Model(BaseModel):
@@ -45,7 +44,7 @@ class Model(BaseModel):
 
         try:
             return cls.__pydantic_validator__.validate_json(**kwargs)
-        except RequestValidationError:
+        except ValidationError:
             if isinstance(json_data, str):
                 json_str = json_data
             elif isinstance(json_data, (bytes, bytearray)):

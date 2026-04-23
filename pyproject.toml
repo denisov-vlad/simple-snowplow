@@ -6,35 +6,32 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "aio-pika>=9.5.7",
-    "aiofiles>=24.1.0",
-    "aiohttp>=3.11.18",
-    "brotli>=1.1.0",
     "brotli-asgi>=1.4.0",
-    "certifi>=2025.4.26",
     "clickhouse-connect>=0.8.17",
     "crawlerdetect>=0.3.0",
-    "elastic-apm>=6.23.0",
     "fastapi>=0.127.1",
     "fastapi-structlog>=0.7.1",
     "fire>=0.7.0",
-    "httptools>=0.7.1",
     "httpx>=0.28.1",
-    "inflection>=0.5.1",
     "jsonschema>=4.25.1",
     "json-repair>=0.44.0",
     "orjson>=3.10.16",
     "prometheus-fastapi-instrumentator>=7.1.0",
     "pydantic-settings>=2.9.1",
-    "pyyaml>=6.0.2",
-    "requests>=2.32.3",
-    "sentry-sdk[fastapi]>=2.35.1",
-    "sqlalchemy>=2.0.40",
-    "sqlmodel>=0.0.22",
     "structlog>=25.3.0",
     "ua-parser[regex]>=1.0.1",
-    "urllib3>=2.4.0",
     "uvicorn>=0.34.2",
 ]
+
+[project.optional-dependencies]
+# Install with `uv sync --extra apm` or `pip install simple-snowplow[apm]`.
+# Required when SNOWPLOW_ELASTIC_APM__ENABLED=true; without the extra, the
+# `core.tracing` module falls back to no-op decorators.
+apm = ["elastic-apm>=6.23.0"]
+# Install with `uv sync --extra sentry`. Required when
+# SNOWPLOW_SENTRY__ENABLED=true; without it, enabling Sentry at startup
+# fails with a clear error.
+sentry = ["sentry-sdk[fastapi]>=2.35.1"]
 
 
 [tool.ruff]
@@ -57,7 +54,6 @@ ignore = [
     # whitespace before ':' - formatter handles this
     "E203",
 ]
-
 # Exclude a variety of commonly ignored directories.
 exclude = [
     ".bzr",
@@ -82,9 +78,27 @@ exclude = [
     "node_modules",
     "venv",
 ]
-
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+# Optional integrations (APM / Prometheus / Sentry) are imported lazily
+# so the app can boot without those packages installed.
+"simple_snowplow/main.py" = ["PLC0415"]
+# Schema registry lookup is imported inside `insert_batch` to avoid a
+# circular import with the schemas module that itself imports the connector.
+"simple_snowplow/routers/tracker/db/clickhouse/connector.py" = ["PLC0415"]
+# FastAPI endpoints idiomatically use `Depends(...)` in parameter defaults.
+"simple_snowplow/routers/tracker/routes/*.py" = ["B008"]
+# RabbitMQPublisher.__init__ takes six plain fields; splitting into a DTO
+# hurts more than the 5-arg limit helps.
+"simple_snowplow/ingest/rabbitmq.py" = ["PLR0913"]
+# parse_payload orchestrates many event shapes; a meaningful split is its
+# own refactor, not a lint cleanup.
+"simple_snowplow/routers/tracker/parsers/payload.py" = ["PLR0912", "PLR0915"]
+# Tests embed long Iglu URIs in fixtures and use long descriptive names;
+# magic values in assertions are fine.
+"tests/**/*.py" = ["E501", "PLR2004"]
 
 [tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
@@ -103,6 +117,15 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    # clickhouse_connect's Cython buffer module (driverc/buffer.pyx) uses
+    # `array.array('u', ...)`, deprecated in Python 3.12+ and due for removal
+    # in 3.16. Emitted during module import via frozen importlib, so we cannot
+    # pin the filter to the module name. Third-party issue, not ours.
+    "ignore:The 'u' type code is deprecated:DeprecationWarning",
+]
 
 [tool.ty.environment]
 # Support both import styles used in this repo:

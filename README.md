@@ -8,10 +8,10 @@ Simple Snowplow is a lightweight, self-hosted analytics collector compatible wit
 - Collects web analytics data including page views, events, and user information
 - Stores data in ClickHouse for high-performance analytics queries
 - Optional RabbitMQ-backed ingest mode with batch worker
-- Optional SendGrid event tracking integration
+- Allowlisted proxy endpoint for serving third-party analytics scripts from your own domain
 - Configurable data retention and storage settings
 - Horizontal scaling capabilities with ClickHouse cluster support
-- Built with FastAPI for high performance
+- Built with FastAPI (Python 3.14) for high performance
 - Optional demo mode for easy testing
 
 ## Architecture
@@ -93,9 +93,32 @@ The structure mirrors the configuration sections:
 - `ingest`: Delivery mode (`direct` or `rabbitmq`) and RabbitMQ/worker tuning
 - `logging`: Format and level for application logs
 - `security`: Docs availability and HTTPS enforcement
-- `proxy`: Allowed domains and paths for the analytics proxy
+- `proxy`: Allowlist of external domains and paths that `/proxy/route/...`
+  is permitted to forward to. Hosts not in `proxy.domains` get a 403; only
+  `http` and `https` schemes are accepted.
 - `performance`: Connection pool and concurrency settings
-- `elastic_apm`, `prometheus`, `sentry`: Optional observability integrations
+- `elastic_apm`, `prometheus`, `sentry`: Optional observability integrations.
+  - Elastic APM requires the `apm` extra (`uv sync --extra apm`); without it,
+    tracing decorators silently no-op and enabling `elastic_apm.enabled`
+    fails at startup with a clear error.
+  - Sentry requires the `sentry` extra (`uv sync --extra sentry`); enabling
+    `sentry.enabled` without it fails at startup with a clear error.
+
+#### Building the Docker image with optional extras
+
+The Dockerfile accepts a space-separated `EXTRAS` build arg mapped to
+`[project.optional-dependencies]` groups. Examples:
+
+```bash
+# Lean image (default)
+docker build -t simple-snowplow .
+
+# With Elastic APM + Sentry bundled
+docker build --build-arg EXTRAS="apm sentry" -t simple-snowplow .
+
+# With Compose: export once, then build normally
+SNOWPLOW_BUILD_EXTRAS="apm sentry" docker compose build app
+```
 
 You can inspect the full configuration (with defaults) via the CLI from the repository root:
 

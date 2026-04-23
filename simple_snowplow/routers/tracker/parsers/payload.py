@@ -3,7 +3,8 @@ Payload parsing functionality for Snowplow events.
 """
 
 import urllib.parse as urlparse
-from datetime import datetime
+from collections.abc import Callable
+from datetime import UTC, datetime
 from http.cookies import SimpleCookie
 from ipaddress import IPv4Address
 from typing import Any
@@ -12,7 +13,7 @@ from uuid import UUID
 import orjson
 import structlog
 from core.config import settings
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from core.tracing import async_capture_span, capture_span
 from routers.tracker.models.snowplow import (
     InsertModel,
     PayloadElementModel,
@@ -56,7 +57,13 @@ EMPTY_UUIDS = (
 EMPTY_INTS = ("event_index",)
 
 DEFAULT_UUID = UUID("00000000-0000-0000-0000-000000000000")
-DEFAULT_DATE = datetime(1970, 1, 1)
+DEFAULT_DATE = datetime(1970, 1, 1, tzinfo=UTC)
+
+# _sp_id cookie value is a 6-part dot-separated string:
+# device_id.created_time.vid.now_time.last_visit_time.session_id
+SP_ID_COOKIE_PARTS = 6
+
+_SE_PR_JSON_ERRORS = (orjson.JSONDecodeError, TypeError)
 
 schemas = settings.common.snowplow.schemas
 
@@ -98,8 +105,8 @@ def _log_validation_result(
     )
 
 
-@async_capture_span()
-async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
+@capture_span()
+def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
     """
     Parse cookies string.
 
@@ -125,7 +132,7 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
         # Extract domain user ID from sp cookie
         if name.startswith("_sp_id"):
             parts = cookie.value.split(".")
-            if len(parts) < 6:
+            if len(parts) < SP_ID_COOKIE_PARTS:
                 logger.warning("Incomplete _sp_id cookie", cookie_value=cookie.value)
                 continue
 
@@ -142,6 +149,142 @@ async def parse_cookies(cookies_str: str | None) -> dict[str, Any]:
         #     result["session_id"] = cookie.value
 
     return result
+
+
+ContextHandler = Callable[[InsertModel, dict[str, Any]], None]
+
+
+def _h_static(model: InsertModel, data: dict[str, Any]) -> None:
+    model.extra.update(data)
+
+
+def _h_perf_timing(model: InsertModel, data: dict[str, Any]) -> None:
+    model.extra["performance_timing"] = data
+
+
+def _h_client_hints(model: InsertModel, data: dict[str, Any]) -> None:
+    model.extra["client_hints"] = data
+
+
+def _h_ga_cookies(model: InsertModel, data: dict[str, Any]) -> None:
+    model.extra["ga_cookies"] = data
+
+
+def _h_web_page(model: InsertModel, data: dict[str, Any]) -> None:
+    model.view_id = UUID(data["id"])
+
+
+def _h_amp(model: InsertModel, data: dict[str, Any]) -> None:
+    model.amp = dict(model.amp, **data)
+
+
+def _h_page_data(model: InsertModel, data: dict[str, Any]) -> None:
+    model.page_data = dict(model.page_data, **data)
+
+
+def _h_mobile_context(model: InsertModel, data: dict[str, Any]) -> None:
+    model.device_brand = data.pop("deviceManufacturer")
+    model.device_model = data.pop("deviceModel")
+    model.os_family = data.pop("osType")
+    model.os_version_string = data.pop("osVersion")
+    model.device_is_mobile = True
+    model.device_is_touch_capable = True
+    model.device_extra = data
+
+
+def _h_mobile_application(model: InsertModel, data: dict[str, Any]) -> None:
+    for k in ("version", "build"):
+        if k in data and isinstance(data[k], str):
+            setattr(model, f"app_{k}", data[k])
+
+
+def _h_client_session(model: InsertModel, data: dict[str, Any]) -> None:
+    visit_count = data.pop("sessionIndex", 0)
+    if visit_count:
+        model.vid = visit_count
+    if data.get("sessionId"):
+        model.sid = UUID(data.pop("sessionId"))
+    if data.get("userId"):
+        model.duid = UUID(data.pop("userId"))
+    model.event_index = data.pop("eventIndex", 0)
+    first_event_time = data.pop("firstEventTimestamp", None)
+    if first_event_time is not None:
+        model.first_event_time = datetime.fromisoformat(first_event_time)
+    previous_session_id = data.pop("previousSessionId", None)
+    if previous_session_id:
+        model.previous_session_id = UUID(previous_session_id)
+    first_event_id = data.pop("firstEventId", None)
+    if first_event_id:
+        model.first_event_id = UUID(first_event_id)
+    model.storage_mechanism = data.pop("storageMechanism", "")
+
+
+def _h_mobile_screen(model: InsertModel, data: dict[str, Any]) -> None:
+    model.url = data.pop("name")
+    model.view_id = UUID(data.pop("id"))
+    model.screen = dict(model.screen, **data)
+
+
+def _h_browser_context(model: InsertModel, data: dict[str, Any]) -> None:
+    if "resolution" in data:
+        model.res = _coalesce_dimension_value(data.pop("resolution"), model.res)
+    if "viewport" in data:
+        model.vp = _coalesce_dimension_value(data.pop("viewport"), model.vp)
+    if "documentSize" in data:
+        model.ds = _coalesce_dimension_value(data.pop("documentSize"), model.ds)
+    if data:
+        model.browser_extra = data
+
+
+def _h_geolocation(model: InsertModel, data: dict[str, Any]) -> None:
+    model.geolocation = data
+
+
+def _h_screen_data(model: InsertModel, data: dict[str, Any]) -> None:
+    model.screen = dict(model.screen, **data)
+
+
+def _h_user_data(model: InsertModel, data: dict[str, Any]) -> None:
+    model.user_data = dict(model.user_data, **data)
+
+
+def _ue_setter(key: str) -> ContextHandler:
+    def _h(model: InsertModel, data: dict[str, Any]) -> None:
+        model.ue[key] = data
+
+    return _h
+
+
+CONTEXT_HANDLERS: dict[str, ContextHandler] = {
+    "com.acme/static_context": _h_static,
+    "org.w3/PerformanceTiming": _h_perf_timing,
+    "org.ietf/http_client_hints": _h_client_hints,
+    "com.google.analytics/cookies": _h_ga_cookies,
+    "com.google.ga4/cookies": _h_ga_cookies,
+    "com.snowplowanalytics.snowplow/web_page": _h_web_page,
+    "dev.amp.snowplow/amp_session": _h_amp,
+    "dev.amp.snowplow/amp_id": _h_amp,
+    "dev.amp.snowplow/amp_web_page": _h_amp,
+    schemas.page_data: _h_page_data,
+    "com.snowplowanalytics.snowplow/mobile_context": _h_mobile_context,
+    "com.snowplowanalytics.mobile/application": _h_mobile_application,
+    "com.snowplowanalytics.snowplow/client_session": _h_client_session,
+    "com.snowplowanalytics.mobile/screen": _h_mobile_screen,
+    "com.snowplowanalytics.snowplow/browser_context": _h_browser_context,
+    "com.snowplowanalytics.snowplow/geolocation_context": _h_geolocation,
+    schemas.screen_data: _h_screen_data,
+    schemas.user_data: _h_user_data,
+    schemas.ad_data: _ue_setter("ad_data"),
+    "com.snowplowanalytics.mobile/screen_summary": _ue_setter("screen_summary"),
+    "com.snowplowanalytics.mobile/application_lifecycle": _ue_setter("app_lifecycle"),
+    "com.android.installreferrer.api/referrer_details": _ue_setter("install_referrer"),
+    "org.w3/PerformanceNavigationTiming": _ue_setter("performance_navigation_timing"),
+    "com.snowplowanalytics.mobile/deep_link": _ue_setter("deep_link"),
+    "com.snowplowanalytics.mobile/deep_link_received": _ue_setter("deep_link_received"),
+    "com.snowplowanalytics.mobile/message_notification": _ue_setter(
+        "message_notification",
+    ),
+}
 
 
 @async_capture_span()
@@ -164,18 +307,17 @@ async def parse_contexts(
         return model
 
     for context in contexts["data"]:
-        bad_contexts = False
         if not isinstance(context, dict):
-            bad_contexts = True
+            logger.warning("Context is not a dict", context=context)
             continue
-        for key in ("schema", "data"):
-            if key not in context:
-                bad_contexts = True
-                logger.warning(f"Empty {key} for payload", context=context)
-                continue
 
-        if bad_contexts:
-            logger.error("Bad contexts", contexts=contexts)
+        missing_keys = [k for k in ("schema", "data") if k not in context]
+        if missing_keys:
+            logger.warning(
+                "Context is missing required keys",
+                missing=missing_keys,
+                context=context,
+            )
             continue
 
         schema_uri = context["schema"]
@@ -198,119 +340,17 @@ async def parse_contexts(
             logger.warning("Wrong data type", context=context)
             continue
 
-        # Process different context types based on schema
-        if schema == "com.acme/static_context":
-            for k, v in data.items():
-                model.extra[k] = v
-        elif schema == "org.w3/PerformanceTiming":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceTiming/jsonschema/1-0-0
-            model.extra["performance_timing"] = data
-        elif schema == "org.ietf/http_client_hints":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/org.ietf/http_client_hints/jsonschema/1-0-0
-            model.extra["client_hints"] = data
-        elif schema in ("com.google.analytics/cookies", "com.google.ga4/cookies"):
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.google.analytics/cookies/jsonschema/1-0-0
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.google.ga4/cookies/jsonschema/1-0-0
-            model.extra["ga_cookies"] = data
-        elif schema == "com.snowplowanalytics.snowplow/web_page":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/web_page/jsonschema/1-0-0
-            model.view_id = UUID(data["id"])
-        elif schema in (
-            "dev.amp.snowplow/amp_session",
-            "dev.amp.snowplow/amp_id",
-            "dev.amp.snowplow/amp_web_page",
-        ):
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_session/jsonschema/1-0-0
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_id/jsonschema/1-0-0
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/dev.amp.snowplow/amp_web_page/jsonschema/1-0-0
-            model.amp = dict(model.amp, **data)
-        elif schema == schemas.page_data:
-            model.page_data = dict(model.page_data, **data)
-        elif schema == "com.snowplowanalytics.snowplow/mobile_context":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/mobile_context/jsonschema/1-0-3
-            model.device_brand = data.pop("deviceManufacturer")
-            model.device_model = data.pop("deviceModel")
-            model.os_family = data.pop("osType")
-            model.os_version_string = data.pop("osVersion")
-            model.device_is_mobile = True
-            model.device_is_touch_capable = True
-            model.device_extra = data
-        elif schema == "com.snowplowanalytics.mobile/application":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application/jsonschema/1-0-0
-            # TODO: support for web
-            for k in ("version", "build"):
-                if k in data and isinstance(data[k], str):
-                    setattr(model, f"app_{k}", data[k])
-        elif schema == "com.snowplowanalytics.snowplow/client_session":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/client_session/jsonschema/1-0-2
-            visit_count = data.pop("sessionIndex", 0)
-            if visit_count:
-                model.vid = visit_count
-            if data.get("sessionId"):
-                model.sid = UUID(data.pop("sessionId"))
-            if data.get("userId"):
-                model.duid = UUID(data.pop("userId"))
-            model.event_index = data.pop("eventIndex", 0)
-            first_event_time = data.pop("firstEventTimestamp", None)
-            if first_event_time is not None:
-                model.first_event_time = datetime.fromisoformat(first_event_time)
-            previous_session_id = data.pop("previousSessionId", None)
-            if previous_session_id:
-                model.previous_session_id = UUID(previous_session_id)
-            first_event_id = data.pop("firstEventId", None)
-            if first_event_id:
-                model.first_event_id = UUID(first_event_id)
-            model.storage_mechanism = data.pop("storageMechanism", "")
-        elif schema == "com.snowplowanalytics.mobile/screen":
-            # data is duplicated in event field is it's view
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen/jsonschema/1-0-0
-            model.url = data.pop("name")
-            model.view_id = UUID(data.pop("id"))
-            model.screen = dict(model.screen, **data)
-        elif schema == "com.snowplowanalytics.snowplow/browser_context":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/browser_context/jsonschema/2-0-0
-            if "resolution" in data:
-                model.res = _coalesce_dimension_value(data.pop("resolution"), model.res)
-            if "viewport" in data:
-                model.vp = _coalesce_dimension_value(data.pop("viewport"), model.vp)
-            if "documentSize" in data:
-                model.ds = _coalesce_dimension_value(data.pop("documentSize"), model.ds)
-            if data:
-                model.browser_extra = data
-        elif schema == "com.snowplowanalytics.snowplow/geolocation_context":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.snowplow/geolocation_context/jsonschema/1-1-0
-            model.geolocation = data
-        elif schema == schemas.screen_data:
-            model.screen = dict(model.screen, **data)
-        elif schema == schemas.user_data:
-            model.user_data = dict(model.user_data, **data)
+        handler = CONTEXT_HANDLERS.get(schema)
+        if handler is None:
+            logger.warning(
+                "Schema has no parser",
+                data=data,
+                schema=schema,
+                schema_uri=schema_uri,
+            )
+            continue
 
-        # Unstructured events contexts
-        elif schema == schemas.ad_data:
-            model.ue["ad_data"] = data
-        elif schema == "com.snowplowanalytics.mobile/screen_summary":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/screen_summary/jsonschema/1-0-0
-            model.ue["screen_summary"] = data
-        elif schema == "com.snowplowanalytics.mobile/application_lifecycle":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/application_lifecycle/jsonschema/1-0-0
-            model.ue["app_lifecycle"] = data
-        elif schema == "com.android.installreferrer.api/referrer_details":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.android.installreferrer.api/referrer_details/jsonschema/1-0-0
-            model.ue["install_referrer"] = data
-        elif schema == "org.w3/PerformanceNavigationTiming":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/org.w3/PerformanceNavigationTiming/jsonschema/1-0-0
-            model.ue["performance_navigation_timing"] = data
-        elif schema == "com.snowplowanalytics.mobile/deep_link":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/deep_link/jsonschema/1-0-0
-            model.ue["deep_link"] = data
-        elif schema == "com.snowplowanalytics.mobile/deep_link_received":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/deep_link/jsonschema/1-0-0
-            model.ue["deep_link_received"] = data
-        elif schema == "com.snowplowanalytics.mobile/message_notification":
-            # https://github.com/snowplow/iglu-central/blob/master/schemas/com.snowplowanalytics.mobile/message_notification/jsonschema/1-0-0
-            model.ue["message_notification"] = data
-        else:
-            logger.warning("Schema has no parser", data=data, schema=schema)
+        handler(model, data)
 
     return model
 
@@ -409,7 +449,7 @@ async def parse_payload(
 
     # Get cookie information if device ID is missing
     if result.duid is None:
-        sp_cookies = await parse_cookies(cookies)
+        sp_cookies = parse_cookies(cookies)
         if sp_cookies and "device_id" in sp_cookies:
             result.duid = UUID(sp_cookies["device_id"])
 
@@ -436,7 +476,7 @@ async def parse_payload(
     if result.se_pr and isinstance(result.se_pr, str):
         try:
             result.se_pr = orjson.loads(result.se_pr)
-        except orjson.JSONDecodeError, TypeError:
+        except _SE_PR_JSON_ERRORS:
             result.se_pr = {"ex-property": result.se_pr}
         finally:
             if not isinstance(result.se_pr, dict):

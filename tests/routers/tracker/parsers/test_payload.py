@@ -84,6 +84,7 @@ if "elasticapm" not in sys.modules:
         return decorator
 
     traces_module.async_capture_span = _async_capture_span
+    traces_module.capture_span = _async_capture_span
     asyncio_module.traces = traces_module
     contrib_module.asyncio = asyncio_module
     elasticapm_module.contrib = contrib_module
@@ -184,7 +185,7 @@ class _RecordingLogger:
 def test_parse_cookies_truncated_sp_id_cookie_returns_empty_dict():
     cookies_str = "_sp_id.123=abc.def"
 
-    result = asyncio.run(parse_cookies(cookies_str))
+    result = parse_cookies(cookies_str)
 
     assert result == {}
 

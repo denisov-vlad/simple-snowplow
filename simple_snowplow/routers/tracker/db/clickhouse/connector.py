@@ -10,7 +10,7 @@ import structlog
 from clickhouse_connect.driver.asyncclient import AsyncClient
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
 from core.constants import CLICKHOUSE_ASYNC_SETTINGS
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from core.tracing import async_capture_span
 from routers.tracker.db.clickhouse.schemas.snowplow import TupleColumnDef
 
 logger = structlog.get_logger(__name__)
@@ -136,18 +136,13 @@ class ClickHouseConnector:
         table_group: str = "snowplow",
     ) -> None:
         """
-        Insert rows into the specified table group.
+        Insert rows into the specified table group in a single batch request.
 
         Args:
             rows: List of rows to insert
             table_group: The table group
         """
-        if not rows:
-            logger.debug("No rows to insert")
-            return
-
-        for row in rows:
-            await self.insert_batch([row], table_group=table_group)
+        await self.insert_batch(rows, table_group=table_group)
 
     @staticmethod
     def _sanitize_clickhouse_value(type_name: str, value: Any) -> Any:

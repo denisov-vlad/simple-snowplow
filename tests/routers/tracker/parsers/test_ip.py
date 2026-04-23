@@ -1,4 +1,3 @@
-import asyncio
 import importlib.util
 import sys
 from pathlib import Path
@@ -14,13 +13,14 @@ if "elasticapm" not in sys.modules:
     asyncio_module = ModuleType("elasticapm.contrib.asyncio")
     traces_module = ModuleType("elasticapm.contrib.asyncio.traces")
 
-    def _async_capture_span(*args, **kwargs):  # pragma: no cover - stub
+    def _capture_span(*args, **kwargs):  # pragma: no cover - stub
         def decorator(func):
             return func
 
         return decorator
 
-    traces_module.async_capture_span = _async_capture_span
+    traces_module.async_capture_span = _capture_span
+    traces_module.capture_span = _capture_span
     asyncio_module.traces = traces_module
     contrib_module.asyncio = asyncio_module
     elasticapm_module.contrib = contrib_module
@@ -44,26 +44,26 @@ DEFAULT_IPV4 = ip_module.DEFAULT_IPV4
 
 
 def test_extract_ip_from_header_uses_first_ip_from_forward_chain():
-    result = asyncio.run(
-        extract_ip_from_header("203.0.113.1,198.51.100.101,198.51.100.102"),
+    result = extract_ip_from_header(
+        "203.0.113.1,198.51.100.101,198.51.100.102",
     )
 
     assert str(result) == "203.0.113.1"
 
 
 def test_extract_ip_from_header_skips_invalid_values():
-    result = asyncio.run(extract_ip_from_header("unknown, not-an-ip, 198.51.100.44"))
+    result = extract_ip_from_header("unknown, not-an-ip, 198.51.100.44")
 
     assert str(result) == "198.51.100.44"
 
 
 def test_convert_ip_from_forward_chain():
-    result = asyncio.run(convert_ip("203.0.113.1,198.51.100.101"))
+    result = convert_ip("203.0.113.1,198.51.100.101")
 
     assert str(result) == "203.0.113.1"
 
 
 def test_convert_ip_invalid_chain_returns_default_ipv4():
-    result = asyncio.run(convert_ip("unknown,not-an-ip"))
+    result = convert_ip("unknown,not-an-ip")
 
     assert result == DEFAULT_IPV4

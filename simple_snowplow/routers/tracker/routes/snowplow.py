@@ -10,7 +10,7 @@ from ipaddress import IPv4Address, IPv6Address
 from core.config import settings
 from core.constants import CONTENT_TYPE_GIF, TRACKING_PIXEL
 from core.dependencies import DbConnector
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from core.tracing import async_capture_span
 from fastapi import Depends, Header, Request, Response
 from routers.tracker.handlers import process_data
 from routers.tracker.models.snowplow import (
@@ -32,7 +32,7 @@ async def get_user_ip_from_configured_header(
     """
     header_name = settings.common.snowplow.user_ip_header
     for header_value in request.headers.getlist(header_name):
-        parsed_ip = await extract_ip_from_header(header_value)
+        parsed_ip = extract_ip_from_header(header_value)
         if parsed_ip is not None:
             return parsed_ip
     return None

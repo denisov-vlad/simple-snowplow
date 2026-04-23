@@ -2,6 +2,11 @@ FROM python:3.14.4-alpine3.23
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.6-python3.14-alpine3.23 /usr/local/bin/uv /usr/local/bin/uv
 
+# Space-separated list of optional dependency groups to install, e.g.
+#   docker build --build-arg EXTRAS="apm sentry" .
+# Corresponds to [project.optional-dependencies] in pyproject.toml.
+ARG EXTRAS=""
+
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
     UV_PYTHON=python3.14
@@ -18,7 +23,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         libgcc \
         curl \
         tini && \
-    uv sync --locked --no-install-project && \
+    extra_args="" && \
+    for extra in ${EXTRAS}; do extra_args="${extra_args} --extra ${extra}"; done && \
+    uv sync --locked --no-install-project ${extra_args} && \
     apk del g++ && \
     rm -rf /var/cache/apk/*
 

@@ -6,7 +6,7 @@ SendGrid email event webhooks.
 """
 
 from core.dependencies import DbConnector
-from elasticapm.contrib.asyncio.traces import async_capture_span
+from core.tracing import async_capture_span
 from fastapi import Response
 from routers.tracker.models.sendgrid import SendgridElementBaseModel
 from starlette.status import HTTP_204_NO_CONTENT

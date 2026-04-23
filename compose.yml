@@ -4,6 +4,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # Space-separated optional dependency groups. Leave empty for the
+        # lean build. Example: EXTRAS: "apm sentry".
+        EXTRAS: "${SNOWPLOW_BUILD_EXTRAS:-}"
     ports:
     - "8000:80"
     environment:

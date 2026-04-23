@@ -9,7 +9,9 @@ from simple_snowplow.routers.tracker.parsers import iglu as iglu_module  # noqa:
 
 
 def _write_schema(
-    base_dir: pathlib.Path, schema_uri: str, content: str
+    base_dir: pathlib.Path,
+    schema_uri: str,
+    content: str,
 ) -> pathlib.Path:
     schema_path = iglu_module.resolve_iglu_schema_path(schema_uri)
     assert schema_path is not None

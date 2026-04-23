@@ -9,7 +9,7 @@ from core.config import settings
 from fastapi.responses import Response
 from fastapi.routing import APIRouter
 
-from .routes import sendgrid_event, tracker_cors, tracker_get, tracker_post
+from .routes import tracker_cors, tracker_get, tracker_post  # sendgrid_event
 
 # Get endpoint configuration from settings
 endpoints = settings.common.snowplow.endpoints
@@ -34,7 +34,10 @@ router.get(
 )(tracker_get)
 
 # Register the SendGrid webhook endpoint
-router.post(
-    endpoints.sendgrid_endpoint,
-    summary="Sendgrid event endpoint",
-)(sendgrid_event)
+# Disabled: no "sendgrid" table group is registered in the ClickHouse schema
+# registry, so inserts would raise KeyError. Re-enable together with schema +
+# ClickHouse table definitions.
+# router.post(
+#     endpoints.sendgrid_endpoint,
+#     summary="Sendgrid event endpoint",
+# )(sendgrid_event)

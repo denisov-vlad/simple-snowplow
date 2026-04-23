@@ -28,8 +28,8 @@ from typing import Any
 from zipfile import ZipFile
 
 import fire
+import httpx
 import orjson
-import requests
 import structlog
 from clickhouse_connect import get_async_client
 from clickhouse_connect.driver.exceptions import ClickHouseError, DatabaseError
@@ -39,6 +39,7 @@ from ingest import RabbitMQBatchWorker
 from ingest.rabbitmq import connect_rabbitmq
 from plugins.logger import init_logging
 from routers.tracker.db.clickhouse import ClickHouseConnector, TableManager
+from starlette.status import HTTP_200_OK
 
 
 def _build_clickhouse_insert_settings(*, require_wait: bool = False) -> dict[str, int]:
@@ -260,8 +261,8 @@ class ScriptsCommands:
         for filename in files:
             url = f"{base_url}/{filename}"
             self.logger.info("Downloading", url=url)
-            resp = requests.get(url, timeout=60)
-            if resp.status_code != 200:
+            resp = httpx.get(url, timeout=60, follow_redirects=True)
+            if resp.status_code != HTTP_200_OK:
                 raise RuntimeError(
                     f"Failed to download {filename}: HTTP {resp.status_code}",
                 )
