@@ -7,6 +7,7 @@ Settings can be configured via environment variables with the SNOWPLOW_ prefix.
 
 import os
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import AnyHttpUrl, BaseModel, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -106,6 +107,46 @@ class SecurityConfig(BaseModel):
     trusted_hosts: list[str] = ["*"]
     enable_https_redirect: bool = False
     trust_proxy_headers: bool = True
+    cors_allowed_origins: list[str] = ["*"]
+    cors_allow_credentials: bool = True
+
+    @field_validator("cors_allowed_origins")
+    @classmethod
+    def normalize_cors_allowed_origins(cls, values: list[str]) -> list[str]:
+        """Normalize configured CORS origins for exact browser Origin matching."""
+        normalized: list[str] = []
+
+        for value in values:
+            origin = value.strip()
+            if not origin:
+                raise ValueError("cors_allowed_origins entries must not be empty")
+
+            if origin == "*":
+                normalized.append(origin)
+                continue
+
+            parsed = urlsplit(origin.rstrip("/"))
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.netloc
+                or parsed.path not in {"", "/"}
+                or parsed.query
+                or parsed.fragment
+                or parsed.username is not None
+                or parsed.password is not None
+            ):
+                raise ValueError(
+                    "cors_allowed_origins entries must be bare HTTP(S) origins",
+                )
+
+            normalized.append(f"{parsed.scheme.lower()}://{parsed.netloc.lower()}")
+
+        if "*" in normalized and len(normalized) > 1:
+            raise ValueError(
+                "cors_allowed_origins cannot mix '*' with explicit origins",
+            )
+
+        return normalized
 
 
 class ElasticAPMConfig(BaseModel):

@@ -33,11 +33,6 @@ def _normalize_hostname(hostname: str) -> str:
     return hostname.rstrip(".").lower()
 
 
-ALLOWED_PROXY_HOSTS: Final[frozenset[str]] = frozenset(
-    _normalize_hostname(domain) for domain in PROXY_CONFIG.domains
-)
-
-
 router = APIRouter(tags=["proxy"], prefix=PROXY_ENDPOINT)
 
 
@@ -57,6 +52,11 @@ def _parse_proxy_target_url(schema: str, host: str, path: str) -> httpx.URL:
     if not target_url.host:
         raise ValueError("Proxy target is missing a hostname")
     return target_url
+
+
+def _get_allowed_proxy_hosts() -> frozenset[str]:
+    """Return the current normalized proxy host allowlist."""
+    return frozenset(_normalize_hostname(domain) for domain in PROXY_CONFIG.domains)
 
 
 def _should_encode_domain(domain: str | None) -> bool:
@@ -145,7 +145,7 @@ async def proxy(schema: str, host: str, path: str = "") -> Response:
     # Only allow hosts that were explicitly opted-in via configuration.
     # Without this check the endpoint is a generic SSRF gadget
     # (cloud metadata, internal services, localhost, ...).
-    if _normalize_hostname(target_url.host) not in ALLOWED_PROXY_HOSTS:
+    if _normalize_hostname(target_url.host) not in _get_allowed_proxy_hosts():
         raise HTTPException(status_code=403, detail="Proxy target not allowed")
 
     try:

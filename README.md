@@ -216,6 +216,20 @@ To track events from your website:
 
 2. Replace `your-server.com` with your Simple Snowplow server address
 
+By default the collector allows cross-origin requests from any origin,
+including credentialed browser tracker requests.
+
+If you want to restrict that in production, configure CORS explicitly for the
+sites you trust. For example, for `https://example.com`:
+
+```bash
+export SNOWPLOW_SECURITY__CORS_ALLOW_CREDENTIALS=true
+export SNOWPLOW_SECURITY__CORS_ALLOWED_ORIGINS='["https://example.com"]'
+```
+
+`cors_allowed_origins` entries should be bare origins such as
+`https://example.com` without a path.
+
 ### Demo Mode
 
 To test Simple Snowplow with the built-in demo:
