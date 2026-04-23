@@ -14,7 +14,7 @@ ENV UV_LINK_MODE=copy \
 WORKDIR /app
 
 # Install build dependencies and runtime libraries
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/root/.cache \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     apk update && \
@@ -33,7 +33,8 @@ WORKDIR /app/simple_snowplow
 
 COPY ./simple_snowplow /app/simple_snowplow
 
-RUN uv run cli.py scripts download --version 4.6.9 --output_dir static --force
+RUN --mount=type=cache,target=/root/.cache \
+    uv run cli.py scripts download --version 4.6.9 --output_dir static --force
 
 # Use tini as init to properly handle signals
 ENTRYPOINT ["/sbin/tini", "--"]
