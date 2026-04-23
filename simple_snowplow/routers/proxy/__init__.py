@@ -41,6 +41,19 @@ def _decode_url_part(s: str) -> str:
     return base64.urlsafe_b64decode(s).decode("utf-8")
 
 
+def _normalize_hostname(hostname: str) -> str:
+    """Normalize hostnames for allowlist comparison."""
+    return hostname.rstrip(".").lower()
+
+
+def _parse_proxy_target_url(schema: str, host: str, path: str) -> httpx.URL:
+    """Build the proxy target URL and expose the parsed hostname."""
+    target_url = httpx.URL(f"{schema}://{host}/{path}")
+    if not target_url.host:
+        raise ValueError("Proxy target is missing a hostname")
+    return target_url
+
+
 def _should_encode_domain(domain: str | None) -> bool:
     """Check if the domain should be encoded."""
     return domain in PROXY_CONFIG.domains
@@ -120,29 +133,28 @@ async def proxy(schema: str, host: str, path: str = "") -> Response:
     try:
         decoded_host = _decode_url_part(host)
         decoded_path = _decode_url_part(path)
-    except (ValueError, UnicodeDecodeError) as exc:
+        target_url = _parse_proxy_target_url(schema, decoded_host, decoded_path)
+    except (ValueError, UnicodeDecodeError, httpx.InvalidURL) as exc:
         raise HTTPException(status_code=400, detail="Invalid proxy target") from exc
 
     # Only allow hosts that were explicitly opted-in via configuration.
     # Without this check the endpoint is a generic SSRF gadget
     # (cloud metadata, internal services, localhost, ...).
-    host_only = decoded_host.split(":", 1)[0].lower()
-    if host_only not in {d.lower() for d in PROXY_CONFIG.domains}:
+    parsed_hostname = _normalize_hostname(target_url.host)
+    if parsed_hostname not in {_normalize_hostname(domain) for domain in PROXY_CONFIG.domains}:
         raise HTTPException(status_code=403, detail="Proxy target not allowed")
-
-    url = f"{schema}://{decoded_host}/{decoded_path}"
 
     try:
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.get(url, timeout=DEFAULT_PROXY_TIMEOUT)
+            response = await client.get(target_url, timeout=DEFAULT_PROXY_TIMEOUT)
     except httpx.TimeoutException as exc:
-        logger.warning("Proxy request timed out", url=url)
+        logger.warning("Proxy request timed out", url=str(target_url))
         raise HTTPException(
             status_code=504,
             detail=f"Proxy request to '{decoded_host}' timed out",
         ) from exc
     except httpx.RequestError as exc:
-        logger.warning("Proxy request failed", url=url, error=str(exc))
+        logger.warning("Proxy request failed", url=str(target_url), error=str(exc))
         raise HTTPException(
             status_code=502,
             detail=f"Proxy request to '{decoded_host}' failed",
