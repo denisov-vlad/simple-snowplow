@@ -93,9 +93,6 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # RabbitMQPublisher.__init__ takes six plain fields; splitting into a DTO
 # hurts more than the 5-arg limit helps.
 "simple_snowplow/ingest/rabbitmq.py" = ["PLR0913"]
-# parse_payload orchestrates many event shapes; a meaningful split is its
-# own refactor, not a lint cleanup.
-"simple_snowplow/routers/tracker/parsers/payload.py" = ["PLR0912", "PLR0915"]
 # Tests embed long Iglu URIs in fixtures and use long descriptive names;
 # magic values in assertions are fine.
 "tests/**/*.py" = ["E501", "PLR2004"]

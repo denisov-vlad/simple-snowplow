@@ -391,40 +391,21 @@ async def parse_event(event: dict[str, Any] | None, model: InsertModel) -> Inser
     return model
 
 
-@async_capture_span()
-async def parse_payload(
+def _build_initial_model(
     element: PayloadElementModel,
     user_agent: UserAgentModel,
     ip: IPv4Address,
-    cookies: str | None,
 ) -> InsertModel:
-    """
-    Parse a Snowplow event payload.
+    """Merge payload + UA + IP into a fresh InsertModel."""
 
-    Args:
-        element: The payload element
-        user_agent: The parsed user agent data
-        ip: The user's IP address
-        cookies: The cookies string
-
-    Returns:
-        Processed InsertModel with all data combined
-    """
-
-    data = element.model_dump(
-        exclude={"contexts", "ue_context", "ping_context"},
-    )
+    data = element.model_dump(exclude={"contexts", "ue_context", "ping_context"})
     ua_data = user_agent.model_dump()
-    data = {**ua_data, **data, "user_ip": ip}
+    return InsertModel.model_validate({**ua_data, **data, "user_ip": ip})
 
-    result = InsertModel.model_validate(data)
-    result = await parse_contexts(element.contexts, result)
-    result = await parse_event(element.ue_context, result)
 
-    if element.ping_context:
-        result.ue["page_ping"] = element.ping_context
+def _apply_amp_fields(result: InsertModel) -> None:
+    """Promote AMP-specific fields from `result.amp` onto top-level fields."""
 
-    # AMP-specific processing
     if "uid" in result.amp:
         result.uid = result.amp.pop("userId")
     if result.e == "ue" and "amp_page_ping" in result.ue:
@@ -433,27 +414,40 @@ async def parse_payload(
     if result.amp.get("domainUserid"):
         result.duid = UUID(result.amp.pop("domainUserid"))
 
-    # Parse URL for AMP linker
-    if result.url:
-        parsed_url = urlparse.urlparse(result.url)
-        query_string = urlparse.parse_qs(parsed_url.query)
 
-        if query_string.get("sp_amp_linker", []):
-            amp_linker = query_string["sp_amp_linker"][0]
-            try:
-                unknown_1, unknown_2, unknown_3, amp_device_id = amp_linker.split("*")
-                amp_device_id = parse_base64(amp_device_id)
-                result.amp["device_id"] = UUID(amp_device_id)
-            except Exception as e:
-                logger.warning(f"Failed to parse AMP linker: {e}")
+def _apply_amp_linker(result: InsertModel) -> None:
+    """Decode the ``sp_amp_linker`` query param and extract the AMP device id."""
 
-    # Get cookie information if device ID is missing
-    if result.duid is None:
-        sp_cookies = parse_cookies(cookies)
-        if sp_cookies and "device_id" in sp_cookies:
-            result.duid = UUID(sp_cookies["device_id"])
+    if not result.url:
+        return
 
-    # Handle screen_view events
+    parsed_url = urlparse.urlparse(result.url)
+    query_string = urlparse.parse_qs(parsed_url.query)
+    if not query_string.get("sp_amp_linker"):
+        return
+
+    amp_linker = query_string["sp_amp_linker"][0]
+    try:
+        *_, amp_device_id = amp_linker.split("*")
+        amp_device_id = parse_base64(amp_device_id)
+        result.amp["device_id"] = UUID(amp_device_id)
+    except Exception as e:
+        logger.warning(f"Failed to parse AMP linker: {e}")
+
+
+def _apply_cookie_duid(result: InsertModel, cookies: str | None) -> None:
+    """Fall back to the Snowplow `_sp_id` cookie when `duid` is still unset."""
+
+    if result.duid is not None:
+        return
+    sp_cookies = parse_cookies(cookies)
+    if sp_cookies and "device_id" in sp_cookies:
+        result.duid = UUID(sp_cookies["device_id"])
+
+
+def _apply_screen_view(result: InsertModel) -> None:
+    """Flatten a mobile ``screen_view`` unstructured event into a page view."""
+
     if "screen_view" in result.ue:
         result.e = "pv"
         result.view_id = UUID(result.ue["screen_view"].pop("id"))
@@ -468,35 +462,80 @@ async def parse_payload(
 
         result.screen.update(result.ue.pop("screen_view"))
 
-    # Handle screen name in screen context
+    # A mobile screen context can also supply the URL directly.
     if "screen_name" in result.screen:
         result.url = result.screen.pop("screen_name")
 
-    # Parse structured event properties if they are JSON
-    if result.se_pr and isinstance(result.se_pr, str):
-        try:
-            result.se_pr = orjson.loads(result.se_pr)
-        except _SE_PR_JSON_ERRORS:
-            result.se_pr = {"ex-property": result.se_pr}
-        finally:
-            if not isinstance(result.se_pr, dict):
-                result.se_pr = {"ex-property": result.se_pr}
-    else:
-        result.se_pr = {}
 
-    if result.se_va:
-        if not isinstance(result.se_va, (float, int)):
-            try:
-                result.se_va = float(result.se_va)
-            except ValueError:
-                result.se_pr["ex-value"] = result.se_va
-                result.se_va = 0.0
-    else:
+def _normalize_se_property(result: InsertModel) -> None:
+    """Force ``result.se_pr`` to a dict, wrapping non-JSON strings."""
+
+    if not (result.se_pr and isinstance(result.se_pr, str)):
+        result.se_pr = {}
+        return
+
+    try:
+        result.se_pr = orjson.loads(result.se_pr)
+    except _SE_PR_JSON_ERRORS:
+        result.se_pr = {"ex-property": result.se_pr}
+
+    if not isinstance(result.se_pr, dict):
+        result.se_pr = {"ex-property": result.se_pr}
+
+
+def _normalize_se_value(result: InsertModel) -> None:
+    """Force ``result.se_va`` to a float, stashing non-numeric originals.
+
+    Assumes ``_normalize_se_property`` ran first so ``result.se_pr`` is a dict.
+    """
+
+    if not result.se_va:
+        result.se_va = 0.0
+        return
+
+    if isinstance(result.se_va, (float, int)):
+        return
+
+    try:
+        result.se_va = float(result.se_va)
+    except ValueError:
+        if isinstance(result.se_pr, dict):
+            result.se_pr["ex-value"] = result.se_va
         result.se_va = 0.0
 
+
+def _apply_client_hints_device(result: InsertModel) -> None:
+    """Derive ``device_is_mobile`` / ``device_is_pc`` from UA client hints."""
+
     is_mobile = result.extra.get("client_hints", {}).get("isMobile")
-    if is_mobile is not None:
-        result.device_is_mobile = bool(int(is_mobile))
-        result.device_is_pc = bool(int(not is_mobile))
+    if is_mobile is None:
+        return
+    result.device_is_mobile = bool(int(is_mobile))
+    result.device_is_pc = bool(int(not is_mobile))
+
+
+@async_capture_span()
+async def parse_payload(
+    element: PayloadElementModel,
+    user_agent: UserAgentModel,
+    ip: IPv4Address,
+    cookies: str | None,
+) -> InsertModel:
+    """Parse a Snowplow event payload into an ``InsertModel``."""
+
+    result = _build_initial_model(element, user_agent, ip)
+    result = await parse_contexts(element.contexts, result)
+    result = await parse_event(element.ue_context, result)
+
+    if element.ping_context:
+        result.ue["page_ping"] = element.ping_context
+
+    _apply_amp_fields(result)
+    _apply_amp_linker(result)
+    _apply_cookie_duid(result, cookies)
+    _apply_screen_view(result)
+    _normalize_se_property(result)
+    _normalize_se_value(result)
+    _apply_client_hints_device(result)
 
     return result

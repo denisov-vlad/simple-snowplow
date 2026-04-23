@@ -28,6 +28,16 @@ HOSTNAME = settings.common.hostname
 ALLOWED_PROXY_SCHEMES: Final[frozenset[str]] = frozenset({"http", "https"})
 
 
+def _normalize_hostname(hostname: str) -> str:
+    """Normalize hostnames for allowlist comparison."""
+    return hostname.rstrip(".").lower()
+
+
+ALLOWED_PROXY_HOSTS: Final[frozenset[str]] = frozenset(
+    _normalize_hostname(domain) for domain in PROXY_CONFIG.domains
+)
+
+
 router = APIRouter(tags=["proxy"], prefix=PROXY_ENDPOINT)
 
 
@@ -39,11 +49,6 @@ def _encode_url_part(s: str) -> str:
 def _decode_url_part(s: str) -> str:
     """URL-safe base64 decode a string."""
     return base64.urlsafe_b64decode(s).decode("utf-8")
-
-
-def _normalize_hostname(hostname: str) -> str:
-    """Normalize hostnames for allowlist comparison."""
-    return hostname.rstrip(".").lower()
 
 
 def _parse_proxy_target_url(schema: str, host: str, path: str) -> httpx.URL:
@@ -140,8 +145,7 @@ async def proxy(schema: str, host: str, path: str = "") -> Response:
     # Only allow hosts that were explicitly opted-in via configuration.
     # Without this check the endpoint is a generic SSRF gadget
     # (cloud metadata, internal services, localhost, ...).
-    parsed_hostname = _normalize_hostname(target_url.host)
-    if parsed_hostname not in {_normalize_hostname(domain) for domain in PROXY_CONFIG.domains}:
+    if _normalize_hostname(target_url.host) not in ALLOWED_PROXY_HOSTS:
         raise HTTPException(status_code=403, detail="Proxy target not allowed")
 
     try:
