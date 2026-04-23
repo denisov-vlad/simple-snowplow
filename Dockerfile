@@ -6,6 +6,9 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.6-python3.14-alpine3.23 /usr/local/bin/uv 
 #   docker build --build-arg EXTRAS="apm sentry" .
 # Corresponds to [project.optional-dependencies] in pyproject.toml.
 ARG EXTRAS=""
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
 
 ENV UV_LINK_MODE=copy \
     UV_COMPILE_BYTECODE=1 \
@@ -13,8 +16,8 @@ ENV UV_LINK_MODE=copy \
 
 WORKDIR /app
 
-# Install build dependencies and runtime libraries
-RUN --mount=type=cache,target=/root/.cache \
+# Install build dependencies and runtime libraries.
+RUN --mount=type=cache,id=root-cache-${TARGETOS}-${TARGETARCH}${TARGETVARIANT},sharing=locked,target=/root/.cache \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     apk update && \
@@ -33,7 +36,7 @@ WORKDIR /app/simple_snowplow
 
 COPY ./simple_snowplow /app/simple_snowplow
 
-RUN --mount=type=cache,target=/root/.cache \
+RUN --mount=type=cache,id=root-cache-${TARGETOS}-${TARGETARCH}${TARGETVARIANT},sharing=locked,target=/root/.cache \
     uv run cli.py scripts download --version 4.6.9 --output_dir static --force
 
 # Use tini as init to properly handle signals
