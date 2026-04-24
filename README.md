@@ -176,6 +176,12 @@ uv run python simple_snowplow/cli.py queue worker
 
 In this mode the HTTP app only enqueues messages. Batch inserts into ClickHouse are performed exclusively by the worker.
 
+The default RabbitMQ `prefetch_count` matches the default worker `batch_size`
+so one-row tracking messages can fill a complete ClickHouse batch before the
+timeout flush. If you tune `SNOWPLOW_INGEST__RABBITMQ__BATCH_SIZE`, tune
+`SNOWPLOW_INGEST__RABBITMQ__PREFETCH_COUNT` with it unless you intentionally
+prefer lower worker memory use and smaller timeout-driven inserts.
+
 Idempotency: The command uses `CREATE DATABASE IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`; re-running is safe. If you change schema definitions (e.g. `order_by`, `engine`) you must manually apply migrations (dropping/recreating or performing ALTER statements) – the CLI purposefully does not perform destructive changes.
 
 Troubleshooting:

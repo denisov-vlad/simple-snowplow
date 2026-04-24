@@ -21,6 +21,12 @@ def test_failed_queue_name_must_differ_from_main_queue():
         )
 
 
+def test_default_prefetch_can_fill_default_batch():
+    config = RabbitMQConfig()
+
+    assert config.prefetch_count >= config.batch_size
+
+
 class _FakeExchange:
     def __init__(self):
         self.published = []
