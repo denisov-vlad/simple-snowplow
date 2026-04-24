@@ -4,6 +4,7 @@ import importlib
 import json
 import pathlib
 import sys
+from ipaddress import IPv4Address
 
 import pytest
 
@@ -14,6 +15,7 @@ sys.path.append(str(PROJECT_ROOT / "simple_snowplow"))
 from simple_snowplow.routers.tracker.handlers import process_data
 from simple_snowplow.routers.tracker.models.snowplow import (
     PayloadElementModel,
+    UserAgentModel,
 )
 
 
@@ -81,3 +83,49 @@ async def test_process_data_logs_iglu_warning_but_returns_row(
         and kwargs["validation_stage"] == "contexts"
         for args, kwargs in logger.warnings
     )
+
+
+def test_build_initial_model_skips_revalidation_and_copies_ua_mutables(
+    monkeypatch,
+):
+    runtime_payload_module = importlib.import_module("routers.tracker.parsers.payload")
+    body = PayloadElementModel.model_validate(
+        {
+            "aid": "example-app",
+            "e": "pv",
+            "p": "web",
+            "tv": "js-1.0.0",
+            "res": "1920x1080",
+        },
+    )
+    user_agent = UserAgentModel(
+        user_agent="Mozilla/5.0",
+        browser_version=["123"],
+        device_extra={"family": "Desktop"},
+    )
+
+    def _fail_model_validate(cls, *args, **kwargs):
+        raise AssertionError("InsertModel.model_validate should not run")
+
+    monkeypatch.setattr(
+        runtime_payload_module.InsertModel,
+        "model_validate",
+        classmethod(_fail_model_validate),
+    )
+
+    first = runtime_payload_module._build_initial_model(
+        body,
+        user_agent,
+        IPv4Address("127.0.0.1"),
+    )
+    first.browser_version.append("mutated")
+    first.device_extra["family"] = "mutated"
+    second = runtime_payload_module._build_initial_model(
+        body,
+        user_agent,
+        IPv4Address("127.0.0.1"),
+    )
+
+    assert first.aid == "example-app"
+    assert second.browser_version == ["123"]
+    assert second.device_extra == {"family": "Desktop"}

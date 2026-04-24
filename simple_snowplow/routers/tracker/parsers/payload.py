@@ -4,6 +4,7 @@ Payload parsing functionality for Snowplow events.
 
 import urllib.parse as urlparse
 from collections.abc import Callable
+from copy import copy
 from datetime import UTC, datetime
 from http.cookies import SimpleCookie
 from ipaddress import IPv4Address
@@ -66,6 +67,13 @@ SP_ID_COOKIE_PARTS = 6
 _SE_PR_JSON_ERRORS = (orjson.JSONDecodeError, TypeError)
 
 schemas = settings.common.snowplow.schemas
+
+_MUTABLE_USER_AGENT_FIELDS = (
+    "browser_version",
+    "browser_extra",
+    "os_version",
+    "device_extra",
+)
 
 
 def _coalesce_dimension_value(value: Any, fallback: str) -> str:
@@ -398,9 +406,19 @@ def _build_initial_model(
 ) -> InsertModel:
     """Merge payload + UA + IP into a fresh InsertModel."""
 
-    data = element.model_dump(exclude={"contexts", "ue_context", "ping_context"})
-    ua_data = user_agent.model_dump()
-    return InsertModel.model_validate({**ua_data, **data, "user_ip": ip})
+    data = element.__dict__.copy()
+    ua_data = user_agent.__dict__.copy()
+    for field_name in _MUTABLE_USER_AGENT_FIELDS:
+        ua_data[field_name] = copy(ua_data[field_name])
+    data.update(ua_data)
+    data["user_ip"] = ip
+    return InsertModel.model_construct(**data)
+
+
+def dump_insert_model(model: InsertModel) -> dict[str, Any]:
+    """Return a ClickHouse row dict without running Pydantic serialization."""
+
+    return model.__dict__.copy()
 
 
 def _apply_amp_fields(result: InsertModel) -> None:
