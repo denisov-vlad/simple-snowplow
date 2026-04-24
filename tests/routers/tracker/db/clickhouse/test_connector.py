@@ -111,6 +111,47 @@ async def test_insert_batch_sends_single_clickhouse_insert(anyio_backend):
     assert client.calls[0]["data"] == [["a", "1"], ["b", "2"]]
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
+async def test_insert_batch_reuses_cached_insert_metadata(anyio_backend):
+    register_fields(
+        "test_cached_events",
+        [
+            ColumnDef(payload_name="foo", name="foo", type=STRING),
+        ],
+    )
+    client = _FakeClient()
+    connector = ClickHouseConnector(
+        client,
+        database="snowplow",
+        tables={
+            "test_cached_events": {
+                "local": {"name": "cached_events_local"},
+                "distributed": {"name": "cached_events_distributed"},
+            },
+        },
+    )
+
+    await connector.insert_batch([{"foo": "a"}], table_group="test_cached_events")
+
+    register_fields(
+        "test_cached_events",
+        [
+            ColumnDef(payload_name="bar", name="bar", type=STRING),
+        ],
+    )
+    await connector.insert_batch(
+        [{"foo": "b", "bar": "should-not-be-used"}],
+        table_group="test_cached_events",
+    )
+
+    assert len(client.calls) == 2
+    assert client.calls[0]["column_names"] == ["foo"]
+    assert client.calls[0]["data"] == [["a"]]
+    assert client.calls[1]["column_names"] == ["foo"]
+    assert client.calls[1]["data"] == [["b"]]
+
+
 register_fields(
     "test_tuple_events",
     [
