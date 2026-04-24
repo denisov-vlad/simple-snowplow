@@ -9,13 +9,15 @@ import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
+import httpx
 import structlog
 from clickhouse_connect import get_async_client
 from clickhouse_connect.driver.httputil import get_pool_manager
 from fastapi import FastAPI
 from routers.tracker.parsers.iglu import warm_iglu_schema_cache
 
-from .config import ClickHouseConfig, settings
+from .config import ClickHouseConfig, ProxyConfig, settings
+from .constants import DEFAULT_PROXY_TIMEOUT
 from .exceptions import DatabaseConnectionError
 from .healthcheck import ClickHouseHealthChecker
 
@@ -24,6 +26,7 @@ logger = structlog.get_logger(__name__)
 PERFORMANCE_CONFIG = settings.performance
 CLICKHOUSE_CONFIG = settings.clickhouse
 INGEST_CONFIG = settings.ingest
+PROXY_CONFIG = settings.proxy
 
 
 def _build_clickhouse_insert_settings() -> dict[str, int]:
@@ -153,6 +156,37 @@ async def _configure_rabbitmq_ingest(application: FastAPI) -> None:
     application.state._closeables.append(application.state.connector)
 
 
+async def _configure_proxy_http_client(
+    application: FastAPI,
+    config: ProxyConfig = PROXY_CONFIG,
+) -> None:
+    """Create the shared outbound HTTP client used by the proxy route."""
+
+    limits = httpx.Limits(
+        max_connections=PERFORMANCE_CONFIG.max_concurrent_connections,
+        max_keepalive_connections=PERFORMANCE_CONFIG.max_concurrent_connections,
+    )
+    application.state.proxy_http_client = httpx.AsyncClient(
+        follow_redirects=True,
+        timeout=DEFAULT_PROXY_TIMEOUT,
+        limits=limits,
+    )
+    application.state.proxy_allowed_hosts = frozenset(
+        domain.rstrip(".").lower() for domain in config.domains
+    )
+    application.state._closeables.append(application.state.proxy_http_client)
+
+
+async def _close_lifespan_resources(application: FastAPI) -> None:
+    """Close resources registered during application lifespan startup."""
+
+    for resource in reversed(application.state._closeables):
+        try:
+            await resource.close()
+        except Exception as e:
+            logger.warning("Error closing resource", error=str(e))
+
+
 def warm_known_iglu_schemas() -> None:
     """Preload supported Iglu validators into memory during startup."""
 
@@ -221,11 +255,13 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
         else:
             await _configure_direct_ingest(application)
 
+        await _configure_proxy_http_client(application)
         warm_known_iglu_schemas()
         logger.info("Ingest backend initialized")
 
     except Exception as e:
         logger.error("Failed to initialize ingest backend", error=str(e))
+        await _close_lifespan_resources(application)
         raise DatabaseConnectionError(
             "Failed to initialize ingest backend",
             {
@@ -240,8 +276,4 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None]:
     # Cleanup on shutdown
     logger.info("Shutting down application")
 
-    for resource in reversed(application.state._closeables):
-        try:
-            await resource.close()
-        except Exception as e:
-            logger.warning("Error closing resource", error=str(e))
+    await _close_lifespan_resources(application)

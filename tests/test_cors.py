@@ -95,3 +95,47 @@ def test_create_app_supports_credentialed_cors_with_allow_all_origins(monkeypatc
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "https://example.com"
     assert response.headers["access-control-allow-credentials"] == "true"
+
+
+def test_base_middleware_can_disable_access_log_and_brotli(monkeypatch):
+    monkeypatch.chdir(PROJECT_ROOT / "simple_snowplow")
+    main_module = _reload_main_module()
+    monkeypatch.setattr(main_module.settings.performance, "enable_access_log", False)
+    monkeypatch.setattr(main_module.settings.performance, "enable_brotli", False)
+
+    middleware_classes = [middleware.cls for middleware in main_module._get_base_middleware()]
+
+    assert not any(
+        issubclass(middleware_class, main_module.AccessLogMiddleware)
+        for middleware_class in middleware_classes
+    )
+    assert main_module.BrotliMiddleware not in middleware_classes
+
+
+def test_base_middleware_passes_expensive_middleware_exclusions(monkeypatch):
+    monkeypatch.chdir(PROJECT_ROOT / "simple_snowplow")
+    main_module = _reload_main_module()
+    excluded_paths = ["/tracker", "/i"]
+    monkeypatch.setattr(main_module.settings.performance, "enable_access_log", True)
+    monkeypatch.setattr(main_module.settings.performance, "enable_brotli", True)
+    monkeypatch.setattr(
+        main_module.settings.performance,
+        "access_log_excluded_paths",
+        excluded_paths,
+    )
+    monkeypatch.setattr(
+        main_module.settings.performance,
+        "brotli_excluded_paths",
+        excluded_paths,
+    )
+
+    middleware = main_module._get_base_middleware()
+    access_log = next(
+        item
+        for item in middleware
+        if item.cls is main_module.PathSkippingAccessLogMiddleware
+    )
+    brotli = next(item for item in middleware if item.cls is main_module.BrotliMiddleware)
+
+    assert access_log.kwargs["excluded_paths"] == excluded_paths
+    assert brotli.kwargs["excluded_handlers"] == excluded_paths

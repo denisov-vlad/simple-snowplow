@@ -27,13 +27,28 @@ from plugins.logger import init_logging, validation_exception_handler
 from routers.proxy import router as proxy_router
 from routers.tracker import router as app_router
 from starlette.middleware.cors import CORSMiddleware
+from starlette.types import Receive, Scope, Send
+
+
+class PathSkippingAccessLogMiddleware(AccessLogMiddleware):
+    """Access logger that can bypass exact paths such as collector endpoints."""
+
+    def __init__(self, app, excluded_paths: list[str] | None = None, **kwargs):
+        super().__init__(app, **kwargs)
+        self.excluded_paths = frozenset(excluded_paths or ())
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope.get("path") in self.excluded_paths:
+            await self.app(scope, receive, send)
+            return
+        await super().__call__(scope, receive, send)
 
 
 def _get_base_middleware() -> list[Middleware]:
     """Get the list of base middleware for the application."""
     allow_all_origins = settings.security.cors_allowed_origins == ["*"]
 
-    return [
+    middleware = [
         Middleware(
             CORSMiddleware,
             allow_origins=[]
@@ -48,10 +63,27 @@ def _get_base_middleware() -> list[Middleware]:
         Middleware(CurrentScopeSetMiddleware),
         Middleware(CorrelationIdMiddleware),
         Middleware(StructlogMiddleware),
-        Middleware(AccessLogMiddleware),
-        Middleware(SecurityHeadersMiddleware),
-        Middleware(BrotliMiddleware),
     ]
+
+    if settings.performance.enable_access_log:
+        middleware.append(
+            Middleware(
+                PathSkippingAccessLogMiddleware,
+                excluded_paths=settings.performance.access_log_excluded_paths,
+            ),
+        )
+
+    middleware.append(Middleware(SecurityHeadersMiddleware))
+
+    if settings.performance.enable_brotli:
+        middleware.append(
+            Middleware(
+                BrotliMiddleware,
+                excluded_handlers=settings.performance.brotli_excluded_paths,
+            ),
+        )
+
+    return middleware
 
 
 def _configure_conditional_middleware(app: FastAPI) -> None:

@@ -198,6 +198,10 @@ class PerformanceConfig(BaseModel):
     max_concurrent_connections: int = 100
     db_pool_size: int = 5
     db_pool_overflow: int = 10
+    enable_access_log: bool = True
+    access_log_excluded_paths: list[str] = []
+    enable_brotli: bool = True
+    brotli_excluded_paths: list[str] = []
 
     @field_validator("db_pool_size", "db_pool_overflow", "max_concurrent_connections")
     @classmethod

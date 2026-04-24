@@ -96,7 +96,12 @@ The structure mirrors the configuration sections:
 - `proxy`: Allowlist of external domains and paths that `/proxy/route/...`
   is permitted to forward to. Hosts not in `proxy.domains` get a 403; only
   `http` and `https` schemes are accepted.
-- `performance`: Connection pool and concurrency settings
+- `performance`: Connection pool, concurrency, and middleware cost controls.
+  For high-volume collectors, `enable_access_log=false` and
+  `enable_brotli=false` remove those middleware layers entirely. To keep them
+  enabled but bypass collector routes, set
+  `access_log_excluded_paths='["/tracker", "/i"]'` and
+  `brotli_excluded_paths='["/tracker", "/i"]'`.
 - `elastic_apm`, `prometheus`, `sentry`: Optional observability integrations.
   - Elastic APM requires the `apm` extra (`uv sync --extra apm`); without it,
     tracing decorators silently no-op and enabling `elastic_apm.enabled`

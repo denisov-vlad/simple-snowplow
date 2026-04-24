@@ -13,12 +13,13 @@ from typing import Final
 import httpx
 import structlog
 from core.config import settings
-from core.constants import CONTENT_TYPE_OCTET_STREAM, DEFAULT_PROXY_TIMEOUT
-from fastapi import HTTPException
-from fastapi.responses import Response
+from core.constants import CONTENT_TYPE_OCTET_STREAM
+from fastapi import HTTPException, Request
+from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRouter
 from pydantic import AnyHttpUrl
 from routers.proxy import models
+from starlette.background import BackgroundTask
 
 logger = structlog.get_logger(__name__)
 
@@ -31,6 +32,11 @@ ALLOWED_PROXY_SCHEMES: Final[frozenset[str]] = frozenset({"http", "https"})
 def _normalize_hostname(hostname: str) -> str:
     """Normalize hostnames for allowlist comparison."""
     return hostname.rstrip(".").lower()
+
+
+ALLOWED_PROXY_HOSTS: Final[frozenset[str]] = frozenset(
+    _normalize_hostname(domain) for domain in PROXY_CONFIG.domains
+)
 
 
 router = APIRouter(tags=["proxy"], prefix=PROXY_ENDPOINT)
@@ -54,11 +60,6 @@ def _parse_proxy_target_url(schema: str, host: str, path: str) -> httpx.URL:
     return target_url
 
 
-def _get_allowed_proxy_hosts() -> frozenset[str]:
-    """Return the current normalized proxy host allowlist."""
-    return frozenset(_normalize_hostname(domain) for domain in PROXY_CONFIG.domains)
-
-
 def _should_encode_domain(domain: str | None) -> bool:
     """Check if the domain should be encoded."""
     return domain in PROXY_CONFIG.domains
@@ -69,6 +70,21 @@ def _should_encode_path(path: str) -> bool:
     # Remove leading slash for comparison
     clean_path = path.lstrip("/")
     return clean_path in PROXY_CONFIG.paths
+
+
+def _get_proxy_allowed_hosts(request: Request) -> frozenset[str]:
+    """Return the configured proxy host allowlist."""
+
+    return getattr(request.app.state, "proxy_allowed_hosts", ALLOWED_PROXY_HOSTS)
+
+
+def _get_proxy_http_client(request: Request) -> httpx.AsyncClient:
+    """Return the lifespan-owned outbound HTTP client for proxy requests."""
+
+    client = getattr(request.app.state, "proxy_http_client", None)
+    if client is None:
+        raise HTTPException(status_code=500, detail="Proxy HTTP client is not ready")
+    return client
 
 
 @router.post("/hash")
@@ -117,7 +133,12 @@ async def proxy_hash(data: models.HashModel) -> AnyHttpUrl:
 
 
 @router.get("/route/{schema}/{host}/{path}")
-async def proxy(schema: str, host: str, path: str = "") -> Response:
+async def proxy(
+    request: Request,
+    schema: str,
+    host: str,
+    path: str = "",
+) -> StreamingResponse:
     """
     Proxy a request to an external resource.
 
@@ -145,12 +166,15 @@ async def proxy(schema: str, host: str, path: str = "") -> Response:
     # Only allow hosts that were explicitly opted-in via configuration.
     # Without this check the endpoint is a generic SSRF gadget
     # (cloud metadata, internal services, localhost, ...).
-    if _normalize_hostname(target_url.host) not in _get_allowed_proxy_hosts():
+    if _normalize_hostname(target_url.host) not in _get_proxy_allowed_hosts(request):
         raise HTTPException(status_code=403, detail="Proxy target not allowed")
 
     try:
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.get(target_url, timeout=DEFAULT_PROXY_TIMEOUT)
+        client = _get_proxy_http_client(request)
+        response = await client.send(
+            client.build_request("GET", target_url),
+            stream=True,
+        )
     except httpx.TimeoutException as exc:
         logger.warning("Proxy request timed out", url=str(target_url))
         raise HTTPException(
@@ -164,8 +188,9 @@ async def proxy(schema: str, host: str, path: str = "") -> Response:
             detail=f"Proxy request to '{decoded_host}' failed",
         ) from exc
 
-    return Response(
-        content=response.content,
+    return StreamingResponse(
+        response.aiter_bytes(),
         status_code=response.status_code,
         media_type=response.headers.get("Content-Type", CONTENT_TYPE_OCTET_STREAM),
+        background=BackgroundTask(response.aclose),
     )

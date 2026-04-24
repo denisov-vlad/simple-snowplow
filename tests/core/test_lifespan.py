@@ -10,7 +10,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
 
 import core.lifespan as lifespan_module  # noqa: E402
-from core.config import ClickHouseConfig  # noqa: E402
+from core.config import ClickHouseConfig, ProxyConfig  # noqa: E402
 from routers.tracker.parsers.iglu import ValidationResult  # noqa: E402
 
 READY_AFTER_ATTEMPTS = 3
@@ -45,6 +45,15 @@ class _RecordingLogger:
 
     def error(self, *args, **kwargs):
         self.errors.append((args, kwargs))
+
+
+class _FakeProxyClient:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.closed = False
+
+    async def close(self):
+        self.closed = True
 
 
 @pytest.mark.anyio
@@ -103,6 +112,33 @@ async def test_create_ready_clickhouse_client_closes_client_when_probe_fails(
         await lifespan_module._create_ready_clickhouse_client()
 
     assert client.closed is True
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
+async def test_configure_proxy_http_client_reuses_lifespan_resources(
+    monkeypatch,
+    anyio_backend,
+):
+    created_clients = []
+
+    def _fake_async_client(**kwargs):
+        client = _FakeProxyClient(**kwargs)
+        created_clients.append(client)
+        return client
+
+    monkeypatch.setattr(lifespan_module.httpx, "AsyncClient", _fake_async_client)
+    application = SimpleNamespace(state=SimpleNamespace(_closeables=[]))
+
+    await lifespan_module._configure_proxy_http_client(
+        application,
+        ProxyConfig(domains=["Example.com."]),
+    )
+
+    assert len(created_clients) == 1
+    assert application.state.proxy_http_client is created_clients[0]
+    assert application.state.proxy_allowed_hosts == frozenset({"example.com"})
+    assert application.state._closeables == [created_clients[0]]
 
 
 @pytest.mark.anyio
