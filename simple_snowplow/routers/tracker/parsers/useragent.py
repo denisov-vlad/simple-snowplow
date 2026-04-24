@@ -2,11 +2,15 @@
 User agent parsing functionality.
 """
 
+from functools import lru_cache
+from typing import Final
+
 from core.tracing import capture_span
 from crawlerdetect import CrawlerDetect
 from routers.tracker.models.snowplow import UserAgentModel
 from ua_parser import parse
 
+USER_AGENT_CACHE_SIZE: Final[int] = 4096
 crawler_detect = CrawlerDetect()
 
 
@@ -14,13 +18,18 @@ def _join_version(parts: list[str | None]) -> list[str]:
     return [p for p in parts if p is not None]
 
 
-@capture_span()
-def parse_agent(string: str | None) -> UserAgentModel:
-    """Parse a user agent string into structured data."""
+def clear_user_agent_cache() -> None:
+    """Clear cached user-agent parse results."""
 
+    _parse_agent_cached.cache_clear()
+
+
+@lru_cache(maxsize=USER_AGENT_CACHE_SIZE)
+def _parse_agent_cached(string: str) -> UserAgentModel:
+    """Parse a non-null user-agent string into cacheable structured data."""
     data = UserAgentModel(user_agent=string)
 
-    if string is None:
+    if not string:
         return data
 
     ua = parse(string)
@@ -60,3 +69,10 @@ def parse_agent(string: str | None) -> UserAgentModel:
             data.device_extra["family"] = device.family
 
     return data
+
+
+@capture_span()
+def parse_agent(string: str | None) -> UserAgentModel:
+    """Parse a user agent string into structured data."""
+
+    return _parse_agent_cached(string or "").model_copy(deep=True)
