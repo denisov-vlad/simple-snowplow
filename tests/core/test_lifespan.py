@@ -56,6 +56,26 @@ class _FakeProxyClient:
         self.closed = True
 
 
+class _FakeHealthChecker:
+    async def check(self):
+        return {"backend": True}
+
+
+def test_cache_health_checker_uses_performance_config(monkeypatch):
+    checker = _FakeHealthChecker()
+    monkeypatch.setattr(
+        lifespan_module,
+        "PERFORMANCE_CONFIG",
+        SimpleNamespace(healthcheck_cache_ttl_seconds=7.5),
+    )
+
+    cached = lifespan_module._cache_health_checker(checker)
+
+    assert isinstance(cached, lifespan_module.CachedHealthChecker)
+    assert cached.checker is checker
+    assert cached.ttl_seconds == 7.5
+
+
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"], indirect=True)
 async def test_retry_clickhouse_startup_waits_until_connection_is_ready(

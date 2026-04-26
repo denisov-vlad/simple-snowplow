@@ -9,7 +9,7 @@ import os
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
-from pydantic import AnyHttpUrl, BaseModel, field_validator, model_validator
+from pydantic import AnyHttpUrl, BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from .constants import (
@@ -169,20 +169,12 @@ class SentryConfig(BaseModel):
 
     enabled: bool = False
     dsn: str | None = None
-    traces_sample_rate: float = 0.0
+    traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     environment: str = (
         SENTRY_ENV_PROD
         if os.getenv("SNOWPLOW_ENV", ENV_DEVELOPMENT) == ENV_PRODUCTION
         else SENTRY_ENV_DEV
     )
-
-    @field_validator("traces_sample_rate")
-    @classmethod
-    def validate_sample_rate(cls, v: float) -> float:
-        """Ensure sample rate is between 0 and 1."""
-        if not 0.0 <= v <= 1.0:
-            raise ValueError("traces_sample_rate must be between 0.0 and 1.0")
-        return v
 
 
 class ProxyConfig(BaseModel):
@@ -195,21 +187,14 @@ class ProxyConfig(BaseModel):
 class PerformanceConfig(BaseModel):
     """Performance tuning configuration."""
 
-    max_concurrent_connections: int = 100
-    db_pool_size: int = 5
-    db_pool_overflow: int = 10
+    max_concurrent_connections: int = Field(default=100, gt=0)
+    db_pool_size: int = Field(default=5, gt=0)
+    db_pool_overflow: int = Field(default=10, gt=0)
+    healthcheck_cache_ttl_seconds: float = Field(default=2.0, ge=0.0)
     enable_access_log: bool = True
     access_log_excluded_paths: list[str] = []
     enable_brotli: bool = True
     brotli_excluded_paths: list[str] = []
-
-    @field_validator("db_pool_size", "db_pool_overflow", "max_concurrent_connections")
-    @classmethod
-    def validate_positive(cls, v: int) -> int:
-        """Ensure values are positive."""
-        if v <= 0:
-            raise ValueError("Value must be positive")
-        return v
 
 
 class ClickHouseConnection(BaseModel):
@@ -271,17 +256,14 @@ class ClickHouseConfig(BaseModel):
     connection: ClickHouseConnection = ClickHouseConnection()
     configuration: ClickHouseConfiguration = ClickHouseConfiguration()
     tables: dict[str, Any] = {}
-    startup_timeout_seconds: int = DEFAULT_CLICKHOUSE_STARTUP_TIMEOUT_SECONDS
-    startup_retry_interval_ms: int = DEFAULT_CLICKHOUSE_STARTUP_RETRY_INTERVAL_MS
-
-    @field_validator("startup_timeout_seconds", "startup_retry_interval_ms")
-    @classmethod
-    def validate_positive(cls, value: int) -> int:
-        """Ensure ClickHouse startup timings are positive integers."""
-
-        if value <= 0:
-            raise ValueError("Value must be positive")
-        return value
+    startup_timeout_seconds: int = Field(
+        default=DEFAULT_CLICKHOUSE_STARTUP_TIMEOUT_SECONDS,
+        gt=0,
+    )
+    startup_retry_interval_ms: int = Field(
+        default=DEFAULT_CLICKHOUSE_STARTUP_RETRY_INTERVAL_MS,
+        gt=0,
+    )
 
 
 class DirectInsertConfig(BaseModel):
@@ -295,36 +277,28 @@ class RabbitMQConfig(BaseModel):
     """RabbitMQ-backed ingest settings."""
 
     host: str = DEFAULT_RABBITMQ_HOST
-    port: int = DEFAULT_RABBITMQ_PORT
+    port: int = Field(default=DEFAULT_RABBITMQ_PORT, gt=0)
     username: str = "guest"
     password: str = "guest"
     virtualhost: str = "/"
     queue_name: str = DEFAULT_RABBITMQ_QUEUE_NAME
     failed_queue_name: str | None = None
-    prefetch_count: int = DEFAULT_RABBITMQ_PREFETCH_COUNT
-    batch_size: int = DEFAULT_RABBITMQ_BATCH_SIZE
-    batch_timeout_ms: int = DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS
-    retry_delay_ms: int = DEFAULT_RABBITMQ_RETRY_DELAY_MS
-    connect_timeout_seconds: int = DEFAULT_RABBITMQ_CONNECT_TIMEOUT_SECONDS
-    startup_timeout_seconds: int = DEFAULT_RABBITMQ_STARTUP_TIMEOUT_SECONDS
-    startup_retry_interval_ms: int = DEFAULT_RABBITMQ_STARTUP_RETRY_INTERVAL_MS
-
-    @field_validator(
-        "port",
-        "prefetch_count",
-        "batch_size",
-        "batch_timeout_ms",
-        "retry_delay_ms",
-        "connect_timeout_seconds",
-        "startup_timeout_seconds",
-        "startup_retry_interval_ms",
+    prefetch_count: int = Field(default=DEFAULT_RABBITMQ_PREFETCH_COUNT, gt=0)
+    batch_size: int = Field(default=DEFAULT_RABBITMQ_BATCH_SIZE, gt=0)
+    batch_timeout_ms: int = Field(default=DEFAULT_RABBITMQ_BATCH_TIMEOUT_MS, gt=0)
+    retry_delay_ms: int = Field(default=DEFAULT_RABBITMQ_RETRY_DELAY_MS, gt=0)
+    connect_timeout_seconds: int = Field(
+        default=DEFAULT_RABBITMQ_CONNECT_TIMEOUT_SECONDS,
+        gt=0,
     )
-    @classmethod
-    def validate_positive(cls, value: int) -> int:
-        """Ensure queue settings are positive integers."""
-        if value <= 0:
-            raise ValueError("Value must be positive")
-        return value
+    startup_timeout_seconds: int = Field(
+        default=DEFAULT_RABBITMQ_STARTUP_TIMEOUT_SECONDS,
+        gt=0,
+    )
+    startup_retry_interval_ms: int = Field(
+        default=DEFAULT_RABBITMQ_STARTUP_RETRY_INTERVAL_MS,
+        gt=0,
+    )
 
     @model_validator(mode="after")
     def validate_failed_queue_name(self) -> RabbitMQConfig:

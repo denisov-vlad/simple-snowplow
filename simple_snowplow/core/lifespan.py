@@ -19,7 +19,8 @@ from routers.tracker.parsers.iglu import warm_iglu_schema_cache
 from .config import ClickHouseConfig, ProxyConfig, settings
 from .constants import DEFAULT_PROXY_TIMEOUT
 from .exceptions import DatabaseConnectionError
-from .healthcheck import ClickHouseHealthChecker
+from .healthcheck import CachedHealthChecker, ClickHouseHealthChecker
+from .protocols import HealthChecker
 
 logger = structlog.get_logger(__name__)
 
@@ -27,6 +28,15 @@ PERFORMANCE_CONFIG = settings.performance
 CLICKHOUSE_CONFIG = settings.clickhouse
 INGEST_CONFIG = settings.ingest
 PROXY_CONFIG = settings.proxy
+
+
+def _cache_health_checker(checker: HealthChecker) -> CachedHealthChecker:
+    """Apply configured TTL caching to backend health checks."""
+
+    return CachedHealthChecker(
+        checker,
+        ttl_seconds=PERFORMANCE_CONFIG.healthcheck_cache_ttl_seconds,
+    )
 
 
 def _build_clickhouse_insert_settings() -> dict[str, int]:
@@ -127,8 +137,8 @@ async def _configure_direct_ingest(application: FastAPI) -> None:
         insert_settings=_build_clickhouse_insert_settings(),
         **CLICKHOUSE_CONFIG.configuration.model_dump(),
     )
-    application.state.health_checker = ClickHouseHealthChecker(
-        application.state.ch_client,
+    application.state.health_checker = _cache_health_checker(
+        ClickHouseHealthChecker(application.state.ch_client),
     )
     application.state._closeables.append(application.state.ch_client)
 
@@ -148,10 +158,12 @@ async def _configure_rabbitmq_ingest(application: FastAPI) -> None:
         database=clickhouse_config.database,
         cluster_name=clickhouse_config.cluster_name,
     )
-    application.state.health_checker = RabbitMQHealthChecker(
-        application.state.connector.channel,
-        rabbitmq_config.queue_name,
-        rabbitmq_config.resolved_failed_queue_name,
+    application.state.health_checker = _cache_health_checker(
+        RabbitMQHealthChecker(
+            application.state.connector.channel,
+            rabbitmq_config.queue_name,
+            rabbitmq_config.resolved_failed_queue_name,
+        ),
     )
     application.state._closeables.append(application.state.connector)
 
