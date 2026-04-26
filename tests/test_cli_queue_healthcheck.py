@@ -1,14 +1,7 @@
-import pathlib
-import sys
 from types import SimpleNamespace
 
+import cli as cli_module
 import pytest
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
-
-import cli as cli_module  # noqa: E402
 
 
 class _FakeClient:
@@ -85,12 +78,12 @@ async def test_check_queue_worker_dependencies_returns_healthy_status(
     }
     assert channel.declare_calls == [
         {
-            "name": "snowplow.ingest",
+            "name": "evnt.ingest",
             "durable": True,
             "passive": True,
         },
         {
-            "name": "snowplow.ingest.failed",
+            "name": "evnt.ingest.failed",
             "durable": True,
             "passive": True,
         },

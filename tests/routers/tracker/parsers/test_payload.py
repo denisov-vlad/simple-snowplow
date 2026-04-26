@@ -5,8 +5,6 @@ from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
 
 _created_stub_modules: list[str] = []
 
@@ -150,9 +148,7 @@ if "routers" not in sys.modules:
     _register_stub_module("routers.tracker.models", models_module)
     _register_stub_module("routers.tracker.models.snowplow", snowplow_module)
 
-module_path = (
-    PROJECT_ROOT / "simple_snowplow" / "routers" / "tracker" / "parsers" / "payload.py"
-)
+module_path = PROJECT_ROOT / "evnt" / "routers" / "tracker" / "parsers" / "payload.py"
 spec = importlib.util.spec_from_file_location("payload_module", module_path)
 payload_module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None

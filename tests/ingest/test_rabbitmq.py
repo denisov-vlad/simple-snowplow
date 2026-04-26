@@ -1,23 +1,15 @@
-import pathlib
-import sys
-
 import pytest
 from clickhouse_connect.driver.exceptions import DataError
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
-
-from core.config import RabbitMQConfig  # noqa: E402
-from ingest import rabbitmq as rabbitmq_module  # noqa: E402
-from ingest.rabbitmq import QueuedInsertPayload, RabbitMQBatchWorker  # noqa: E402
+from core.config import RabbitMQConfig
+from ingest import rabbitmq as rabbitmq_module
+from ingest.rabbitmq import QueuedInsertPayload, RabbitMQBatchWorker
 
 
 def test_failed_queue_name_must_differ_from_main_queue():
     with pytest.raises(ValueError, match="failed_queue_name must differ"):
         RabbitMQConfig(
-            queue_name="snowplow.ingest",
-            failed_queue_name="snowplow.ingest",
+            queue_name="evnt.ingest",
+            failed_queue_name="evnt.ingest",
         )
 
 
@@ -68,12 +60,12 @@ class _BatchSink:
         self.fail = fail
         self.batch_calls = []
 
-    async def insert_batch(self, rows, table_group="snowplow"):
+    async def insert_batch(self, rows, table_group="evnt"):
         if self.fail:
             raise RuntimeError("boom")
         self.batch_calls.append((table_group, rows))
 
-    async def insert_rows(self, rows, table_group="snowplow"):
+    async def insert_rows(self, rows, table_group="evnt"):
         raise AssertionError("worker should prefer insert_batch when available")
 
 
@@ -82,7 +74,7 @@ class _SelectiveBatchSink(_BatchSink):
         super().__init__()
         self.bad_ids = set(bad_ids)
 
-    async def insert_batch(self, rows, table_group="snowplow"):
+    async def insert_batch(self, rows, table_group="evnt"):
         if any(row.get("id") in self.bad_ids for row in rows):
             raise DataError("invalid row")
         self.batch_calls.append((table_group, rows))
@@ -120,7 +112,7 @@ async def test_worker_batches_messages_before_insert(anyio_backend):
         await worker.add_message(message)
 
     assert sink.batch_calls == [
-        ("snowplow", [{"id": 1}, {"id": 2}, {"id": 3}]),
+        ("evnt", [{"id": 1}, {"id": 2}, {"id": 3}]),
     ]
     assert all(message.acked for message in messages)
     assert not any(message.nacked for message in messages)
@@ -165,8 +157,8 @@ async def test_worker_moves_only_failed_message_to_failed_queue_for_clickhouse_d
     await worker.flush_all()
 
     assert sink.batch_calls == [
-        ("snowplow", [{"id": 1}]),
-        ("snowplow", [{"id": 3}]),
+        ("evnt", [{"id": 1}]),
+        ("evnt", [{"id": 3}]),
     ]
     assert messages[0].acked is True
     assert messages[1].acked is True
@@ -175,7 +167,7 @@ async def test_worker_moves_only_failed_message_to_failed_queue_for_clickhouse_d
     assert messages[1].nacked is False
     assert (
         worker.channel.default_exchange.published[0]["routing_key"]
-        == "snowplow.ingest.failed"
+        == "evnt.ingest.failed"
     )
     assert (
         worker.channel.default_exchange.published[0]["message"].body == messages[1].body

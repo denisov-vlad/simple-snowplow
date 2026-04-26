@@ -1,1 +1,0 @@
-"""Simple Snowplow package."""

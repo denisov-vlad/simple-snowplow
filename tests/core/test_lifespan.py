@@ -1,17 +1,10 @@
-import pathlib
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import core.lifespan as lifespan_module
 import pytest
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
-
-import core.lifespan as lifespan_module  # noqa: E402
-from core.config import ClickHouseConfig, ProxyConfig  # noqa: E402
-from routers.tracker.parsers.iglu import ValidationResult  # noqa: E402
+from core.config import ClickHouseConfig, ProxyConfig
+from routers.tracker.parsers.iglu import ValidationResult
 
 READY_AFTER_ATTEMPTS = 3
 

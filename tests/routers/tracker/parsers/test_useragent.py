@@ -1,12 +1,6 @@
-import pathlib
-import sys
 from types import SimpleNamespace
 
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
-
-from routers.tracker.parsers import useragent as useragent_module  # noqa: E402
+from routers.tracker.parsers import useragent as useragent_module
 
 
 def _parsed_user_agent():

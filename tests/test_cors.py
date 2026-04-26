@@ -1,19 +1,12 @@
 import importlib
-import pathlib
-import sys
 from contextlib import asynccontextmanager
 
+from core.config import SecurityConfig
 from fastapi.testclient import TestClient
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
-sys.path.append(str(PROJECT_ROOT))
-sys.path.append(str(PROJECT_ROOT / "simple_snowplow"))
-
-from core.config import SecurityConfig  # noqa: E402
 
 
 def _reload_main_module():
-    return importlib.import_module("simple_snowplow.main")
+    return importlib.import_module("evnt.main")
 
 
 def _no_op_lifespan(_app):
@@ -39,8 +32,10 @@ def test_security_config_defaults_to_allow_all_credentialed_cors():
     assert security.cors_allow_credentials is True
 
 
-def test_create_app_allows_credentialed_cors_for_explicit_origins(monkeypatch):
-    monkeypatch.chdir(PROJECT_ROOT / "simple_snowplow")
+def test_create_app_allows_credentialed_cors_for_explicit_origins(
+    monkeypatch, app_root
+):
+    monkeypatch.chdir(app_root)
     main_module = _reload_main_module()
     monkeypatch.setattr(main_module, "lifespan", _no_op_lifespan)
     monkeypatch.setattr(
@@ -70,8 +65,10 @@ def test_create_app_allows_credentialed_cors_for_explicit_origins(monkeypatch):
     assert response.headers["access-control-allow-credentials"] == "true"
 
 
-def test_create_app_supports_credentialed_cors_with_allow_all_origins(monkeypatch):
-    monkeypatch.chdir(PROJECT_ROOT / "simple_snowplow")
+def test_create_app_supports_credentialed_cors_with_allow_all_origins(
+    monkeypatch, app_root
+):
+    monkeypatch.chdir(app_root)
     main_module = _reload_main_module()
     monkeypatch.setattr(main_module, "lifespan", _no_op_lifespan)
     monkeypatch.setattr(main_module.settings.security, "cors_allowed_origins", ["*"])
@@ -97,13 +94,15 @@ def test_create_app_supports_credentialed_cors_with_allow_all_origins(monkeypatc
     assert response.headers["access-control-allow-credentials"] == "true"
 
 
-def test_base_middleware_can_disable_access_log_and_brotli(monkeypatch):
-    monkeypatch.chdir(PROJECT_ROOT / "simple_snowplow")
+def test_base_middleware_can_disable_access_log_and_brotli(monkeypatch, app_root):
+    monkeypatch.chdir(app_root)
     main_module = _reload_main_module()
     monkeypatch.setattr(main_module.settings.performance, "enable_access_log", False)
     monkeypatch.setattr(main_module.settings.performance, "enable_brotli", False)
 
-    middleware_classes = [middleware.cls for middleware in main_module._get_base_middleware()]
+    middleware_classes = [
+        middleware.cls for middleware in main_module._get_base_middleware()
+    ]
 
     assert not any(
         issubclass(middleware_class, main_module.AccessLogMiddleware)
@@ -112,8 +111,8 @@ def test_base_middleware_can_disable_access_log_and_brotli(monkeypatch):
     assert main_module.BrotliMiddleware not in middleware_classes
 
 
-def test_base_middleware_passes_expensive_middleware_exclusions(monkeypatch):
-    monkeypatch.chdir(PROJECT_ROOT / "simple_snowplow")
+def test_base_middleware_passes_expensive_middleware_exclusions(monkeypatch, app_root):
+    monkeypatch.chdir(app_root)
     main_module = _reload_main_module()
     excluded_paths = ["/tracker", "/i"]
     monkeypatch.setattr(main_module.settings.performance, "enable_access_log", True)
@@ -135,7 +134,9 @@ def test_base_middleware_passes_expensive_middleware_exclusions(monkeypatch):
         for item in middleware
         if item.cls is main_module.PathSkippingAccessLogMiddleware
     )
-    brotli = next(item for item in middleware if item.cls is main_module.BrotliMiddleware)
+    brotli = next(
+        item for item in middleware if item.cls is main_module.BrotliMiddleware
+    )
 
     assert access_log.kwargs["excluded_paths"] == excluded_paths
     assert brotli.kwargs["excluded_handlers"] == excluded_paths

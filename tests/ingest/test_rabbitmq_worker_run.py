@@ -1,15 +1,8 @@
 import asyncio
-import pathlib
-import sys
 
 import pytest
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
-
-from core.config import RabbitMQConfig  # noqa: E402
-from ingest.rabbitmq import QueuedInsertPayload, RabbitMQBatchWorker  # noqa: E402
+from core.config import RabbitMQConfig
+from ingest.rabbitmq import QueuedInsertPayload, RabbitMQBatchWorker
 
 
 class _FakeExchange:
@@ -79,10 +72,10 @@ class _Sink:
     def __init__(self):
         self.calls = []
 
-    async def insert_batch(self, rows, table_group="snowplow"):
+    async def insert_batch(self, rows, table_group="evnt"):
         self.calls.append((table_group, rows))
 
-    async def insert_rows(self, rows, table_group="snowplow"):
+    async def insert_rows(self, rows, table_group="evnt"):
         raise AssertionError("worker should prefer insert_batch")
 
 
@@ -110,5 +103,5 @@ async def test_run_does_not_cancel_queue_iterator_on_flush_timeout(anyio_backend
     await task
 
     assert iterator.cancelled is False
-    assert sink.calls == [("snowplow", [{"id": 1}])]
+    assert sink.calls == [("evnt", [{"id": 1}])]
     assert message.acked is True

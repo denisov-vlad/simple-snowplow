@@ -1,14 +1,7 @@
 import asyncio
-import pathlib
-import sys
 
 import pytest
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
-
-from core.healthcheck import CachedHealthChecker  # noqa: E402
+from core.healthcheck import CachedHealthChecker
 
 
 class _FakeHealthChecker:

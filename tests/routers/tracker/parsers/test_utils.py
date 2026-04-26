@@ -4,8 +4,6 @@ from pathlib import Path
 from types import ModuleType
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
 
 if "elasticapm" not in sys.modules:
     elasticapm_module = ModuleType("elasticapm")
@@ -29,9 +27,7 @@ if "elasticapm" not in sys.modules:
     sys.modules["elasticapm.contrib.asyncio"] = asyncio_module
     sys.modules["elasticapm.contrib.asyncio.traces"] = traces_module
 
-module_path = (
-    PROJECT_ROOT / "simple_snowplow" / "routers" / "tracker" / "parsers" / "utils.py"
-)
+module_path = PROJECT_ROOT / "evnt" / "routers" / "tracker" / "parsers" / "utils.py"
 spec = importlib.util.spec_from_file_location("utils_module", module_path)
 utils_module = importlib.util.module_from_spec(spec)
 assert spec.loader is not None

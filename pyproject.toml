@@ -1,7 +1,7 @@
 [project]
-name = "simple-snowplow"
+name = "evnt"
 version = "0.6.0"
-description = "Add your description here"
+description = "A tiny self-hosted event collector. Speaks the Snowplow tracker wire protocol, persists to ClickHouse, optional RabbitMQ buffer, single-container deploy."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -24,12 +24,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Install with `uv sync --extra apm` or `pip install simple-snowplow[apm]`.
-# Required when SNOWPLOW_ELASTIC_APM__ENABLED=true; without the extra, the
+# Install with `uv sync --extra apm` or `pip install evnt[apm]`.
+# Required when EVNT_ELASTIC_APM__ENABLED=true; without the extra, the
 # `core.tracing` module falls back to no-op decorators.
 apm = ["elastic-apm>=6.23.0"]
 # Install with `uv sync --extra sentry`. Required when
-# SNOWPLOW_SENTRY__ENABLED=true; without it, enabling Sentry at startup
+# EVNT_SENTRY__ENABLED=true; without it, enabling Sentry at startup
 # fails with a clear error.
 sentry = ["sentry-sdk[fastapi]>=2.35.1"]
 
@@ -84,15 +84,15 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 [tool.ruff.lint.per-file-ignores]
 # Optional integrations (APM / Prometheus / Sentry) are imported lazily
 # so the app can boot without those packages installed.
-"simple_snowplow/main.py" = ["PLC0415"]
+"evnt/main.py" = ["PLC0415"]
 # Schema registry lookup is imported inside `insert_batch` to avoid a
 # circular import with the schemas module that itself imports the connector.
-"simple_snowplow/routers/tracker/db/clickhouse/connector.py" = ["PLC0415"]
+"evnt/routers/tracker/db/clickhouse/connector.py" = ["PLC0415"]
 # FastAPI endpoints idiomatically use `Depends(...)` in parameter defaults.
-"simple_snowplow/routers/tracker/routes/*.py" = ["B008"]
+"evnt/routers/tracker/routes/*.py" = ["B008"]
 # RabbitMQPublisher.__init__ takes six plain fields; splitting into a DTO
 # hurts more than the 5-arg limit helps.
-"simple_snowplow/ingest/rabbitmq.py" = ["PLR0913"]
+"evnt/ingest/rabbitmq.py" = ["PLR0913"]
 # Tests embed long Iglu URIs in fixtures and use long descriptive names;
 # magic values in assertions are fine.
 "tests/**/*.py" = ["E501", "PLR2004"]
@@ -102,7 +102,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 max-complexity = 10
 
 [tool.ruff.lint.isort]
-known-first-party = ["simple_snowplow"]
+known-first-party = ["evnt"]
 combine-as-imports = true
 
 [tool.ruff.format]
@@ -126,9 +126,9 @@ filterwarnings = [
 
 [tool.ty.environment]
 # Support both import styles used in this repo:
-# - absolute package imports: from simple_snowplow...
-# - app-root imports (when running from ./simple_snowplow): from core..., from routers...
-root = [".", "./simple_snowplow"]
+# - absolute package imports: from evnt...
+# - app-root imports (when running from ./evnt): from core..., from routers...
+root = [".", "./evnt"]
 
 [dependency-groups]
 dev = [

@@ -1,19 +1,11 @@
-# ruff: noqa: E402
-
 import importlib
 import json
-import pathlib
-import sys
 from ipaddress import IPv4Address
 
 import pytest
 
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[3]
-sys.path.append(str(PROJECT_ROOT))
-sys.path.append(str(PROJECT_ROOT / "simple_snowplow"))
-
-from simple_snowplow.routers.tracker.handlers import process_data
-from simple_snowplow.routers.tracker.models.snowplow import (
+from evnt.routers.tracker.handlers import process_data
+from evnt.routers.tracker.models.snowplow import (
     PayloadElementModel,
     UserAgentModel,
 )

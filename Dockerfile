@@ -32,9 +32,10 @@ RUN --mount=type=cache,id=root-cache-${TARGETOS}-${TARGETARCH}${TARGETVARIANT},s
     apk del g++ && \
     rm -rf /var/cache/apk/*
 
-WORKDIR /app/simple_snowplow
+WORKDIR /app/evnt
 
-COPY ./simple_snowplow /app/simple_snowplow
+COPY ./evnt /app/evnt
+COPY LICENSE THIRD_PARTY_NOTICES.md /app/
 
 RUN --mount=type=cache,id=root-cache-${TARGETOS}-${TARGETARCH}${TARGETVARIANT},sharing=locked,target=/root/.cache \
     uv run cli.py scripts download --version 4.6.9 --output_dir static --force

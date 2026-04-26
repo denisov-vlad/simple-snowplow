@@ -1,15 +1,7 @@
-import pathlib
-import sys
-
 import pytest
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[5]
-sys.path.insert(0, str(PROJECT_ROOT))
-sys.path.insert(0, str(PROJECT_ROOT / "simple_snowplow"))
-
-from routers.tracker.db.clickhouse.connector import ClickHouseConnector  # noqa: E402
-from routers.tracker.db.clickhouse.schemas import register_fields  # noqa: E402
-from routers.tracker.db.clickhouse.schemas.snowplow import (  # noqa: E402
+from routers.tracker.db.clickhouse.connector import ClickHouseConnector
+from routers.tracker.db.clickhouse.schemas import register_fields
+from routers.tracker.db.clickhouse.schemas.snowplow import (
     STRING,
     ColumnDef,
     TupleColumnDef,
@@ -63,7 +55,7 @@ async def test_insert_rows_issues_single_batch_request(anyio_backend):
     client = _FakeClient()
     connector = ClickHouseConnector(
         client,
-        database="snowplow",
+        database="evnt",
         tables=_tables(),
     )
 
@@ -82,7 +74,7 @@ async def test_insert_rows_noop_for_empty_batch(anyio_backend):
     client = _FakeClient()
     connector = ClickHouseConnector(
         client,
-        database="snowplow",
+        database="evnt",
         tables=_tables(),
     )
 
@@ -97,7 +89,7 @@ async def test_insert_batch_sends_single_clickhouse_insert(anyio_backend):
     client = _FakeClient()
     connector = ClickHouseConnector(
         client,
-        database="snowplow",
+        database="evnt",
         tables=_tables(),
     )
 
@@ -107,7 +99,7 @@ async def test_insert_batch_sends_single_clickhouse_insert(anyio_backend):
     )
 
     assert len(client.calls) == 1
-    assert client.calls[0]["table_name"] == "snowplow.events_local"
+    assert client.calls[0]["table_name"] == "evnt.events_local"
     assert client.calls[0]["data"] == [["a", "1"], ["b", "2"]]
 
 
@@ -123,7 +115,7 @@ async def test_insert_batch_reuses_cached_insert_metadata(anyio_backend):
     client = _FakeClient()
     connector = ClickHouseConnector(
         client,
-        database="snowplow",
+        database="evnt",
         tables={
             "test_cached_events": {
                 "local": {"name": "cached_events_local"},
@@ -174,7 +166,7 @@ async def test_insert_batch_sanitizes_none_for_string_columns(anyio_backend):
     client = _FakeClient()
     connector = ClickHouseConnector(
         client,
-        database="snowplow",
+        database="evnt",
         tables={
             "test_tuple_events": {
                 "local": {"name": "tuple_events_local"},
@@ -189,6 +181,6 @@ async def test_insert_batch_sanitizes_none_for_string_columns(anyio_backend):
     )
 
     assert len(client.calls) == 1
-    assert client.calls[0]["table_name"] == "snowplow.tuple_events_local"
+    assert client.calls[0]["table_name"] == "evnt.tuple_events_local"
     assert client.calls[0]["column_names"] == ["foo", "resolution"]
     assert client.calls[0]["data"] == [["", ("", "1280x720", "")]]

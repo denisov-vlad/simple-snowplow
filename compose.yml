@@ -1,19 +1,19 @@
 services:
   app:
-    container_name: simple-snowplow
+    container_name: evnt
     build:
       context: .
       dockerfile: Dockerfile
       args:
         # Space-separated optional dependency groups. Leave empty for the
         # lean build. Example: EXTRAS: "apm sentry".
-        EXTRAS: "${SNOWPLOW_BUILD_EXTRAS:-}"
+        EXTRAS: "${EVNT_BUILD_EXTRAS:-}"
     ports:
     - "8000:80"
     environment:
-    - "SNOWPLOW_COMMON__DEMO=true"
-    - "SNOWPLOW_INGEST__MODE=${SNOWPLOW_INGEST__MODE:-direct}"
-    - "SNOWPLOW_LOGGING__LEVEL=DEBUG"
+    - "EVNT_COMMON__DEMO=true"
+    - "EVNT_INGEST__MODE=${EVNT_INGEST__MODE:-direct}"
+    - "EVNT_LOGGING__LEVEL=DEBUG"
     restart: on-failure
     command: ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
     healthcheck:
@@ -28,8 +28,8 @@ services:
     develop:
       watch:
       - action: sync
-        path: ./simple_snowplow
-        target: /app/simple_snowplow
+        path: ./evnt
+        target: /app/evnt
         ignore:
         - .venv/
         - __pycache__/
@@ -37,12 +37,12 @@ services:
         path: ./uv.lock
 
   worker:
-    container_name: simple-snowplow-worker
+    container_name: evnt-worker
     build:
       context: .
       dockerfile: Dockerfile
     environment:
-    - "SNOWPLOW_LOGGING__LEVEL=DEBUG"
+    - "EVNT_LOGGING__LEVEL=DEBUG"
     restart: on-failure
     command: ["uv", "run", "python", "cli.py", "queue", "worker"]
     healthcheck:
@@ -60,7 +60,7 @@ services:
     - rabbitmq
 
   clickhouse:
-    container_name: simple-snowplow-ch
+    container_name: evnt-ch
     image: clickhouse/clickhouse-server:26.3.4.11-alpine
     environment:
     - "CLICKHOUSE_PASSWORD=password"
@@ -76,7 +76,7 @@ services:
       retries: 12
 
   rabbitmq:
-    container_name: simple-snowplow-rabbitmq
+    container_name: evnt-rabbitmq
     image: rabbitmq:3.13-management-alpine
     ports:
     - "5672:5672"

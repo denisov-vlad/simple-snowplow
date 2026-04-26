@@ -131,5 +131,5 @@ dmypy.json
 # Ignore dynaconf secret files
 .secrets.*
 
-# Snowplow static files
-/simple_snowplow/static/
+# Downloaded Snowplow tracker scripts (fetched by `uv run evnt/cli.py scripts download`)
+/evnt/static/

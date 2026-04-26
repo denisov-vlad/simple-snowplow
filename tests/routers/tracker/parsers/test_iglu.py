@@ -1,11 +1,6 @@
 import pathlib
-import sys
 
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[4]
-sys.path.append(str(PROJECT_ROOT))
-sys.path.append(str(PROJECT_ROOT / "simple_snowplow"))
-
-from simple_snowplow.routers.tracker.parsers import iglu as iglu_module  # noqa: E402
+from evnt.routers.tracker.parsers import iglu as iglu_module
 
 
 def _write_schema(
