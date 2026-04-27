@@ -2,7 +2,7 @@
 # Toggle via `--build-arg BUILD_DEMO=false` (or EVNT_BUILD_DEMO=false in compose).
 # When false, a tiny placeholder index.html is shipped instead of the real SPA,
 # so FastAPI's StaticFiles mount has something to serve.
-ARG BUILD_DEMO=true
+ARG BUILD_DEMO=false
 
 FROM node:24-alpine AS web-builder-true
 WORKDIR /web
