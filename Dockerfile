@@ -9,7 +9,7 @@ WORKDIR /web
 RUN corepack enable
 COPY evnt/routers/demo/web/package.json evnt/routers/demo/web/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --config.package-import-method=copy
 COPY evnt/routers/demo/web/ ./
 RUN pnpm run build
 

@@ -135,5 +135,5 @@ dmypy.json
 /evnt/static/
 
 # Demo Vue SPA build artifacts
-/evnt/routers/demo/web/node_modules/
-/evnt/routers/demo/web/dist/
+evnt/routers/demo/web/node_modules/
+evnt/routers/demo/web/dist/
