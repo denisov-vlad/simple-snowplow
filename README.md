@@ -1,384 +1,93 @@
 # evnt
 
-`evnt` is a lightweight, self-hosted event collector that **implements the Snowplow tracker wire protocol** so it can receive events from the upstream Snowplow open-source JavaScript and mobile trackers. It allows you to collect event data from websites and applications while maintaining full control over your data and infrastructure.
+`evnt` is a lightweight, self-hosted event collector that **implements the Snowplow tracker wire protocol**. Point any official Snowplow tracker (JS, iOS/Swift, Android/Kotlin, Python, etc.) at `evnt` and it will accept the events, enrich them, and write them to ClickHouse — no hosted Snowplow infrastructure required.
 
-> **Disclaimer.** "Snowplow" is a trademark of Snowplow Analytics Ltd.
-> This is an independent open-source project that interoperates with the
-> publicly documented Snowplow tracker protocol and bundles the official
-> Snowplow JavaScript tracker (BSD-3-Clause) and Iglu Central schemas
-> (Apache-2.0) **unmodified**. It is **not affiliated with, sponsored by,
-> or endorsed by Snowplow Analytics Ltd.** See
-> [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full attribution.
+> **Disclaimer.** "Snowplow" is a trademark of Snowplow Analytics Ltd. This is an independent open-source project that interoperates with the publicly documented Snowplow tracker protocol and bundles the official Snowplow JavaScript tracker (BSD-3-Clause) and Iglu Central schemas (Apache-2.0) **unmodified**. It is **not affiliated with, sponsored by, or endorsed by Snowplow Analytics Ltd.** See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for full attribution.
 
-## Features
+## Why evnt
 
-- Accepts events from the official Snowplow JavaScript tracker over the documented HTTP tracker protocol
-- Collects web analytics data including page views, events, and user information
-- Stores data in ClickHouse for high-performance analytics queries
-- Optional RabbitMQ-backed ingest mode with batch worker
-- Allowlisted proxy endpoint for serving third-party analytics scripts from your own domain
-- Configurable data retention and storage settings
-- Horizontal scaling capabilities with ClickHouse cluster support
-- Built with FastAPI (Python 3.14) for high performance
-- Optional demo mode for easy testing
+- **Snowplow-protocol compatible** — receive events from any official tracker without rewriting your client code.
+- **ClickHouse-native** — events land in a wide, partitioned `MergeTree` table ready for sub-second analytics.
+- **Lean stack** — FastAPI on Python 3.14, async ClickHouse client, no JVM, no Kafka requirement.
+- **Optional durable buffer** — flip a flag to switch from direct writes to RabbitMQ + batch worker for high-load or flaky downstreams.
+- **Self-hosted, no telemetry** — your data, your infra, your retention policy.
+- **Built-in demo UI** — a Vue 3 single-page app at `/demo/` that shows the raw payloads as they leave the browser **and** lets you browse the ClickHouse tables directly from the front-end.
 
-## Architecture
+## Quickstart
 
-`evnt` consists of the following components:
+```bash
+git clone https://github.com/denisov-vlad/evnt.git
+cd evnt
 
-1. **FastAPI Backend**: Handles incoming tracking events
-2. **ClickHouse Database**: Stores and processes analytics data
-3. **RabbitMQ + Worker**: Optional durable buffer and batch writer for fault-tolerant ingest
-4. **JavaScript Tracking Libraries**: The unmodified Snowplow JavaScript tracker and plugins (BSD-3-Clause), fetched from the official Snowplow GitHub Releases via `cli.py scripts download`
+# 1. Bring up ClickHouse first (the app waits for it).
+docker compose up -d clickhouse
 
-## Installation
+# 2. One-time: create the `evnt` database and tables (idempotent).
+docker compose run --rm app uv run python cli.py db init
 
-### Local Development
+# 3. Start the collector (and worker, if you want RabbitMQ mode).
+docker compose up -d
+```
 
-To install `evnt` for local development:
+Open **<http://localhost:8000/demo/>**. The demo SPA has three tabs:
 
-1. Make sure you have Docker and Docker Compose installed
-2. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/evnt.git
-   cd evnt
-   ```
-3. (One‑time) Initialize ClickHouse databases & tables:
-   ```bash
-   # Ensure ClickHouse service is up first (in a separate terminal)
-   docker compose up -d clickhouse
+- **Live Events** — every payload sent to `/tracker` is intercepted and rendered as an expandable JSON tree, with timestamp and method.
+- **ClickHouse Tables** — TanStack Table grid that queries ClickHouse over HTTP **directly from the browser** (CORS is preconfigured in `deploy/clickhouse/`). Pick a table, sort, paginate, expand JSON columns inline.
+- **Settings** — change the ClickHouse URL / user / password if you’re pointing at a non-default cluster; values persist in `localStorage`.
 
-   # Create tables (idempotent – safe to re-run)
-   docker compose run app uv run python cli.py db init
-   ```
+To skip the SPA in your image, build with `BUILD_DEMO=false` (the `/demo/` mount falls back to a placeholder):
 
-4. Start the application using Docker Compose:
-   ```bash
-   docker compose up
-   ```
+```bash
+EVNT_BUILD_DEMO=false docker compose build app
+# or
+docker build --build-arg BUILD_DEMO=false -t evnt .
+```
 
-### Production Deployment
+## Sending events from your applications
 
-For a production environment:
+`evnt` speaks the Snowplow tracker protocol. Use the official trackers — point their collector URL at `https://your-evnt-host` and they’ll just work. Reference docs:
 
-1. Install ClickHouse version 22.11 or later (follow the [ClickHouse documentation](https://clickhouse.com/docs/en/quick-start))
-2. Build the Docker image:
-   ```bash
-   docker build -t evnt ./evnt
-   ```
-3. Set the configuration you need using environment variables (see [Configuration](#configuration))
-4. Run the Docker container:
-   ```bash
-   docker run -d \
-     -p 8000:80 \
-     -e EVNT_ENV=production \
-     -e EVNT_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-host \
-     evnt
+- **JavaScript** (web) — <https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/javascript-trackers/>
+- **Swift / iOS** — <https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/mobile-trackers/>
+- **Kotlin / Android** — <https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/mobile-trackers/>
+- **Python** — <https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/python-tracker/>
 
-You can supply additional configuration through more `-e` flags.
+The full tracker matrix (Java, Go, .NET, Roku, Unity, Lua, …) is at <https://docs.snowplow.io/docs/collecting-data/collecting-from-own-applications/>.
+
+If you want to host the official Snowplow JS bundle from your own domain, run:
+
+```bash
+uv run python evnt/cli.py scripts download
+```
+
+That places `sp.js` (and plugins) into `evnt/static/`, served at `/static/sp.js`.
 
 ## Configuration
 
-`evnt` is configured via a **single Pydantic `BaseSettings` model**. The application reads values from environment variables using the `EVNT_` prefix and double underscores (`__`) for nesting. For example:
+Settings are loaded from a single Pydantic `BaseSettings` model. Use the `EVNT_` prefix and `__` for nested keys:
 
 ```bash
-EVNT_COMMON__SERVICE_NAME=my-evnt
-EVNT_COMMON__DEMO=true
-EVNT_CLICKHOUSE__CONNECTION__HOST=my-clickhouse-server
-EVNT_COMMON__SNOWPLOW__USER_IP_HEADER=CF-Connecting-IP
-EVNT_INGEST__MODE=rabbitmq
-EVNT_INGEST__RABBITMQ__HOST=my-rabbitmq
+EVNT_COMMON__DEMO=true                          # enable the /demo/ SPA at runtime
+EVNT_CLICKHOUSE__CONNECTION__HOST=clickhouse    # CH host
+EVNT_INGEST__MODE=rabbitmq                      # direct (default) | rabbitmq
+EVNT_SECURITY__CORS_ALLOWED_ORIGINS='["https://example.com"]'
 ```
 
-`EVNT_COMMON__SNOWPLOW__USER_IP_HEADER` controls which request header is
-used to resolve the client IP (default: `X-Forwarded-For`). If the header
-contains multiple comma-separated addresses, the first valid IP is used.
-
-The structure mirrors the configuration sections:
-
-- `common`: Basic application options (service name, hostname, demo mode)
-- `clickhouse`: Connection details and table definitions
-- `ingest`: Delivery mode (`direct` or `rabbitmq`) and RabbitMQ/worker tuning
-- `logging`: Format and level for application logs
-- `security`: Docs availability and HTTPS enforcement
-- `proxy`: Allowlist of external domains and paths that `/proxy/route/...`
-  is permitted to forward to. Hosts not in `proxy.domains` get a 403; only
-  `http` and `https` schemes are accepted.
-- `performance`: Connection pool, concurrency, and middleware cost controls.
-  For high-volume collectors, `enable_access_log=false` and
-  `enable_brotli=false` remove those middleware layers entirely. To keep them
-  enabled but bypass collector routes, set
-  `access_log_excluded_paths='["/tracker", "/i"]'` and
-  `brotli_excluded_paths='["/tracker", "/i"]'`. Frequent health probes reuse
-  backend status for `healthcheck_cache_ttl_seconds` seconds; set it to `0` to
-  probe ClickHouse or RabbitMQ on every request.
-- `elastic_apm`, `prometheus`, `sentry`: Optional observability integrations.
-  - Elastic APM requires the `apm` extra (`uv sync --extra apm`); without it,
-    tracing decorators silently no-op and enabling `elastic_apm.enabled`
-    fails at startup with a clear error.
-  - Sentry requires the `sentry` extra (`uv sync --extra sentry`); enabling
-    `sentry.enabled` without it fails at startup with a clear error.
-
-#### Building the Docker image with optional extras
-
-The Dockerfile accepts a space-separated `EXTRAS` build arg mapped to
-`[project.optional-dependencies]` groups. Examples:
-
-```bash
-# Lean image (default)
-docker build -t evnt .
-
-# With Elastic APM + Sentry bundled
-docker build --build-arg EXTRAS="apm sentry" -t evnt .
-
-# With Compose: export once, then build normally
-EVNT_BUILD_EXTRAS="apm sentry" docker compose build app
-```
-
-You can inspect the full configuration (with defaults) via the CLI from the repository root:
+Inspect the full config tree (with defaults) any time:
 
 ```bash
 uv run python evnt/cli.py settings
 ```
 
-Set `EVNT_ENV` to label the running environment (e.g. `production`) — the value is propagated to logging integrations such as Sentry but does not change how configuration is loaded.
-
-### Ingest Modes
-
-`ingest.mode=direct`:
-- API writes directly to ClickHouse on every request.
-- No additional infrastructure is required.
-
-`ingest.mode=rabbitmq`:
-- API publishes events to RabbitMQ.
-- A separate worker consumes the queue, batches rows by `table_group`, and writes them to ClickHouse.
-- This is the mode to use when you want a durable buffer between request handling and ClickHouse availability.
-- Startup wait is configurable with `EVNT_INGEST__RABBITMQ__STARTUP_TIMEOUT_SECONDS` and `EVNT_INGEST__RABBITMQ__STARTUP_RETRY_INTERVAL_MS`.
-
-## Usage
-
-### Database Initialization
-
-Table creation has been moved out of the FastAPI startup sequence and is now handled explicitly via the CLI. This gives you predictable, repeatable migrations and avoids race conditions on multi-instance deployments.
-
-You only need to run the init command when:
-
-* First installation (fresh ClickHouse instance)
-* You changed table-related configuration (e.g. engine, partitioning, cluster_name)
-* Upgrading to a version that adds new tables / columns (future migrations)
-
-Run in Docker Compose (after the image is built):
-```bash
-docker compose up -d clickhouse
-docker compose run app uv run python cli.py db init
-docker compose up -d app
-```
-
-### Queue-Backed Ingest
-
-To enable queue-backed ingest, switch the API to RabbitMQ mode and run the worker:
-
-```bash
-EVNT_INGEST__MODE=rabbitmq docker compose --profile rabbitmq up -d rabbitmq worker app
-```
-
-Or locally from the repository root:
-
-```bash
-export EVNT_INGEST__MODE=rabbitmq
-uv run python evnt/cli.py queue worker
-```
-
-In this mode the HTTP app only enqueues messages. Batch inserts into ClickHouse are performed exclusively by the worker.
-
-The default RabbitMQ `prefetch_count` matches the default worker `batch_size`
-so one-row tracking messages can fill a complete ClickHouse batch before the
-timeout flush. If you tune `EVNT_INGEST__RABBITMQ__BATCH_SIZE`, tune
-`EVNT_INGEST__RABBITMQ__PREFETCH_COUNT` with it unless you intentionally
-prefer lower worker memory use and smaller timeout-driven inserts.
-
-Idempotency: The command uses `CREATE DATABASE IF NOT EXISTS` and `CREATE TABLE IF NOT EXISTS`; re-running is safe. If you change schema definitions (e.g. `order_by`, `engine`) you must manually apply migrations (dropping/recreating or performing ALTER statements) – the CLI purposefully does not perform destructive changes.
-
-Troubleshooting:
-* Connection errors: ensure the hostname matches `EVNT_CLICKHOUSE__CONNECTION__HOST` (defaults to `clickhouse` inside Docker network).
-* Cluster setup: set `EVNT_CLICKHOUSE__CONFIGURATION__CLUSTER_NAME` before running init so distributed tables are created.
-* Permissions: use a ClickHouse user with `CREATE DATABASE` and `CREATE TABLE` privileges.
-
-### Downloading Tracker Scripts via CLI
-
-Instead of the shell script you can use the built-in command (run from the repository root):
-```bash
-uv run python evnt/cli.py scripts download
-```
-This will place `sp.js`, `sp.js.map`, plugin bundle, and `loader.js` copies in the repository-level `static/` directory and adjust the source map `file` field for the loader copy.
-
-### Web Tracking
-
-To track events from your website:
-
-1. Include the Snowplow tracker in your HTML:
-   ```html
-   <script type="text/javascript">
-   (function(p,l,o,w,i,n,g){if(!p[i]){p.GlobalSnowplowNamespace=p.GlobalSnowplowNamespace||[];
-   p.GlobalSnowplowNamespace.push(i);p[i]=function(){(p[i].q=p[i].q||[]).push(arguments)
-   };p[i].q=p[i].q||[];n=l.createElement(o);g=l.getElementsByTagName(o)[0];n.async=1;
-   n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,"script","//your-server.com/static/sp.js","snowplow"));
-
-   snowplow('newTracker', 'sp', 'your-server.com', {
-     appId: 'my-app',
-     platform: 'web',
-     post: true,
-     forceSecureTracker: true
-   });
-
-   snowplow('trackPageView');
-   </script>
-   ```
-
-2. Replace `your-server.com` with your `evnt` server address
-
-By default the collector allows cross-origin requests from any origin,
-including credentialed browser tracker requests.
-
-If you want to restrict that in production, configure CORS explicitly for the
-sites you trust. For example, for `https://example.com`:
-
-```bash
-export EVNT_SECURITY__CORS_ALLOW_CREDENTIALS=true
-export EVNT_SECURITY__CORS_ALLOWED_ORIGINS='["https://example.com"]'
-```
-
-`cors_allowed_origins` entries should be bare origins such as
-`https://example.com` without a path.
-
-### Demo Mode
-
-To test `evnt` with the built-in demo:
-
-1. Set `common.demo = true` in your configuration
-2. Access the demo page at `http://your-server.com/demo/`
-3. Events will be tracked and stored in your ClickHouse database
-
-### Querying Data
-
-To query the collected data, connect to your ClickHouse instance:
-
-```bash
-docker exec -it evnt-ch clickhouse-client
-```
-
-Example queries:
-
-```sql
--- Get page views from the last 24 hours
-SELECT time, page, refr, device_id, session_id
-FROM evnt.local
-WHERE event_type = 'page_view'
-  AND time > now() - INTERVAL 1 DAY
-ORDER BY time DESC;
-
--- Count events by type
-SELECT event_type, count() as events
-FROM evnt.local
-GROUP BY event_type
-ORDER BY events DESC;
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Connection refused to ClickHouse**
-   - Check that ClickHouse is running and accessible
-   - Verify the host and port in your configuration
-   - Ensure firewall rules allow connections
-
-2. **No data being collected**
-   - Check browser console for JavaScript errors
-   - Verify tracking endpoint is correctly configured in your tracker
-   - Check server logs for any errors
-
-3. **Missing data in queries**
-   - Verify the table name (it may be different if you configured a custom name)
-   - Check if data partitioning is working as expected
-
-### Logs
-
-To view application logs:
-
-```bash
-docker logs -f evnt
-```
-
-For more verbose logging, set `logging.level = "DEBUG"` in your configuration.
-
-## Development
-
-### Setting Up the Development Environment
-
-1. Create a virtual environment and install uv (if not already installed):
-   ```bash
-   # Install uv (if not already installed)
-   curl -sSf https://astral.sh/uv/install.sh | sh
-   # Or on macOS with Homebrew
-   # brew install uv
-
-   # Create a virtual environment with uv
-   uv venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-2. Install dependencies:
-   ```bash
-   uv sync
-   ```
-
-3. Install development tools:
-   ```bash
-   uv pip install -G dev
-   pre-commit install
-   ```
-
-4. Run the application locally:
-   ```bash
-   cd evnt
-   uv run uvicorn main:app --reload
-   ```
-
-### Running Tests
-
-```bash
-uv run pytest
-```
-
-### Using Docker Compose with Development Mode
-
-```bash
-docker compose up --watch
-```
-
-This activates the development mode which automatically:
-- Syncs your local code changes to the container without rebuilding
-- Rebuilds the container only when dependencies change (when uv.lock is modified)
-
 ## License & Attribution
 
 This project's own source code is licensed under BSD 3-Clause (see [LICENSE](LICENSE)).
 
-It interoperates with, and optionally redistributes unmodified copies of,
-third-party components from Snowplow Analytics Ltd. and other authors:
+It interoperates with, and optionally redistributes unmodified copies of, third-party components from Snowplow Analytics Ltd. and other authors:
 
-- **Snowplow JavaScript tracker** (`sp.js`, plugins) — BSD 3-Clause,
-  © 2022 Snowplow Analytics Ltd, © 2010 Anthon Pang. Fetched on demand by
-  `cli.py scripts download`; not committed to this repo.
-- **Iglu Central schemas** — Apache License 2.0, © Snowplow Analytics Ltd.
-  Included as a git submodule at `evnt/vendor/iglu-central`,
-  unmodified.
+- **Snowplow JavaScript tracker** (`sp.js`, plugins) — BSD 3-Clause, © 2022 Snowplow Analytics Ltd, © 2010 Anthon Pang. Fetched on demand by `cli.py scripts download`; not committed to this repo.
+- **Iglu Central schemas** — Apache License 2.0, © Snowplow Analytics Ltd. Included as a git submodule at `evnt/vendor/iglu-central`, unmodified.
 
-Full third-party copyright and license notices are in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which downstream packagers
-**must** redistribute alongside any Docker image or artifact that bundles the
-tracker scripts or Iglu schemas.
+Full third-party copyright and license notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), which downstream packagers **must** redistribute alongside any Docker image or artifact that bundles the tracker scripts or Iglu schemas.
 
-"Snowplow" is a trademark of Snowplow Analytics Ltd. This project is not
-affiliated with, sponsored by, or endorsed by Snowplow Analytics Ltd.
+"Snowplow" is a trademark of Snowplow Analytics Ltd. This project is not affiliated with, sponsored by, or endorsed by Snowplow Analytics Ltd.
