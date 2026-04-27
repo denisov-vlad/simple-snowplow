@@ -42,3 +42,7 @@ htmlcov/
 
 # OS specific
 .DS_Store
+
+# Demo Vue SPA build artifacts (built inside the web-builder stage)
+evnt/routers/demo/web/node_modules
+evnt/routers/demo/web/dist

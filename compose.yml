@@ -8,6 +8,10 @@ services:
         # Space-separated optional dependency groups. Leave empty for the
         # lean build. Example: EXTRAS: "apm sentry".
         EXTRAS: "${EVNT_BUILD_EXTRAS:-}"
+        # Skip the Vue demo SPA build (saves the Node stage). The FastAPI
+        # /demo mount still works (placeholder page) but EVNT_COMMON__DEMO
+        # should be set to false at runtime in this case.
+        BUILD_DEMO: "${EVNT_BUILD_DEMO:-true}"
     ports:
     - "8000:80"
     environment:
@@ -60,7 +64,7 @@ services:
     - rabbitmq
 
   clickhouse:
-    container_name: evnt-ch
+    container_name: clickhouse
     image: clickhouse/clickhouse-server:26.3.4.11-alpine
     environment:
     - "CLICKHOUSE_PASSWORD=password"
@@ -68,6 +72,12 @@ services:
     - "8123:8123"
     - "9000:9000"
     - "9009:9009"
+    volumes:
+    # Mount individual files (not the whole directory) so we don't shadow the
+    # image's docker_related_config.xml (which sets <listen_host>::</listen_host>)
+    # nor block the entrypoint from writing users.d/default-user.xml.
+    - ./deploy/clickhouse/config.d/cors.xml:/etc/clickhouse-server/config.d/cors.xml:ro
+    - ./deploy/clickhouse/users.d/cors.xml:/etc/clickhouse-server/users.d/cors.xml:ro
     healthcheck:
       test: ["CMD", "clickhouse-client", "--host", "localhost", "--port", "9000", "--user", "default", "--password", "password", "--query", "SELECT 1"]
       interval: 5s

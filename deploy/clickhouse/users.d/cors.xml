@@ -1,0 +1,12 @@
+<clickhouse>
+    <!--
+        Ensure the actual GET/POST responses also carry an
+        Access-Control-Allow-Origin header (the <http_options_response>
+        block above only handles preflight OPTIONS).
+    -->
+    <profiles>
+        <default>
+            <add_http_cors_header>1</add_http_cors_header>
+        </default>
+    </profiles>
+</clickhouse>

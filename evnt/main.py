@@ -105,10 +105,11 @@ def _configure_routers(app: FastAPI) -> None:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
     # Mount demo static assets if enabled (there are no dynamic demo routes).
+    # The Vue SPA is built into routers/demo/web/dist by Vite (`npm run build`).
     if settings.common.demo:
         app.mount(
             "/demo",
-            StaticFiles(directory="routers/demo/static", html=True),
+            StaticFiles(directory="routers/demo/web/dist", html=True),
             name="demo",
         )
 

@@ -1,3 +1,31 @@
+# --- Stage 1: build the Vue demo SPA ---
+# Toggle via `--build-arg BUILD_DEMO=false` (or EVNT_BUILD_DEMO=false in compose).
+# When false, a tiny placeholder index.html is shipped instead of the real SPA,
+# so FastAPI's StaticFiles mount has something to serve.
+ARG BUILD_DEMO=true
+
+FROM node:24-alpine AS web-builder-true
+WORKDIR /web
+RUN corepack enable
+COPY evnt/routers/demo/web/package.json evnt/routers/demo/web/pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+COPY evnt/routers/demo/web/ ./
+RUN pnpm run build
+
+FROM alpine:3 AS web-builder-false
+WORKDIR /web
+RUN mkdir -p dist && \
+    printf '%s\n' \
+        '<!doctype html><meta charset="utf-8"><title>evnt</title>' \
+        '<p>Demo UI is disabled in this image (BUILD_DEMO=false).</p>' \
+        '<p>Rebuild with <code>--build-arg BUILD_DEMO=true</code> to enable.</p>' \
+        > dist/index.html
+
+# Pick the stage matching BUILD_DEMO ("true" or "false").
+FROM web-builder-${BUILD_DEMO} AS web-builder
+
+# --- Stage 2: runtime image ---
 FROM python:3.14.4-alpine3.23
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.6-python3.14-alpine3.23 /usr/local/bin/uv /usr/local/bin/uv
@@ -35,6 +63,7 @@ RUN --mount=type=cache,id=root-cache-${TARGETOS}-${TARGETARCH}${TARGETVARIANT},s
 WORKDIR /app/evnt
 
 COPY ./evnt /app/evnt
+COPY --from=web-builder /web/dist /app/evnt/routers/demo/web/dist
 COPY LICENSE THIRD_PARTY_NOTICES.md /app/
 
 RUN --mount=type=cache,id=root-cache-${TARGETOS}-${TARGETARCH}${TARGETVARIANT},sharing=locked,target=/root/.cache \
